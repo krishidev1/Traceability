@@ -1,0 +1,457 @@
+-- Paste this AFTER your existing ERD script.
+-- This file does not recreate your current tables.
+-- It only adds fields/tables required by the auth flow and the new platform fields document.
+-- Naming follows your current schema: public.*, snake_case, users.user_id, users.full_name, users.mob.
+
+BEGIN;
+
+-- =========================
+-- 1. AUTH + COMMON SIGNUP
+-- =========================
+
+ALTER TABLE public.users
+  ADD COLUMN IF NOT EXISTS account_type character varying(50),
+  ADD COLUMN IF NOT EXISTS profile_image text,
+  ADD COLUMN IF NOT EXISTS village_area character varying(150),
+  ADD COLUMN IF NOT EXISTS district character varying(100),
+  ADD COLUMN IF NOT EXISTS state character varying(100),
+  ADD COLUMN IF NOT EXISTS country character varying(100),
+  ADD COLUMN IF NOT EXISTS pincode character varying(20),
+  ADD COLUMN IF NOT EXISTS gps_coordinates character varying(100),
+  ADD COLUMN IF NOT EXISTS is_verified boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS verification_status character varying(30) DEFAULT 'pending',
+  ADD COLUMN IF NOT EXISTS updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP;
+
+UPDATE public.users
+SET account_type = 'grower'
+WHERE account_type IS NULL
+  AND role = 'farmer';
+
+UPDATE public.users
+SET account_type = role
+WHERE account_type IS NULL
+  AND role IN ('admin', 'drone_controller');
+
+UPDATE public.users
+SET role = 'farmer'
+WHERE role IS NULL
+  OR role NOT IN ('farmer', 'admin', 'drone_controller');
+
+UPDATE public.users
+SET is_verified = false
+WHERE is_verified IS NULL;
+
+UPDATE public.users
+SET verification_status = 'pending'
+WHERE verification_status IS NULL;
+
+CREATE INDEX IF NOT EXISTS users_mob_idx
+  ON public.users (mob)
+  WHERE mob IS NOT NULL AND mob <> '';
+
+CREATE INDEX IF NOT EXISTS users_account_type_idx
+  ON public.users (account_type);
+
+CREATE INDEX IF NOT EXISTS users_role_idx
+  ON public.users (role);
+
+CREATE TABLE IF NOT EXISTS public.password_reset_requests
+(
+  id serial NOT NULL,
+  identifier character varying(150) NOT NULL,
+  requested_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  handled boolean DEFAULT false,
+  CONSTRAINT password_reset_requests_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS public.login_activity_logs
+(
+  id serial NOT NULL,
+  user_id integer,
+  identifier character varying(150),
+  success boolean NOT NULL DEFAULT false,
+  ip_address text,
+  user_agent text,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT login_activity_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT login_activity_logs_user_id_fkey FOREIGN KEY (user_id)
+    REFERENCES public.users (user_id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS login_activity_logs_user_id_idx
+  ON public.login_activity_logs (user_id);
+
+CREATE INDEX IF NOT EXISTS login_activity_logs_identifier_idx
+  ON public.login_activity_logs (identifier);
+
+-- =========================
+-- 2. VERIFICATION DOCUMENTS
+-- =========================
+
+CREATE TABLE IF NOT EXISTS public.verification_documents
+(
+  document_id serial NOT NULL,
+  user_id integer NOT NULL,
+  document_type character varying(80) NOT NULL,
+  document_number character varying(120),
+  document_url text,
+  verification_status character varying(30) DEFAULT 'pending',
+  uploaded_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT verification_documents_pkey PRIMARY KEY (document_id),
+  CONSTRAINT verification_documents_user_id_fkey FOREIGN KEY (user_id)
+    REFERENCES public.users (user_id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS verification_documents_user_id_idx
+  ON public.verification_documents (user_id);
+
+-- =========================
+-- 3. CROP FARMING FIELDS
+-- Existing tables extended: farms, crops, monitoring_records, packings.
+-- =========================
+
+ALTER TABLE public.farms
+  ADD COLUMN IF NOT EXISTS soil_type character varying(100),
+  ADD COLUMN IF NOT EXISTS irrigation_method character varying(100),
+  ADD COLUMN IF NOT EXISTS is_organic boolean,
+  ADD COLUMN IF NOT EXISTS farm_type character varying(50);
+
+ALTER TABLE public.plantations
+  ADD COLUMN IF NOT EXISTS production_type character varying(50) DEFAULT 'crop';
+
+ALTER TABLE public.crops
+  ADD COLUMN IF NOT EXISTS seed_source character varying(150);
+
+ALTER TABLE public.monitoring_records
+  ADD COLUMN IF NOT EXISTS fertilizer_usage text,
+  ADD COLUMN IF NOT EXISTS pesticide_records text,
+  ADD COLUMN IF NOT EXISTS irrigation_logs text,
+  ADD COLUMN IF NOT EXISTS disease_detection text,
+  ADD COLUMN IF NOT EXISTS drone_monitoring text;
+
+ALTER TABLE public.packings
+  ADD COLUMN IF NOT EXISTS batch_number character varying(100),
+  ADD COLUMN IF NOT EXISTS cold_storage text,
+  ADD COLUMN IF NOT EXISTS transport_method character varying(100);
+
+-- =========================
+-- 4. SHRIMP FARMING FIELDS
+-- =========================
+
+CREATE TABLE IF NOT EXISTS public.shrimp_ponds
+(
+  pond_id serial NOT NULL,
+  user_id integer NOT NULL,
+  pond_name character varying(150) NOT NULL,
+  water_type character varying(100),
+  pond_size numeric,
+  species_cultured character varying(150),
+  hatchery_source character varying(150),
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT shrimp_ponds_pkey PRIMARY KEY (pond_id),
+  CONSTRAINT shrimp_ponds_user_id_fkey FOREIGN KEY (user_id)
+    REFERENCES public.users (user_id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS public.shrimp_monitoring_records
+(
+  id serial NOT NULL,
+  pond_id integer NOT NULL,
+  user_id integer NOT NULL,
+  record_date date DEFAULT CURRENT_DATE,
+  water_quality text,
+  feed_monitoring text,
+  salinity_check numeric,
+  oxygen_level numeric,
+  disease_detection text,
+  remarks text,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT shrimp_monitoring_records_pkey PRIMARY KEY (id),
+  CONSTRAINT shrimp_monitoring_records_pond_id_fkey FOREIGN KEY (pond_id)
+    REFERENCES public.shrimp_ponds (pond_id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE CASCADE,
+  CONSTRAINT shrimp_monitoring_records_user_id_fkey FOREIGN KEY (user_id)
+    REFERENCES public.users (user_id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS public.shrimp_harvests
+(
+  id serial NOT NULL,
+  pond_id integer NOT NULL,
+  user_id integer NOT NULL,
+  harvest_date date NOT NULL,
+  total_quantity numeric NOT NULL,
+  cold_storage text,
+  packing_size text,
+  transport_method character varying(100),
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT shrimp_harvests_pkey PRIMARY KEY (id),
+  CONSTRAINT shrimp_harvests_pond_id_fkey FOREIGN KEY (pond_id)
+    REFERENCES public.shrimp_ponds (pond_id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE CASCADE,
+  CONSTRAINT shrimp_harvests_user_id_fkey FOREIGN KEY (user_id)
+    REFERENCES public.users (user_id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE CASCADE
+);
+
+-- =========================
+-- 5. BEE FARMING / APICULTURE FIELDS
+-- =========================
+
+CREATE TABLE IF NOT EXISTS public.apiaries
+(
+  apiary_id serial NOT NULL,
+  user_id integer NOT NULL,
+  apiary_name character varying(150) NOT NULL,
+  bee_species character varying(120),
+  number_of_hives integer,
+  queen_bee_age character varying(80),
+  floral_source text,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT apiaries_pkey PRIMARY KEY (apiary_id),
+  CONSTRAINT apiaries_user_id_fkey FOREIGN KEY (user_id)
+    REFERENCES public.users (user_id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS public.apiary_monitoring_records
+(
+  id serial NOT NULL,
+  apiary_id integer NOT NULL,
+  user_id integer NOT NULL,
+  inspection_date date DEFAULT CURRENT_DATE,
+  hive_inspection text,
+  disease_check text,
+  feeding_records text,
+  temperature numeric,
+  humidity numeric,
+  remarks text,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT apiary_monitoring_records_pkey PRIMARY KEY (id),
+  CONSTRAINT apiary_monitoring_records_apiary_id_fkey FOREIGN KEY (apiary_id)
+    REFERENCES public.apiaries (apiary_id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE CASCADE,
+  CONSTRAINT apiary_monitoring_records_user_id_fkey FOREIGN KEY (user_id)
+    REFERENCES public.users (user_id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS public.honey_harvests
+(
+  id serial NOT NULL,
+  apiary_id integer NOT NULL,
+  user_id integer NOT NULL,
+  honey_type character varying(120),
+  harvest_date date NOT NULL,
+  moisture_percentage numeric,
+  processing_status character varying(50),
+  batch_number character varying(100),
+  fssai_license character varying(100),
+  organic_certification text,
+  lab_report_url text,
+  purity_verification text,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT honey_harvests_pkey PRIMARY KEY (id),
+  CONSTRAINT honey_harvests_apiary_id_fkey FOREIGN KEY (apiary_id)
+    REFERENCES public.apiaries (apiary_id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE CASCADE,
+  CONSTRAINT honey_harvests_user_id_fkey FOREIGN KEY (user_id)
+    REFERENCES public.users (user_id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE CASCADE
+);
+
+-- =========================
+-- 6. ARTISAN FIELDS
+-- =========================
+
+CREATE TABLE IF NOT EXISTS public.artisan_profiles
+(
+  artisan_id serial NOT NULL,
+  user_id integer NOT NULL,
+  artisan_name character varying(150) NOT NULL,
+  craft_type character varying(120),
+  workshop_location text,
+  years_of_experience integer,
+  number_of_workers integer,
+  products_manufactured text,
+  raw_materials_used text,
+  monthly_production_capacity character varying(100),
+  production_method character varying(80),
+  packaging_method character varying(120),
+  accept_bulk_orders boolean DEFAULT false,
+  export_ready boolean DEFAULT false,
+  online_selling_experience text,
+  delivery_regions text,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT artisan_profiles_pkey PRIMARY KEY (artisan_id),
+  CONSTRAINT artisan_profiles_user_id_fkey FOREIGN KEY (user_id)
+    REFERENCES public.users (user_id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE CASCADE
+);
+
+-- =========================
+-- 7. KOTPAD HANDLOOM FABRIC FIELDS
+-- =========================
+
+CREATE TABLE IF NOT EXISTS public.kotpad_handloom_fabrics
+(
+  kotpad_id serial NOT NULL,
+  user_id integer NOT NULL,
+  plantation_id integer,
+  product_name character varying(180) DEFAULT 'Kotpad Handloom Fabric',
+  gi_tag_number character varying(120),
+  category character varying(120) DEFAULT 'Handloom / Textile',
+  state character varying(80) DEFAULT 'Odisha',
+  district character varying(100) DEFAULT 'Koraput',
+  region_cluster character varying(180) DEFAULT 'Kotpad Village',
+  gi_registration_date date,
+  description text,
+  cultural_significance text,
+  gi_certificate_url text,
+  weaver_name character varying(180),
+  community_name character varying(150),
+  organization_type character varying(100),
+  id_proof_url text,
+  contact_number character varying(20),
+  email_id character varying(180),
+  address text,
+  experience_in_weaving character varying(80),
+  family_members_involved integer,
+  gps_location character varying(120),
+  fabric_type character varying(100),
+  yarn_source character varying(120),
+  natural_dye_used character varying(180),
+  dye_preparation_method text,
+  water_source character varying(120),
+  chemical_free_status boolean,
+  eco_friendly_certificate_url text,
+  loom_type character varying(120),
+  weaving_technique character varying(180),
+  time_taken_per_fabric character varying(80),
+  daily_production_capacity character varying(100),
+  design_pattern text,
+  color_combination character varying(180),
+  product_type character varying(120),
+  handmade_verification boolean,
+  batch_number character varying(120),
+  qr_verification_code character varying(180),
+  weaver_id character varying(120),
+  production_date date,
+  geo_fenced_production_area text,
+  authenticity_certificate_url text,
+  blockchain_trace_id character varying(180),
+  inspection_status character varying(80),
+  quality_grade character varying(20),
+  product_images jsonb,
+  selling_price numeric,
+  wholesale_price numeric,
+  available_stock numeric,
+  minimum_order_quantity numeric,
+  export_availability boolean,
+  packaging_type character varying(120),
+  shipping_time character varying(80),
+  marketplace_visibility character varying(30),
+  natural_dye_usage boolean,
+  tribal_women_involved boolean,
+  carbon_friendly_production boolean,
+  water_recycling_used boolean,
+  traditional_knowledge_preservation text,
+  cultural_story text,
+  government_recognition text,
+  fabric_pattern_recognition text,
+  ai_authenticity_check text,
+  qr_scan_history jsonb,
+  demand_forecasting text,
+  export_analytics text,
+  drone_based_cotton_monitoring text,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT kotpad_handloom_fabrics_pkey PRIMARY KEY (kotpad_id),
+  CONSTRAINT kotpad_handloom_fabrics_user_id_fkey FOREIGN KEY (user_id)
+    REFERENCES public.users (user_id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE CASCADE,
+  CONSTRAINT kotpad_handloom_fabrics_plantation_id_fkey FOREIGN KEY (plantation_id)
+    REFERENCES public.plantations (id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS kotpad_handloom_fabrics_user_id_idx
+  ON public.kotpad_handloom_fabrics (user_id);
+
+CREATE INDEX IF NOT EXISTS kotpad_handloom_fabrics_plantation_id_idx
+  ON public.kotpad_handloom_fabrics (plantation_id);
+
+-- =========================
+-- 8. WOMEN NGO FIELDS
+-- =========================
+
+CREATE TABLE IF NOT EXISTS public.women_ngo_profiles
+(
+  ngo_id serial NOT NULL,
+  user_id integer NOT NULL,
+  ngo_name character varying(180) NOT NULL,
+  registration_number character varying(120),
+  coordinator_name character varying(150),
+  women_member_count integer,
+  operational_districts text,
+  skill_development text,
+  livelihood_programs text,
+  training_sessions text,
+  community_support text,
+  government_partnerships text,
+  families_supported integer,
+  income_generated numeric,
+  products_services_offered text,
+  beneficiary_tracking text,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT women_ngo_profiles_pkey PRIMARY KEY (ngo_id),
+  CONSTRAINT women_ngo_profiles_user_id_fkey FOREIGN KEY (user_id)
+    REFERENCES public.users (user_id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE CASCADE
+);
+
+-- =========================
+-- 9. SUPPLIER / MARKETPLACE / LOGISTICS FIELDS
+-- =========================
+
+CREATE TABLE IF NOT EXISTS public.marketplace_logistics
+(
+  id serial NOT NULL,
+  user_id integer NOT NULL,
+  bulk_order_availability boolean DEFAULT false,
+  transport_facility boolean DEFAULT false,
+  export_ready_status boolean DEFAULT false,
+  delivery_regions text,
+  warehouse_information text,
+  storage_facilities text,
+  packaging_availability boolean DEFAULT false,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT marketplace_logistics_pkey PRIMARY KEY (id),
+  CONSTRAINT marketplace_logistics_user_id_fkey FOREIGN KEY (user_id)
+    REFERENCES public.users (user_id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE CASCADE
+);
+
+COMMIT;
