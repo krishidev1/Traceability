@@ -1,0 +1,171 @@
+.tc-root .sambalpuri-production-fields,
+.tc-root .production-theme-sambalpuri .production-fields {
+  display: contents;
+}
+
+.tc-root .production-theme-sambalpuri {
+  --production-primary: #243c8f;
+  --production-secondary: #047481;
+  --production-accent: #b83280;
+  --production-soft: #f6fbff;
+  --production-line: rgba(36, 60, 143, 0.24);
+}
+
+.tc-root .production-theme-sambalpuri .dashboard-hero,
+.tc-root .production-theme-sambalpuri .plantation-hero {
+  background:
+    linear-gradient(135deg, rgba(36, 60, 143, 0.14), transparent 28%),
+    linear-gradient(135deg, #f8fbff, #eefcf9 48%, #fff7fb);
+  border-color: var(--production-line);
+}
+
+.tc-root .production-theme-sambalpuri .card,
+.tc-root .production-theme-sambalpuri .stage-progress-card,
+.tc-root .production-theme-sambalpuri .stat-card,
+.tc-root .production-theme-sambalpuri .plantation-card {
+  border-color: var(--production-line);
+  box-shadow: 0 12px 30px rgba(36, 60, 143, 0.08);
+}
+
+.tc-root .production-theme-sambalpuri .dashboard-kicker,
+.tc-root .production-theme-sambalpuri .plantation-kicker,
+.tc-root .production-theme-sambalpuri .stage-progress-kicker,
+.tc-root .production-theme-sambalpuri .card-title {
+  color: var(--production-primary);
+}
+
+.tc-root .production-theme-sambalpuri .btn-primary,
+.tc-root .production-theme-sambalpuri .step-btn.active,
+.tc-root .production-theme-sambalpuri .dashboard-active-farm:not(.grower-id-panel) {
+  background: linear-gradient(135deg, var(--production-primary), var(--production-secondary));
+  box-shadow: 0 12px 24px rgba(36, 60, 143, 0.2);
+}
+
+.tc-root .production-theme-sambalpuri .step-btn.done,
+.tc-root .production-theme-sambalpuri .btn-outline,
+.tc-root .production-theme-sambalpuri .status-chip.active {
+  background: linear-gradient(135deg, #f6fbff, #eefcf9);
+  border-color: var(--production-line);
+  color: var(--production-primary);
+}
+
+.tc-root .production-theme-sambalpuri .stage-progress-fill {
+  background: linear-gradient(90deg, var(--production-primary), var(--production-secondary), var(--production-accent));
+}
+
+.tc-root .production-theme-sambalpuri .input:focus {
+  border-color: var(--production-primary);
+  box-shadow: 0 0 0 3px rgba(36, 60, 143, 0.12);
+}
+
+.tc-root .sambalpuri-form-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px 16px;
+  align-items: start;
+}
+
+.tc-root .sambalpuri-section-label {
+  grid-column: 1 / -1;
+  width: fit-content;
+  min-height: 28px;
+  margin: 6px 0 2px;
+  padding: 6px 12px;
+  border: 1px solid rgba(36, 60, 143, 0.18);
+  border-radius: 999px;
+  color: var(--production-primary);
+  background: linear-gradient(135deg, #f6fbff, #eefcf9);
+  box-shadow: 0 8px 18px rgba(36, 60, 143, 0.06);
+}
+
+.tc-root .sambalpuri-form-grid .field-wrap {
+  min-width: 0;
+  gap: 6px;
+}
+
+.tc-root .sambalpuri-form-grid .field-label {
+  min-height: 24px;
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  line-height: 1.12;
+}
+
+.tc-root .sambalpuri-form-grid .input {
+  min-height: 44px;
+  height: 44px;
+  padding: 9px 12px;
+  border-radius: 11px;
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.tc-root .sambalpuri-form-grid textarea.input,
+.tc-root .sambalpuri-form-grid .sambalpuri-textarea {
+  height: auto;
+  min-height: 76px;
+  padding-top: 10px;
+  resize: vertical;
+}
+
+.tc-root .sambalpuri-locked-input {
+  color: var(--production-primary);
+  background: linear-gradient(180deg, #f8fbff, #f2fffc);
+  border-color: var(--production-line);
+  font-weight: 600;
+  text-overflow: ellipsis;
+}
+
+.tc-root .sambalpuri-fixed-field .field-label::after {
+  content: none;
+  display: none;
+}
+
+.tc-root .sambalpuri-wide-field {
+  grid-column: span 2;
+}
+
+.tc-root .production-theme-sambalpuri .process-card .form-row {
+  grid-template-columns: minmax(0, 1fr) 148px;
+  align-items: stretch;
+}
+
+.tc-root .production-theme-sambalpuri .process-card .input,
+.tc-root .production-theme-sambalpuri .process-card .btn {
+  min-height: 42px;
+}
+
+.tc-root .production-theme-sambalpuri .process-card .btn {
+  width: 100%;
+}
+
+@media (min-width: 1500px) {
+  .tc-root .sambalpuri-form-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1100px) {
+  .tc-root .sambalpuri-form-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .tc-root .sambalpuri-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tc-root .sambalpuri-wide-field {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 520px) {
+  .tc-root .sambalpuri-form-grid,
+  .tc-root .production-theme-sambalpuri .process-card .form-row {
+    grid-template-columns: 1fr;
+  }
+}

@@ -4,6 +4,7 @@ body.traceconnect-body {
   min-width: 0 !important;
   min-height: 100vh !important;
   background: #ffffff !important;
+  font-family: "Poppins", sans-serif !important;
 }
 
 #root.traceconnect-root-host {
@@ -23,7 +24,7 @@ body.traceconnect-body {
   --green: #1f8a43;
   --blue: #1e5c9a;
   --danger: #c0392b;
-  font-family: inherit;
+  font-family: "Poppins", sans-serif;
   color: var(--text);
   width: 100%;
   min-height: 100vh;
@@ -37,6 +38,13 @@ body.traceconnect-body {
 
 .tc-root * {
   box-sizing: border-box;
+}
+
+.tc-root button,
+.tc-root input,
+.tc-root select,
+.tc-root textarea {
+  font-family: inherit;
 }
 
 .tc-root .app-root {
@@ -1322,6 +1330,22 @@ body.traceconnect-body {
   width: auto;
 }
 
+.tc-root .report-variety-cell {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.tc-root .report-variety-cell > span:first-child {
+  max-width: min(420px, 100%);
+  overflow: hidden;
+  color: #334155;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .tc-root .gallery-group {
   margin-top: 12px;
 }
@@ -2244,6 +2268,12 @@ body.traceconnect-body {
   background: #fff;
 }
 
+.tc-root .input[readonly],
+.tc-root .input:disabled {
+  cursor: not-allowed;
+  background: #f3f6f8;
+}
+
 .tc-root .field-wrap {
   display: flex;
   flex-direction: column;
@@ -2335,6 +2365,39 @@ body.traceconnect-body {
   flex-wrap: wrap;
 }
 
+.tc-root .compact-record-row {
+  align-items: flex-start;
+}
+
+.tc-root .compact-record-text {
+  row-gap: 8px;
+}
+
+.tc-root .record-summary-main {
+  max-width: min(620px, 100%);
+  overflow: hidden;
+  color: #334155;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tc-root .record-summary-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 240px;
+  padding: 4px 8px;
+  border: 1px solid rgba(15, 118, 110, 0.18);
+  border-radius: 999px;
+  color: #0f766e;
+  background: #ecfdf5;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .tc-root .process-entry-card {
   display: flex;
   align-items: center;
@@ -2379,6 +2442,16 @@ body.traceconnect-body {
   color: #64748b;
 }
 
+.tc-root .process-entry-plantation {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  color: #0f766e;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .tc-root .gi-certified-badge {
   display: inline-flex;
   align-items: center;
@@ -2391,6 +2464,28 @@ body.traceconnect-body {
   border: 1px solid #bbf7d0;
   font-size: 11px;
   font-weight: 800;
+}
+
+.tc-root .gi-certified-badge img {
+  width: 14px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.tc-root .gi-logo-badge {
+  color: #33328f;
+  background: #eef2ff;
+  border-color: #c7d2fe;
+}
+
+.tc-root .process-entry-doc-thumb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #33328f;
+  background: linear-gradient(135deg, #eef2ff, #fff7ed);
+  border: 1px solid #c7d2fe;
+  font-size: 20px;
 }
 
 .tc-root .process-entry-actions {
@@ -2454,11 +2549,6 @@ body.traceconnect-body {
   border-radius: 999px;
 }
 
-.tc-root .type-badge.crop {
-  background: #dcfce7;
-  color: #166534;
-}
-
 .tc-root .type-badge.shrimp {
   background: #dbeafe;
   color: #1e40af;
@@ -2469,19 +2559,14 @@ body.traceconnect-body {
   color: #92400e;
 }
 
-.tc-root .type-badge.artisan {
-  background: #ede9fe;
-  color: #5b21b6;
-}
-
-.tc-root .type-badge.ngo {
-  background: #ffe4e6;
-  color: #9f1239;
-}
-
 .tc-root .type-badge.kotpad {
   background: #fef2f2;
   color: #9a3412;
+}
+
+.tc-root .type-badge.sambalpuri {
+  background: #e8f5ff;
+  color: #243c8f;
 }
 
 .tc-root .plantation-location,
@@ -2628,6 +2713,51 @@ body.traceconnect-body {
 .tc-root .gi-certificate-actions .btn {
   min-height: 46px;
   justify-content: center;
+}
+
+.tc-root .gi-certificate-pdf-panel {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0 12px;
+  padding: 12px;
+  border: 1px solid rgba(51, 50, 143, 0.18);
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f8fbff, #fffaf2);
+}
+
+.tc-root .gi-certificate-pdf-panel > img {
+  width: 32px;
+  height: 42px;
+  object-fit: contain;
+}
+
+.tc-root .gi-certificate-pdf-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.tc-root .gi-certificate-pdf-copy a {
+  width: fit-content;
+  color: #33328f;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.tc-root .gi-certificate-pdf-copy a:hover {
+  text-decoration: underline;
+}
+
+.tc-root .gi-certificate-pdf-copy span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #166534;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .tc-root .status-chip {
@@ -4559,7 +4689,6 @@ body.traceconnect-body {
 .tc-root .step-btn.done,
 .tc-root .accepted-box,
 .tc-root .status-chip.active,
-.tc-root .type-badge.crop,
 .tc-root .badge-chip {
   background: linear-gradient(135deg, #ecfff4, #eef8ff);
   border-color: rgba(16, 163, 90, 0.25);
@@ -5201,5 +5330,625 @@ body.traceconnect-body {
 .tc-root .profile-item {
   justify-content: flex-start;
   text-align: left;
+}
+
+/* Final compact Poppins pass for TraceConnect surfaces */
+.tc-root {
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+  text-align: left;
+}
+
+.tc-root main {
+  padding: 18px 18px 40px;
+}
+
+.tc-root .page-container {
+  gap: 12px;
+  text-align: left;
+}
+
+.tc-root h1 {
+  font-size: clamp(24px, 3vw, 32px);
+  letter-spacing: 0;
+  line-height: 1.1;
+}
+
+.tc-root h2 {
+  font-size: clamp(20px, 2.4vw, 26px);
+}
+
+.tc-root h3,
+.tc-root .card-title {
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.tc-root .dashboard-subtitle,
+.tc-root .page-subtitle,
+.tc-root .muted {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.tc-root .card,
+.tc-root .stat-card,
+.tc-root .plantation-card,
+.tc-root .batch-card,
+.tc-root .supplier-trace-card,
+.tc-root .process-entry-card,
+.tc-root .stage-progress-card,
+.tc-root .auth-entry-card,
+.tc-root .confirm-box,
+.tc-root .empty-state {
+  border-radius: 12px;
+  padding: 14px;
+  text-align: left;
+}
+
+.tc-root .dashboard-hero,
+.tc-root .plantation-hero,
+.tc-root .profile-hero {
+  border-radius: 16px;
+  padding: 20px 22px;
+  text-align: left;
+}
+
+.tc-root .card-grid {
+  gap: 12px;
+}
+
+.tc-root .form-grid {
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  align-items: end;
+}
+
+.tc-root .input,
+.tc-root select,
+.tc-root textarea {
+  border-radius: 9px;
+  font-size: 13px;
+  line-height: 1.25;
+  min-height: 40px;
+  padding: 8px 11px;
+}
+
+.tc-root .btn {
+  justify-content: center;
+  border-radius: 9px;
+  font-size: 13px;
+  line-height: 1.2;
+  min-height: 40px;
+  padding: 8px 13px;
+}
+
+.tc-root .stat-icon-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+}
+
+.tc-root .stat-value {
+  font-size: 20px;
+}
+
+.tc-root .step-btn {
+  min-height: auto;
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+
+.tc-root .auth-modal {
+  max-width: 860px;
+}
+
+.tc-root .auth-left-panel,
+.tc-root .auth-right-panel {
+  padding: 28px;
+}
+
+.tc-root .auth-left-copy,
+.tc-root .auth-left-tagline,
+.tc-root .auth-switch-text,
+.tc-root .site-footer,
+.tc-root .trace-footer {
+  text-align: left;
+}
+
+/* Final form alignment: keeps inputs and action buttons on the same visual grid */
+.tc-root .form-grid .field-wrap {
+  min-width: 0;
+  align-self: stretch;
+}
+
+.tc-root .form-grid .field-label {
+  min-height: 18px;
+  display: flex;
+  align-items: flex-end;
+}
+
+.tc-root .form-grid .field-btn-wrap {
+  align-self: end;
+  justify-content: flex-end;
+}
+
+.tc-root .form-grid .field-btn-wrap .btn {
+  min-width: 150px;
+  max-width: 220px;
+  min-height: 40px;
+  align-self: flex-start;
+}
+
+.tc-root .form-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.tc-root .form-row .input,
+.tc-root .form-row .btn {
+  min-height: 42px;
+}
+
+.tc-root .process-card {
+  padding: 16px 18px;
+}
+
+.tc-root .process-card h4 {
+  margin: 0 0 10px;
+  line-height: 1.25;
+}
+
+.tc-root .process-card .form-row {
+  grid-template-columns: minmax(0, 1fr) 148px;
+}
+
+.tc-root .process-card .form-row .btn {
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .tc-root .form-row,
+  .tc-root .process-card .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .tc-root .form-grid .field-btn-wrap .btn,
+  .tc-root .form-row .btn {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+/* Simple themed navbar: no boxed brand or nav labels */
+.tc-root .app-header {
+  --nav-primary: #0b5f3a;
+  --nav-secondary: #0f8d75;
+  --nav-accent: #1d7dd8;
+  padding: 10px 30px;
+  background: linear-gradient(100deg, var(--nav-primary), var(--nav-secondary) 58%, var(--nav-accent));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 10px 26px rgba(6, 50, 36, 0.18);
+}
+
+.tc-root .app-root:has(.production-theme-shrimp) .app-header {
+  --nav-primary: #063b52;
+  --nav-secondary: #0b6f8a;
+  --nav-accent: #179f9a;
+}
+
+.tc-root .app-root:has(.production-theme-bee) .app-header {
+  --nav-primary: #5f3900;
+  --nav-secondary: #9a5b00;
+  --nav-accent: #226f54;
+}
+
+.tc-root .app-root:has(.production-theme-kotpad) .app-header {
+  --nav-primary: #5f1717;
+  --nav-secondary: #7f1d1d;
+  --nav-accent: #9f4a22;
+}
+
+.tc-root .app-root:has(.production-theme-sambalpuri) .app-header {
+  --nav-primary: #172554;
+  --nav-secondary: #243c8f;
+  --nav-accent: #047481;
+}
+
+.tc-root .brand {
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #ffffff;
+  gap: 10px;
+}
+
+.tc-root .brand:hover {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.tc-root .brand-icon {
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.tc-root .brand-text,
+.tc-root .brand span:last-child {
+  color: #ffffff;
+  background: none;
+  -webkit-background-clip: initial;
+  background-clip: initial;
+  -webkit-text-fill-color: currentColor;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-shadow: none;
+}
+
+.tc-root .header-nav {
+  gap: 20px;
+  flex-wrap: nowrap;
+}
+
+.tc-root .nav-pill {
+  position: relative;
+  min-height: 36px;
+  padding: 6px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.tc-root .nav-pill::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 999px;
+  background: #ffffff;
+  opacity: 0;
+  transform: scaleX(0.35);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.tc-root .nav-pill:hover,
+.tc-root .nav-pill.active {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: #ffffff;
+  transform: none;
+}
+
+.tc-root .nav-pill:hover::after,
+.tc-root .nav-pill.active::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.tc-root .profile-trigger {
+  border-color: rgba(255, 255, 255, 0.42);
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: none;
+}
+
+/* Minimal camera modal actions */
+.tc-root .camera-modal .camera-subtitle {
+  margin-top: -4px;
+  font-size: 12px;
+}
+
+.tc-root .camera-modal .camera-actions {
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.tc-root .camera-modal .camera-actions .btn {
+  width: auto;
+  min-width: 88px;
+  min-height: 32px;
+  padding: 6px 11px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.1;
+  box-shadow: none;
+}
+
+.tc-root .camera-modal .camera-actions .loading-inline img {
+  width: 16px;
+  height: 16px;
+}
+
+/* Center confirm dialogs cleanly */
+.tc-root .modal-overlay:has(.confirm-box) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.tc-root .confirm-box {
+  margin: auto;
+  display: grid;
+  justify-items: center;
+  width: min(430px, 94vw);
+  text-align: center;
+}
+
+.tc-root .confirm-box h3,
+.tc-root .confirm-box p,
+.tc-root .confirm-box .muted {
+  text-align: center;
+}
+
+.tc-root .confirm-actions {
+  justify-content: center;
+}
+
+/* Zazzy auth refresh: login + signup only */
+.tc-root main:has(.auth-entry-page) {
+  min-height: 100vh;
+  padding: 18px;
+  background:
+    linear-gradient(135deg, #edf8f1 0%, #f6f9ff 52%, #fff7f2 100%);
+}
+
+.tc-root main:has(.auth-entry-page) + .site-footer {
+  display: none;
+}
+
+.tc-root .auth-entry-page.page-container {
+  min-height: calc(100vh - 36px);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: transparent;
+}
+
+.tc-root .auth-entry-page .auth-modal {
+  width: min(1360px, 100%);
+  min-height: min(760px, calc(100vh - 36px));
+  max-height: calc(100vh - 36px);
+  border: 1px solid rgba(24, 82, 62, 0.14);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 24px 70px rgba(17, 39, 35, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.tc-root .auth-entry-page .auth-left-panel {
+  flex: 0 0 35%;
+  align-items: flex-start;
+  padding: 36px 38px;
+  background:
+    linear-gradient(120deg, rgba(255, 255, 255, 0.08) 0 1px, transparent 1px 28px),
+    linear-gradient(160deg, #151f3f 0%, #2f2865 44%, #0f5d65 100%);
+}
+
+.tc-root .auth-entry-page .auth-left-panel::before {
+  inset: 0;
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background:
+    linear-gradient(128deg, rgba(255, 255, 255, 0.18), transparent 28%),
+    linear-gradient(38deg, transparent 58%, rgba(66, 211, 166, 0.16));
+}
+
+.tc-root .auth-entry-page .auth-left-panel::after {
+  inset: auto 0 0;
+  width: auto;
+  height: 42%;
+  border-radius: 0;
+  background: linear-gradient(0deg, rgba(3, 16, 30, 0.42), transparent);
+}
+
+.tc-root .auth-entry-page .auth-left-brand {
+  position: relative;
+  top: auto;
+  left: auto;
+  margin-bottom: auto;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.13);
+}
+
+.tc-root .auth-entry-page .auth-illustration {
+  align-self: center;
+  margin: 42px 0 34px;
+  color: rgba(191, 245, 234, 0.92);
+  filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.2));
+}
+
+.tc-root .auth-entry-page .auth-illustration svg {
+  width: 132px;
+  height: 132px;
+}
+
+.tc-root .auth-entry-page .auth-left-copy,
+.tc-root .auth-entry-page .auth-left-tagline {
+  width: min(440px, 100%);
+  text-align: left;
+}
+
+.tc-root .auth-entry-page .auth-left-copy {
+  margin-top: 0;
+}
+
+.tc-root .auth-entry-page .auth-left-copy h3 {
+  max-width: 360px;
+  font-size: clamp(25px, 2.2vw, 34px);
+  line-height: 1.08;
+}
+
+.tc-root .auth-entry-page .auth-left-copy p {
+  max-width: 430px;
+  font-size: 14px;
+}
+
+.tc-root .auth-entry-page .auth-left-tagline {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.tc-root .auth-entry-page .auth-right-panel {
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 34px clamp(24px, 4vw, 54px);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(249, 252, 255, 0.94));
+  overflow-y: auto;
+}
+
+.tc-root .auth-entry-page .auth-right-panel > h2,
+.tc-root .auth-entry-page .auth-modal-tabs,
+.tc-root .auth-entry-page .auth-right-panel > form,
+.tc-root .auth-entry-page .auth-switch-text {
+  width: min(640px, 100%);
+}
+
+.tc-root .auth-entry-page .auth-right-panel > h2 {
+  font-size: clamp(27px, 3vw, 36px);
+  letter-spacing: 0;
+}
+
+.tc-root .auth-entry-page .auth-modal-tabs {
+  padding: 4px;
+  border: 1px solid rgba(48, 74, 105, 0.12);
+  border-radius: 15px;
+  background: #eef4f7;
+}
+
+.tc-root .auth-entry-page .auth-modal-tab {
+  border-radius: 11px;
+  padding: 10px 14px;
+  background: transparent;
+  font-weight: 800;
+}
+
+.tc-root .auth-entry-page .auth-modal-tab.active {
+  background: linear-gradient(135deg, #154f7a, #3c3277);
+  box-shadow: 0 8px 20px rgba(30, 74, 110, 0.18);
+}
+
+.tc-root .auth-entry-page .auth-right-panel > form {
+  padding: 22px;
+  border: 1px solid rgba(24, 82, 62, 0.12);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 255, 252, 0.96));
+  box-shadow: 0 18px 42px rgba(20, 62, 47, 0.08);
+}
+
+.tc-root .auth-entry-page .auth-input-wrap {
+  margin-bottom: 14px;
+}
+
+.tc-root .auth-entry-page .auth-input-wrap .input {
+  min-height: 46px;
+  border-radius: 12px;
+  background: #ffffff;
+  border-color: rgba(79, 109, 91, 0.18);
+}
+
+.tc-root .auth-entry-page .auth-input-wrap .input:focus {
+  border-color: #1d7dd8;
+  box-shadow:
+    0 0 0 3px rgba(29, 125, 216, 0.1),
+    0 8px 18px rgba(16, 163, 90, 0.08);
+}
+
+.tc-root .auth-entry-page .auth-account-select-panel {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.tc-root .auth-entry-page .auth-step-row {
+  gap: 10px;
+  margin: 0 0 18px;
+}
+
+.tc-root .auth-entry-page .auth-step-row span {
+  height: 6px;
+}
+
+.tc-root .auth-entry-page .auth-submit-btn {
+  min-height: 46px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #0f8d46, #0f8d75 54%, #1d7dd8);
+  box-shadow: 0 12px 24px rgba(15, 141, 70, 0.18);
+}
+
+.tc-root .auth-entry-page .auth-social-btn {
+  min-height: 40px;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.tc-root .auth-entry-page .auth-or {
+  margin: 11px 0;
+}
+
+.tc-root .auth-entry-page .auth-switch-text {
+  text-align: left;
+  padding-left: 4px;
+}
+
+@media (max-width: 900px) {
+  .tc-root .auth-entry-page .auth-left-panel {
+    flex-basis: 34%;
+    padding: 28px;
+  }
+
+  .tc-root .auth-entry-page .auth-left-copy h3 {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 720px) {
+  .tc-root main:has(.auth-entry-page) {
+    padding: 12px;
+  }
+
+  .tc-root .auth-entry-page .auth-modal {
+    min-height: calc(100vh - 24px);
+    max-height: none;
+    border-radius: 18px;
+  }
+
+  .tc-root .auth-entry-page .auth-left-panel {
+    display: none;
+  }
+
+  .tc-root .auth-entry-page .auth-right-panel {
+    padding: 24px 16px;
+  }
+
+  .tc-root .auth-entry-page .auth-right-panel > form {
+    padding: 16px;
+  }
 }
 

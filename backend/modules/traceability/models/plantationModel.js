@@ -2,17 +2,16 @@ const db = require('../../../config/db');
 const { buildWhere, buildUpdate } = require('../services/sqlBuilder');
 
 const PRODUCTION_TYPES = new Set([
-  'crop',
   'shrimp',
   'bee',
-  'artisan',
-  'women_ngo',
   'kotpad_handloom',
+  'sambalpuri_bandha',
 ]);
+const DEFAULT_PRODUCTION_TYPE = 'shrimp';
 
 function normalizeProductionType(value) {
-  const type = String(value || 'crop').trim();
-  return PRODUCTION_TYPES.has(type) ? type : 'crop';
+  const type = String(value || DEFAULT_PRODUCTION_TYPE).trim();
+  return PRODUCTION_TYPES.has(type) ? type : DEFAULT_PRODUCTION_TYPE;
 }
 
 function normalizePolygon(value) {
@@ -33,7 +32,7 @@ exports.createPlantation = async (data) => {
   const location_description = data.location_description ?? data.farm_location ?? null;
   const area_hectares = data.area_hectares ?? data.land_size ?? null;
   const polygon = data.polygon_coordinates === undefined ? null : normalizePolygon(data.polygon_coordinates);
-  const production_type = normalizeProductionType(data.production_type ?? data.type ?? data.farm_type);
+  const production_type = normalizeProductionType(data.production_type ?? data.type);
 
   const insert = (includeProductionType = true) => {
     const query = includeProductionType ? `
@@ -82,7 +81,12 @@ exports.createPlantation = async (data) => {
     return await insert(true);
   } catch (err) {
     if (err?.code === '42703' && String(err.message || '').includes('production_type')) {
-      return insert(false);
+      const fallbackResult = await insert(false);
+      fallbackResult.rows = fallbackResult.rows.map((row) => ({
+        ...row,
+        production_type,
+      }));
+      return fallbackResult;
     }
     throw err;
   }
@@ -98,14 +102,36 @@ exports.listPlantations = async (filters = {}) => {
     1
   );
 
-  const query = `
-    SELECT *
-    FROM plantations
-    ${where}
-    ORDER BY created_at DESC;
+  const withProductionType = `
+    SELECT p.*, COALESCE(p.production_type, f.crop_type) AS production_type, f.crop_type
+    FROM (
+      SELECT *
+      FROM plantations
+      ${where}
+    ) p
+    LEFT JOIN farms f ON f.farm_id = p.farm_id
+    ORDER BY p.created_at DESC;
   `;
 
-  return db.query(query, values);
+  const withoutProductionType = `
+    SELECT p.*, f.crop_type AS production_type, f.crop_type
+    FROM (
+      SELECT *
+      FROM plantations
+      ${where}
+    ) p
+    LEFT JOIN farms f ON f.farm_id = p.farm_id
+    ORDER BY p.created_at DESC;
+  `;
+
+  try {
+    return await db.query(withProductionType, values);
+  } catch (err) {
+    if (err?.code === '42703' && String(err.message || '').includes('production_type')) {
+      return db.query(withoutProductionType, values);
+    }
+    throw err;
+  }
 };
 
 exports.getPlantationById = async (id) => {
@@ -116,12 +142,11 @@ exports.updatePlantation = async (id, data) => {
   const hasPolygon = Object.prototype.hasOwnProperty.call(data || {}, 'polygon_coordinates');
   const hasProductionType =
     Object.prototype.hasOwnProperty.call(data || {}, 'production_type') ||
-    Object.prototype.hasOwnProperty.call(data || {}, 'type') ||
-    Object.prototype.hasOwnProperty.call(data || {}, 'farm_type');
+    Object.prototype.hasOwnProperty.call(data || {}, 'type');
   const normalizedData = {
     ...data,
     production_type: hasProductionType
-      ? normalizeProductionType(data.production_type ?? data.type ?? data.farm_type)
+      ? normalizeProductionType(data.production_type ?? data.type)
       : undefined,
   };
   const built = buildUpdate({

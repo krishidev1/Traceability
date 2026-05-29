@@ -1,0 +1,235 @@
+.tc-root .kotpad-production-fields,
+.tc-root .production-theme-kotpad .production-fields {
+  display: contents;
+}
+
+.tc-root .production-theme-kotpad {
+  --production-primary: #7f1d1d;
+  --production-secondary: #9f4a22;
+  --production-accent: #27548a;
+  --production-soft: #fff4f1;
+  --production-line: rgba(127, 29, 29, 0.22);
+}
+
+.tc-root .production-theme-kotpad .dashboard-hero,
+.tc-root .production-theme-kotpad .plantation-hero {
+  background:
+    radial-gradient(circle at top left, rgba(159, 74, 34, 0.18), transparent 32%),
+    linear-gradient(135deg, #fffafa, #fff2ed 52%, #edf5ff);
+  border-color: var(--production-line);
+}
+
+.tc-root .production-theme-kotpad .card,
+.tc-root .production-theme-kotpad .stage-progress-card,
+.tc-root .production-theme-kotpad .stat-card,
+.tc-root .production-theme-kotpad .plantation-card {
+  border-color: var(--production-line);
+  box-shadow: 0 12px 30px rgba(127, 29, 29, 0.08);
+}
+
+.tc-root .production-theme-kotpad .dashboard-kicker,
+.tc-root .production-theme-kotpad .plantation-kicker,
+.tc-root .production-theme-kotpad .stage-progress-kicker,
+.tc-root .production-theme-kotpad .card-title {
+  color: var(--production-primary);
+}
+
+.tc-root .production-theme-kotpad .btn-primary,
+.tc-root .production-theme-kotpad .step-btn.active,
+.tc-root .production-theme-kotpad .dashboard-active-farm:not(.grower-id-panel) {
+  background: linear-gradient(135deg, var(--production-primary), var(--production-secondary));
+  box-shadow: 0 12px 24px rgba(127, 29, 29, 0.2);
+}
+
+.tc-root .production-theme-kotpad .step-btn.done,
+.tc-root .production-theme-kotpad .btn-outline,
+.tc-root .production-theme-kotpad .status-chip.active {
+  background: linear-gradient(135deg, #fff4f1, #edf5ff);
+  border-color: var(--production-line);
+  color: var(--production-primary);
+}
+
+.tc-root .production-theme-kotpad .stage-progress-fill {
+  background: linear-gradient(90deg, var(--production-primary), var(--production-secondary), var(--production-accent));
+}
+
+.tc-root .production-theme-kotpad .input:focus {
+  border-color: var(--production-primary);
+  box-shadow: 0 0 0 3px rgba(127, 29, 29, 0.12);
+}
+
+.tc-root .kotpad-section-label {
+  grid-column: 1 / -1;
+  color: var(--production-primary);
+  border-bottom: 1px solid var(--production-line);
+  padding-bottom: 6px;
+}
+
+.tc-root .kotpad-wide-field {
+  grid-column: span 2;
+}
+
+.tc-root .kotpad-textarea {
+  min-height: 82px;
+  resize: vertical;
+}
+
+.tc-root .kotpad-locked-input {
+  color: #5b3940;
+  background: linear-gradient(180deg, #fff7f5, #f7fbff);
+  border-color: var(--production-line);
+}
+
+.tc-root .kotpad-fixed-field .field-label::after {
+  content: none;
+}
+
+@media (max-width: 760px) {
+  .tc-root .kotpad-wide-field {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Kotpad form alignment pass */
+.tc-root .production-theme-kotpad .stage-progress-card,
+.tc-root .production-theme-kotpad .card {
+  border-radius: 14px;
+}
+
+.tc-root .kotpad-form-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-flow: row;
+  align-items: end;
+  gap: 14px 14px;
+}
+
+.tc-root .kotpad-form-grid .form-section-label {
+  grid-column: 1 / -1;
+  width: fit-content;
+  min-height: 28px;
+  margin: 6px 0 2px;
+  padding: 6px 12px;
+  border: 1px solid rgba(127, 29, 29, 0.16);
+  border-radius: 999px;
+  background: linear-gradient(135deg, #fff7ed, #effaf2);
+  box-shadow: 0 8px 18px rgba(127, 29, 29, 0.06);
+}
+
+.tc-root .kotpad-form-grid .field-wrap {
+  min-width: 0;
+  gap: 6px;
+}
+
+.tc-root .kotpad-form-grid .field-label {
+  min-height: 22px;
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  line-height: 1.12;
+}
+
+.tc-root .kotpad-fixed-field .field-label::after {
+  content: none;
+  display: none;
+}
+
+.tc-root .kotpad-form-grid .input {
+  min-height: 42px;
+  height: 42px;
+  padding: 8px 12px;
+  border-radius: 11px;
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.tc-root .kotpad-form-grid textarea.input,
+.tc-root .kotpad-form-grid .kotpad-textarea {
+  height: auto;
+  min-height: 68px;
+  padding-top: 10px;
+  resize: vertical;
+}
+
+.tc-root .kotpad-locked-input {
+  color: var(--production-primary);
+  background:
+    linear-gradient(180deg, #fff9f6, #f9fcff);
+  font-weight: 600;
+  text-overflow: ellipsis;
+}
+
+.tc-root .kotpad-locked-input::placeholder {
+  color: rgba(127, 29, 29, 0.58);
+  font-weight: 600;
+}
+
+.tc-root .kotpad-wide-field {
+  grid-column: span 2;
+}
+
+.tc-root .kotpad-form-grid .field-btn-wrap {
+  align-self: end;
+  padding-top: 28px;
+}
+
+.tc-root .kotpad-form-grid .field-btn-wrap .btn {
+  width: min(100%, 210px);
+  min-height: 42px;
+  align-self: flex-start;
+  border-radius: 11px;
+}
+
+.tc-root .production-theme-kotpad .process-card .form-row {
+  grid-template-columns: minmax(0, 1fr) 148px;
+  align-items: stretch;
+}
+
+.tc-root .production-theme-kotpad .process-card .input,
+.tc-root .production-theme-kotpad .process-card .btn {
+  min-height: 42px;
+}
+
+.tc-root .production-theme-kotpad .process-card .btn {
+  width: 100%;
+}
+
+@media (min-width: 1500px) {
+  .tc-root .kotpad-form-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1100px) {
+  .tc-root .kotpad-form-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .tc-root .kotpad-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tc-root .kotpad-wide-field {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 520px) {
+  .tc-root .kotpad-form-grid,
+  .tc-root .production-theme-kotpad .process-card .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .tc-root .kotpad-form-grid .field-btn-wrap {
+    padding-top: 0;
+  }
+
+  .tc-root .kotpad-form-grid .field-btn-wrap .btn {
+    width: 100%;
+    max-width: none;
+  }
+}

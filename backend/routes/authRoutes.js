@@ -15,11 +15,8 @@ let schemaReadyPromise = null;
 
 const ACCOUNT_TYPE_ALIASES = new Map([
   ['grower', 'grower'],
-  ['crop_farmer', 'grower'],
   ['shrimp_farmer', 'grower'],
   ['beekeeper', 'grower'],
-  ['artisan', 'grower'],
-  ['women_ngo', 'grower'],
   ['government_organization', 'grower'],
   ['farmer', 'grower'],
   ['supplier', 'supplier'],

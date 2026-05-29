@@ -106,6 +106,10 @@ export const traceabilityApi = {
     method: "POST",
     body: JSON.stringify(payload),
   }),
+  createSambalpuriBandhaProduct: (payload) => apiRequest("/api/traceability/sambalpuri-bandha-products", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  }),
   deleteCrop: (id) => apiRequest(`/api/traceability/crops/${encodeURIComponent(id)}`, {
     method: "DELETE",
   }),

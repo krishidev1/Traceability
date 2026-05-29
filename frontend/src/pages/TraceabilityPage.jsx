@@ -86,7 +86,7 @@ export default function TraceabilityPage({
                 ) : (
                   <a
                     className="ta-btn-black ta-btn-lg ta-btn-link"
-                    href="#/"
+                    href="#/auth"
                   >
                     Start Monitoring <ArrowRight size={18} />
                   </a>

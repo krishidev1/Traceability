@@ -110,33 +110,26 @@ CREATE INDEX IF NOT EXISTS verification_documents_user_id_idx
   ON public.verification_documents (user_id);
 
 -- =========================
--- 3. CROP FARMING FIELDS
--- Existing tables extended: farms, crops, monitoring_records, packings.
+-- 3. PRODUCTION TYPE FIELD
 -- =========================
 
-ALTER TABLE public.farms
-  ADD COLUMN IF NOT EXISTS soil_type character varying(100),
-  ADD COLUMN IF NOT EXISTS irrigation_method character varying(100),
-  ADD COLUMN IF NOT EXISTS is_organic boolean,
-  ADD COLUMN IF NOT EXISTS farm_type character varying(50);
+ALTER TABLE public.plantations
+  ADD COLUMN IF NOT EXISTS production_type character varying(50) DEFAULT 'shrimp';
 
 ALTER TABLE public.plantations
-  ADD COLUMN IF NOT EXISTS production_type character varying(50) DEFAULT 'crop';
+  ALTER COLUMN production_type SET DEFAULT 'shrimp';
 
-ALTER TABLE public.crops
-  ADD COLUMN IF NOT EXISTS seed_source character varying(150);
+UPDATE public.plantations
+SET production_type = 'shrimp'
+WHERE production_type IS NULL
+   OR production_type NOT IN ('shrimp', 'bee', 'kotpad_handloom');
 
-ALTER TABLE public.monitoring_records
-  ADD COLUMN IF NOT EXISTS fertilizer_usage text,
-  ADD COLUMN IF NOT EXISTS pesticide_records text,
-  ADD COLUMN IF NOT EXISTS irrigation_logs text,
-  ADD COLUMN IF NOT EXISTS disease_detection text,
-  ADD COLUMN IF NOT EXISTS drone_monitoring text;
+ALTER TABLE public.plantations
+  DROP CONSTRAINT IF EXISTS plantations_production_type_check;
 
-ALTER TABLE public.packings
-  ADD COLUMN IF NOT EXISTS batch_number character varying(100),
-  ADD COLUMN IF NOT EXISTS cold_storage text,
-  ADD COLUMN IF NOT EXISTS transport_method character varying(100);
+ALTER TABLE public.plantations
+  ADD CONSTRAINT plantations_production_type_check
+  CHECK (production_type IN ('shrimp', 'bee', 'kotpad_handloom'));
 
 -- =========================
 -- 4. SHRIMP FARMING FIELDS
@@ -277,37 +270,7 @@ CREATE TABLE IF NOT EXISTS public.honey_harvests
 );
 
 -- =========================
--- 6. ARTISAN FIELDS
--- =========================
-
-CREATE TABLE IF NOT EXISTS public.artisan_profiles
-(
-  artisan_id serial NOT NULL,
-  user_id integer NOT NULL,
-  artisan_name character varying(150) NOT NULL,
-  craft_type character varying(120),
-  workshop_location text,
-  years_of_experience integer,
-  number_of_workers integer,
-  products_manufactured text,
-  raw_materials_used text,
-  monthly_production_capacity character varying(100),
-  production_method character varying(80),
-  packaging_method character varying(120),
-  accept_bulk_orders boolean DEFAULT false,
-  export_ready boolean DEFAULT false,
-  online_selling_experience text,
-  delivery_regions text,
-  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT artisan_profiles_pkey PRIMARY KEY (artisan_id),
-  CONSTRAINT artisan_profiles_user_id_fkey FOREIGN KEY (user_id)
-    REFERENCES public.users (user_id) MATCH SIMPLE
-    ON UPDATE NO ACTION
-    ON DELETE CASCADE
-);
-
--- =========================
--- 7. KOTPAD HANDLOOM FABRIC FIELDS
+-- 6. KOTPAD HANDLOOM FABRIC FIELDS
 -- =========================
 
 CREATE TABLE IF NOT EXISTS public.kotpad_handloom_fabrics
@@ -317,16 +280,17 @@ CREATE TABLE IF NOT EXISTS public.kotpad_handloom_fabrics
   plantation_id integer,
   product_name character varying(180) DEFAULT 'Kotpad Handloom Fabric',
   gi_tag_number character varying(120),
+  gi_application_number character varying(120) DEFAULT '10',
   category character varying(120) DEFAULT 'Handloom / Textile',
   state character varying(80) DEFAULT 'Odisha',
   district character varying(100) DEFAULT 'Koraput',
   region_cluster character varying(180) DEFAULT 'Kotpad Village',
-  gi_registration_date date,
+  gi_registration_date date DEFAULT DATE '2005-06-02',
   description text,
   cultural_significance text,
   gi_certificate_url text,
   weaver_name character varying(180),
-  community_name character varying(150),
+  community_name character varying(150) DEFAULT 'Mirgan Community',
   organization_type character varying(100),
   id_proof_url text,
   contact_number character varying(20),
@@ -335,15 +299,15 @@ CREATE TABLE IF NOT EXISTS public.kotpad_handloom_fabrics
   experience_in_weaving character varying(80),
   family_members_involved integer,
   gps_location character varying(120),
-  fabric_type character varying(100),
+  fabric_type character varying(100) DEFAULT 'Cotton',
   yarn_source character varying(120),
-  natural_dye_used character varying(180),
+  natural_dye_used character varying(180) DEFAULT 'Aal Tree Bark',
   dye_preparation_method text,
   water_source character varying(120),
   chemical_free_status boolean,
   eco_friendly_certificate_url text,
-  loom_type character varying(120),
-  weaving_technique character varying(180),
+  loom_type character varying(120) DEFAULT 'Pit Loom',
+  weaving_technique character varying(180) DEFAULT 'Traditional Handloom',
   time_taken_per_fabric character varying(80),
   daily_production_capacity character varying(100),
   design_pattern text,
@@ -367,8 +331,8 @@ CREATE TABLE IF NOT EXISTS public.kotpad_handloom_fabrics
   export_availability boolean,
   packaging_type character varying(120),
   shipping_time character varying(80),
-  marketplace_visibility character varying(30),
-  natural_dye_usage boolean,
+  marketplace_visibility character varying(30) DEFAULT 'Public',
+  natural_dye_usage boolean DEFAULT true,
   tribal_women_involved boolean,
   carbon_friendly_production boolean,
   water_recycling_used boolean,
@@ -401,37 +365,7 @@ CREATE INDEX IF NOT EXISTS kotpad_handloom_fabrics_plantation_id_idx
   ON public.kotpad_handloom_fabrics (plantation_id);
 
 -- =========================
--- 8. WOMEN NGO FIELDS
--- =========================
-
-CREATE TABLE IF NOT EXISTS public.women_ngo_profiles
-(
-  ngo_id serial NOT NULL,
-  user_id integer NOT NULL,
-  ngo_name character varying(180) NOT NULL,
-  registration_number character varying(120),
-  coordinator_name character varying(150),
-  women_member_count integer,
-  operational_districts text,
-  skill_development text,
-  livelihood_programs text,
-  training_sessions text,
-  community_support text,
-  government_partnerships text,
-  families_supported integer,
-  income_generated numeric,
-  products_services_offered text,
-  beneficiary_tracking text,
-  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT women_ngo_profiles_pkey PRIMARY KEY (ngo_id),
-  CONSTRAINT women_ngo_profiles_user_id_fkey FOREIGN KEY (user_id)
-    REFERENCES public.users (user_id) MATCH SIMPLE
-    ON UPDATE NO ACTION
-    ON DELETE CASCADE
-);
-
--- =========================
--- 9. SUPPLIER / MARKETPLACE / LOGISTICS FIELDS
+-- 7. SUPPLIER / MARKETPLACE / LOGISTICS FIELDS
 -- =========================
 
 CREATE TABLE IF NOT EXISTS public.marketplace_logistics

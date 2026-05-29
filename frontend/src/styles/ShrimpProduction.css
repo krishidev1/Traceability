@@ -1,0 +1,59 @@
+.tc-root .shrimp-production-fields,
+.tc-root .production-theme-shrimp .production-fields {
+  display: contents;
+}
+
+.tc-root .production-theme-shrimp {
+  --production-primary: #0b6f8a;
+  --production-secondary: #179f9a;
+  --production-accent: #7c5cff;
+  --production-soft: #e8fbff;
+  --production-line: rgba(11, 111, 138, 0.22);
+}
+
+.tc-root .production-theme-shrimp .dashboard-hero,
+.tc-root .production-theme-shrimp .plantation-hero {
+  background:
+    radial-gradient(circle at top left, rgba(23, 159, 154, 0.22), transparent 34%),
+    linear-gradient(135deg, #f7fdff, #edfaff 50%, #f2efff);
+  border-color: var(--production-line);
+}
+
+.tc-root .production-theme-shrimp .card,
+.tc-root .production-theme-shrimp .stage-progress-card,
+.tc-root .production-theme-shrimp .stat-card,
+.tc-root .production-theme-shrimp .plantation-card {
+  border-color: var(--production-line);
+  box-shadow: 0 12px 30px rgba(11, 111, 138, 0.08);
+}
+
+.tc-root .production-theme-shrimp .dashboard-kicker,
+.tc-root .production-theme-shrimp .plantation-kicker,
+.tc-root .production-theme-shrimp .stage-progress-kicker,
+.tc-root .production-theme-shrimp .card-title {
+  color: var(--production-primary);
+}
+
+.tc-root .production-theme-shrimp .btn-primary,
+.tc-root .production-theme-shrimp .step-btn.active,
+.tc-root .production-theme-shrimp .dashboard-active-farm:not(.grower-id-panel) {
+  background: linear-gradient(135deg, var(--production-primary), var(--production-secondary));
+  box-shadow: 0 12px 24px rgba(11, 111, 138, 0.2);
+}
+
+.tc-root .production-theme-shrimp .step-btn.done,
+.tc-root .production-theme-shrimp .btn-outline,
+.tc-root .production-theme-shrimp .status-chip.active {
+  background: linear-gradient(135deg, #eefcff, #f4f2ff);
+  border-color: var(--production-line);
+  color: var(--production-primary);
+}
+
+.tc-root .production-theme-shrimp .stage-progress-fill {
+  background: linear-gradient(90deg, var(--production-primary), var(--production-secondary), var(--production-accent));
+}
+
+.tc-root .production-theme-shrimp .input:focus {
+  border-color: var(--production-primary);
+  box-shadow: 0 0 0 3px rgba(11, 111, 138, 0.12);
+}

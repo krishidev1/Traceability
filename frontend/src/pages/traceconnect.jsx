@@ -1,4 +1,4 @@
-
+﻿
 import { useState, useEffect, useContext, createContext, useRef } from "react";
 import {
   FiLock, FiCheckCircle, FiUser, FiLogOut,
@@ -10,6 +10,28 @@ import {
 } from "react-icons/fi";
 import "../styles/traceconnect.css";
 import { authApi, clearAuth, getApiUrl, getStoredAuth, storeAuth, traceabilityApi } from "../api/traceabilityApi";
+import TraceabilityPage from "./TraceabilityPage";
+import ShrimpProductionFields, {
+  SHRIMP_PRODUCTION_CONFIG,
+  buildShrimpDetails,
+  createShrimpInitialFields,
+} from "./ShrimpProduction";
+import BeeProductionFields, {
+  BEE_PRODUCTION_CONFIG,
+  buildBeeDetails,
+  createBeeInitialFields,
+} from "./BeeProduction";
+import KotpadHandloomProductionFields, {
+  KOTPAD_PRODUCTION_CONFIG,
+  buildKotpadDetails,
+  createKotpadInitialFields,
+} from "./KotpadHandloomProduction";
+import SambalpuriBandhaProductionFields, {
+  SAMBALPURI_PRODUCTION_CONFIG,
+  buildSambalpuriDetails,
+  buildSambalpuriProductPayload,
+  createSambalpuriInitialFields,
+} from "./SambalpuriBandhaProduction";
 
 const AuthContext = createContext(null);
 const DataContext = createContext(null);
@@ -17,6 +39,8 @@ const TODAY = new Date().toISOString().split("T")[0];
 const API_URL = getApiUrl();
 const TRACE_CONNECT_LOGO_SRC = "/Traceconnect sample.jpeg";
 const LOADING_GIF_SRC = "/loading.gif";
+const GI_LOGO_SRC = "/gi-logo.svg";
+const KOTPAD_GI_CERTIFICATE_PDF_SRC = "/kotpad-gi-certificate.pdf";
 
 function delay(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -104,7 +128,7 @@ function fromDbPlantation(row) {
     userId: Number(row.user_id),
     name: row.name || "",
     location: row.location_description || "",
-    type: normalizeProductionType(row.production_type || row.type || row.farm_type || "crop"),
+    type: normalizeProductionType(row.production_type || row.crop_type || row.type || "shrimp"),
     status: (row.status || "active").toLowerCase() === "active" ? "Active" : String(row.status),
     createdAt: toISODate(row.created_at),
   };
@@ -354,14 +378,14 @@ function drawMapPlaceholder(ctx, x, y, size, radius) {
   ctx.lineWidth = 1;
   ctx.stroke();
   ctx.fillStyle = "rgba(255,255,255,0.65)";
-  ctx.font = `${Math.max(10, size * 0.12)}px Inter, sans-serif`;
+  ctx.font = `${Math.max(10, size * 0.12)}px Poppins, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText("Map unavailable", x + size / 2, y + size / 2);
   ctx.restore();
 }
 
-function drawGiCertificateStamp(ctx, width, height) {
+async function drawGiCertificateStamp(ctx, width, height, productLabel = "GI TAGGED") {
   const padding = Math.round(Math.min(width, height) * 0.035);
   const badgeWidth = Math.min(Math.round(width * 0.34), 380);
   const badgeHeight = Math.max(96, Math.round(badgeWidth * 0.34));
@@ -395,20 +419,32 @@ function drawGiCertificateStamp(ctx, width, height) {
   ctx.arc(sealX + sealSize / 2, sealY + sealSize / 2, sealSize / 2, 0, Math.PI * 2);
   ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
   ctx.fill();
-  ctx.fillStyle = "#0f8d75";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.font = `800 ${Math.round(sealSize * 0.34)}px Inter, sans-serif`;
-  ctx.fillText("GI", sealX + sealSize / 2, sealY + sealSize / 2 + 1);
+  try {
+    const logo = await loadImageElement(GI_LOGO_SRC);
+    const logoPadding = Math.round(sealSize * 0.16);
+    ctx.drawImage(
+      logo,
+      sealX + logoPadding,
+      sealY + logoPadding,
+      sealSize - logoPadding * 2,
+      sealSize - logoPadding * 2,
+    );
+  } catch {
+    ctx.fillStyle = "#0f8d75";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = `800 ${Math.round(sealSize * 0.34)}px Poppins, sans-serif`;
+    ctx.fillText("GI", sealX + sealSize / 2, sealY + sealSize / 2 + 1);
+  }
 
   const textX = sealX + sealSize + Math.round(badgeHeight * 0.18);
   ctx.textAlign = "left";
   ctx.fillStyle = "#ffffff";
-  ctx.font = `800 ${Math.max(18, Math.round(badgeHeight * 0.22))}px Inter, sans-serif`;
+  ctx.font = `800 ${Math.max(18, Math.round(badgeHeight * 0.22))}px Poppins, sans-serif`;
   ctx.fillText("CERTIFIED GI", textX, y + Math.round(badgeHeight * 0.38));
-  ctx.font = `700 ${Math.max(12, Math.round(badgeHeight * 0.13))}px Inter, sans-serif`;
+  ctx.font = `700 ${Math.max(12, Math.round(badgeHeight * 0.13))}px Poppins, sans-serif`;
   ctx.fillStyle = "rgba(255, 255, 255, 0.86)";
-  ctx.fillText("KOTPAD HANDLOOM", textX, y + Math.round(badgeHeight * 0.64));
+  ctx.fillText(productLabel, textX, y + Math.round(badgeHeight * 0.64));
   ctx.restore();
 }
 
@@ -416,7 +452,7 @@ function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(new Error("Unable to read selected image."));
+    reader.onerror = () => reject(new Error("Unable to read selected file."));
     reader.readAsDataURL(file);
   });
 }
@@ -443,8 +479,17 @@ async function addGiCertificateStampToImage(dataUrl) {
   canvas.height = outputHeight;
   const ctx = canvas.getContext("2d");
   ctx.drawImage(image, 0, 0, outputWidth, outputHeight);
-  drawGiCertificateStamp(ctx, outputWidth, outputHeight);
+  await drawGiCertificateStamp(ctx, outputWidth, outputHeight, "KOTPAD HANDLOOM");
   return canvas.toDataURL("image/jpeg", 0.92);
+}
+
+function isPdfUrl(url = "") {
+  const value = String(url || "").toLowerCase();
+  return value.startsWith("data:application/pdf") || value.includes(".pdf");
+}
+
+function isGiLogoProduction(mode) {
+  return mode === "kotpad_handloom" || mode === "sambalpuri_bandha";
 }
 
 function drawGeoOverlay(ctx, width, topY, panelHeight, details) {
@@ -497,12 +542,12 @@ function drawGeoOverlay(ctx, width, topY, panelHeight, details) {
   let cursorY = mapY;
   const textX = lineX + Math.round(padding * 0.7);
 
-  ctx.font = `600 ${nameFont}px Inter, sans-serif`;
+  ctx.font = `600 ${nameFont}px Poppins, sans-serif`;
   ctx.fillStyle = "rgba(255,255,255,0.95)";
   ctx.fillText(details.name, textX, cursorY);
 
   cursorY += nameFont + 10;
-  ctx.font = `500 ${textFont}px Inter, sans-serif`;
+  ctx.font = `500 ${textFont}px Poppins, sans-serif`;
   ctx.fillStyle = "rgba(255,255,255,0.9)";
   ctx.fillText(details.dateTime, textX, cursorY);
 
@@ -513,7 +558,7 @@ function drawGeoOverlay(ctx, width, topY, panelHeight, details) {
 
   const coordsLine = `Lat: ${formatCoords(details.lat)}, Long: ${formatCoords(details.lon)}`;
   ctx.fillStyle = "rgba(255,255,255,0.78)";
-  ctx.font = `500 ${smallFont}px Inter, sans-serif`;
+  ctx.font = `500 ${smallFont}px Poppins, sans-serif`;
   ctx.fillText(coordsLine, textX, mapY + mapSize - smallFont - 2);
 }
 
@@ -678,15 +723,22 @@ function DataProvider({ children }) {
   const addCrop = (c) => {
     return run(async () => {
       if (!user?.id) throw new Error("Not logged in");
-      const created = await traceabilityApi.createCrop({
+      const payload = {
         plantation_id: Number(c.plantationId),
         crop_name: c.name,
         crop_variety: c.variety || null,
         sowing_date: c.sowingDate || null,
         expected_harvest_date: c.expectedHarvest || null,
-      });
+      };
+      const created = c.productionType === "sambalpuri_bandha"
+        ? await traceabilityApi.createSambalpuriBandhaProduct({
+            ...payload,
+            ...(c.sambalpuri || {}),
+          })
+        : await traceabilityApi.createCrop(payload);
+      const cropRow = created?.crop || created;
       stabilizeTraceabilityViewport(() => {
-        setCrops((prev) => [...prev, fromDbCrop(created)]);
+        setCrops((prev) => [...prev, fromDbCrop(cropRow)]);
       });
       return created;
     }, "Failed to create crop");
@@ -1013,266 +1065,43 @@ function Toasts({ toasts }) {
   );
 }
 
-const CROP_OPTIONS = [
-  "Wheat",
-  "Rice",
-  "Lettuce",
-  "Corn",
-  "Tomato",
-  "Brinjal",
-  "Spinach",
-  "Green Gram",
-  "Cabbage",
-  "Cauliflower",
-  "Carrot",
-  "Beetroot",
-  "Okra",
-  "French Beans",
-  "Coriander",
-  "Fenugreek",
-  "Capsicum",
-  "Other",
-];
-const SHRIMP_OPTIONS = ["Vannamei Shrimp", "Tiger Prawn", "Scampi", "Giant Freshwater Prawn", "Other"];
-const MONITORING_TYPES = [
-  "Fertilizer Usage",
-  "Pesticide Records",
-  "Irrigation Logs",
-  "Disease Detection",
-  "Drone Monitoring",
-  "Organic Compost",
-  "Biofertilizer",
-  "Soil Treatment",
-  "Hive Inspection",
-  "Disease Check",
-  "Feeding Records",
-  "Temperature Monitoring",
-  "Humidity Monitoring",
-  "Apiary Name",
-  "Bee Species",
-  "Number of Hives",
-  "Queen Bee Age",
-  "Floral Source",
-  "Honey Type",
-  "Moisture Percentage",
-  "Raw / Processed",
-  "FSSAI License",
-  "Organic Certification",
-  "Lab Reports",
-  "Purity Verification",
-  "Artisan Name",
-  "Craft Type",
-  "Workshop Location",
-  "Years of Experience",
-  "Number of Workers",
-  "Products Manufactured",
-  "Raw Materials Used",
-  "Monthly Production Capacity",
-  "Handmade / Machine Assisted",
-  "Accept Bulk Orders",
-  "Export Ready",
-  "Online Selling Experience",
-  "Delivery Regions",
-  "NGO Name",
-  "Registration Number",
-  "Coordinator Name",
-  "Women Member Count",
-  "Operational Districts",
-  "Skill Development",
-  "Livelihood Programs",
-  "Training Sessions",
-  "Community Support",
-  "Government Partnerships",
-  "Families Supported",
-  "Income Generated",
-  "Products / Services Offered",
-  "Beneficiary Tracking",
-  "Other",
-];
-const SHRIMP_MONITORING = ["Water Quality", "Feed Monitoring", "Salinity Check", "Oxygen Level", "Disease Detection", "Aeration", "Other"];
 const HEALTH_OPTIONS = ["Excellent", "Good", "Moderate", "Poor", "Disease Detected", "Needs Inspection", "Purity Verified", "Lab Report Pending"];
 const UNIT_OPTIONS = ["kg", "ton", "count", "litre", "jar", "box", "pack", "piece"];
-const SOIL_TYPE_OPTIONS = ["Alluvial Soil", "Black Soil", "Red Soil", "Laterite Soil", "Sandy Soil", "Clay Soil", "Loamy Soil", "Silty Soil", "Other"];
-const IRRIGATION_METHOD_OPTIONS = ["Drip Irrigation", "Sprinkler Irrigation", "Flood Irrigation", "Canal Irrigation", "Borewell", "Rainfed", "Manual Watering", "Other"];
-const ORGANIC_STATUS_OPTIONS = ["Organic", "Non-Organic", "In Conversion"];
-const WATER_TYPE_OPTIONS = ["Fresh Water", "Brackish Water", "Marine Water", "Other"];
 const PACKAGING_METHOD_OPTIONS = ["Bag", "Sack", "Box", "Bottle / Jar", "Vacuum Pack", "Cold Chain Pack", "Bulk Crate", "Handmade Pack", "Other"];
 const TRANSPORT_METHOD_OPTIONS = ["Road Transport", "Refrigerated Vehicle", "Rail", "Air Cargo", "Sea Freight", "Courier", "Other"];
 const COLD_STORAGE_OPTIONS = ["Not Required", "Required", "Available", "Not Available"];
-const BEE_OPTIONS = ["Honey Bee", "Apis Cerana", "Apis Mellifera", "Stingless Bee", "Other"];
-const ARTISAN_OPTIONS = ["Handloom", "Handicraft", "Pottery", "Bamboo Craft", "Textile", "Jewellery", "Wood Craft", "Metal Craft", "Other"];
-const WOMEN_NGO_OPTIONS = ["Skill Development", "Livelihood Program", "Training Session", "Community Support", "Product Collective", "Beneficiary Program", "Other"];
-const KOTPAD_OPTIONS = ["Saree", "Shawl", "Fabric", "Stole", "Dupatta", "Dress Material", "Home Textile", "Other"];
-const KOTPAD_MONITORING = [
-  "GI Certificate Upload",
-  "Aadhaar / ID Proof",
-  "Eco-Friendly Certification",
-  "Batch Number",
-  "QR Verification Code",
-  "Weaver ID",
-  "Production Date",
-  "Geo-Fenced Production Area",
-  "Authenticity Certificate",
-  "Blockchain Trace ID",
-  "Inspection Status",
-  "Quality Grade",
-  "Product Images",
-  "Selling Price",
-  "Wholesale Price",
-  "Available Stock",
-  "Minimum Order Quantity",
-  "Export Availability",
-  "Packaging Type",
-  "Shipping Time",
-  "Marketplace Visibility",
-  "Natural Dye Usage",
-  "Tribal Women Involved",
-  "Carbon-Friendly Production",
-  "Water Recycling Used",
-  "Traditional Knowledge Preservation",
-  "Cultural Story",
-  "Government Recognition",
-  "Fabric Pattern Recognition",
-  "AI Authenticity Check",
-  "QR Scan History",
-  "Demand Forecasting",
-  "Export Analytics",
-  "Drone-based Cotton Monitoring",
-  "Other",
-];
-const TRACE_STAGES = ["Crops", "Ponds", "Apiaries", "Artisan Production", "NGO Programs", "Kotpad Fabric", "Monitoring", "Verification", "Harvest", "Packing"];
+const TRACE_STAGES = ["Ponds", "Apiaries", "Kotpad Fabric", "Sambalpuri Product", "Monitoring", "Verification", "Harvest", "Packing"];
 const PRODUCTION_TYPE_CONFIG = {
-  crop: {
-    value: "crop",
-    label: "Crop Farming",
-    badge: "Crop Farming",
-    badgeClass: "crop",
-    nameLabel: "Plantation Name",
-    namePlaceholder: "e.g. Green Valley Farm",
-    locationLabel: "Farm Location",
-    locationPlaceholder: "e.g. Puri, Odisha",
-    mode: "crop",
-    crop: "Crop",
-    crops: "Crops",
-    variety: "Variety",
-    varietyPlaceholder: "e.g. Hybrid-5, Baby Leaf",
-    startDateLabel: "Sowing Date *",
-    expectedDateLabel: "Expected Harvest Date",
-    startVerb: "Sown",
-    itemTypeLabel: "Crop Type",
-    options: CROP_OPTIONS,
-    monitoring: MONITORING_TYPES,
-  },
-  shrimp: {
-    value: "shrimp",
-    label: "Shrimp / Prawn Aquaculture",
-    badge: "Aquaculture",
-    badgeClass: "shrimp",
-    nameLabel: "Pond / Farm Name",
-    namePlaceholder: "e.g. Coastal Prawn Farm",
-    locationLabel: "Farm Location",
-    locationPlaceholder: "e.g. Chilika, Odisha",
-    mode: "shrimp",
-    crop: "Pond",
-    crops: "Ponds",
-    variety: "Hatchery / Seed Batch",
-    varietyPlaceholder: "e.g. SIS Hatchery Batch-22",
-    startDateLabel: "Stocking Date *",
-    expectedDateLabel: "Expected Harvest Date",
-    startVerb: "Stocked",
-    itemTypeLabel: "Species Cultured",
-    options: SHRIMP_OPTIONS,
-    monitoring: SHRIMP_MONITORING,
-  },
-  bee: {
-    value: "bee",
-    label: "Bee Farming / Apiculture",
-    badge: "Apiculture",
-    badgeClass: "bee",
-    nameLabel: "Apiary Name",
-    namePlaceholder: "e.g. Hill Apiary Cluster",
-    locationLabel: "Apiary Location",
-    locationPlaceholder: "e.g. Koraput, Odisha",
-    mode: "bee",
-    crop: "Apiary",
-    crops: "Apiaries",
-    variety: "Bee Species",
-    varietyPlaceholder: "e.g. Apis Cerana, Apis Mellifera",
-    startDateLabel: "Apiary Start Date *",
-    expectedDateLabel: "Expected Honey Harvest Date",
-    startVerb: "Started",
-    itemTypeLabel: "Bee Species",
-    options: BEE_OPTIONS,
-    monitoring: ["Hive Inspection", "Disease Check", "Feeding Records", "Temperature Monitoring", "Humidity Monitoring", "FSSAI License", "Organic Certification", "Lab Reports", "Purity Verification", "Other"],
-  },
-  artisan: {
-    value: "artisan",
-    label: "Artisan Production",
-    badge: "Artisan",
-    badgeClass: "artisan",
-    nameLabel: "Workshop / Unit Name",
-    namePlaceholder: "e.g. Odisha Handicraft Unit",
-    locationLabel: "Workshop Location",
-    locationPlaceholder: "e.g. Pipili, Odisha",
-    mode: "artisan",
-    crop: "Production",
-    crops: "Artisan Production",
-    variety: "Craft / Product Details",
-    varietyPlaceholder: "e.g. bamboo basket, handloom shawl",
-    startDateLabel: "Production Start Date *",
-    expectedDateLabel: "Expected Completion Date",
-    startVerb: "Started",
-    itemTypeLabel: "Craft Type",
-    options: ARTISAN_OPTIONS,
-    monitoring: ["Products Manufactured", "Raw Materials Used", "Monthly Production Capacity", "Handmade / Machine Assisted", "Packaging Method", "Accept Bulk Orders", "Export Ready", "Online Selling Experience", "Delivery Regions", "Other"],
-  },
-  women_ngo: {
-    value: "women_ngo",
-    label: "Women NGO",
-    badge: "Women NGO",
-    badgeClass: "ngo",
-    nameLabel: "NGO / Program Name",
-    namePlaceholder: "e.g. Maa Women SHG Collective",
-    locationLabel: "Operational Location",
-    locationPlaceholder: "e.g. Puri, Odisha",
-    mode: "women_ngo",
-    crop: "Program",
-    crops: "NGO Programs",
-    variety: "Program / Activity",
-    varietyPlaceholder: "e.g. tailoring training, livelihood support",
-    startDateLabel: "Program Start Date *",
-    expectedDateLabel: "Expected Completion Date",
-    startVerb: "Started",
-    itemTypeLabel: "Program Type",
-    options: WOMEN_NGO_OPTIONS,
-    monitoring: ["Skill Development", "Livelihood Programs", "Training Sessions", "Community Support", "Government Partnerships", "Families Supported", "Income Generated", "Products / Services Offered", "Beneficiary Tracking", "Other"],
-  },
-  kotpad_handloom: {
-    value: "kotpad_handloom",
-    label: "Kotpad Handloom Fabric",
-    badge: "Kotpad GI Fabric",
-    badgeClass: "kotpad",
-    nameLabel: "Kotpad Product Name",
-    namePlaceholder: "e.g. Kotpad natural dyed shawl",
-    locationLabel: "Cluster / Weaver Location",
-    locationPlaceholder: "e.g. Kotpad, Koraput, Odisha",
-    mode: "kotpad_handloom",
-    crop: "Fabric Batch",
-    crops: "Kotpad Fabric",
-    variety: "Design / Fabric Details",
-    varietyPlaceholder: "e.g. tribal motif, maroon-black cotton",
-    startDateLabel: "Production Date *",
-    expectedDateLabel: "Expected Completion Date",
-    startVerb: "Produced",
-    itemTypeLabel: "Kotpad Product Type",
-    options: KOTPAD_OPTIONS,
-    monitoring: KOTPAD_MONITORING,
-  },
+  shrimp: SHRIMP_PRODUCTION_CONFIG,
+  bee: BEE_PRODUCTION_CONFIG,
+  kotpad_handloom: KOTPAD_PRODUCTION_CONFIG,
+  sambalpuri_bandha: SAMBALPURI_PRODUCTION_CONFIG,
 };
 const PRODUCTION_TYPES = Object.values(PRODUCTION_TYPE_CONFIG);
+const PRODUCTION_FIELD_COMPONENTS = {
+  shrimp: ShrimpProductionFields,
+  bee: BeeProductionFields,
+  kotpad_handloom: KotpadHandloomProductionFields,
+  sambalpuri_bandha: SambalpuriBandhaProductionFields,
+};
+const PRODUCTION_INITIAL_FIELDS = {
+  shrimp: createShrimpInitialFields,
+  bee: createBeeInitialFields,
+  kotpad_handloom: createKotpadInitialFields,
+  sambalpuri_bandha: createSambalpuriInitialFields,
+};
+const PRODUCTION_DETAIL_BUILDERS = {
+  shrimp: buildShrimpDetails,
+  bee: buildBeeDetails,
+  kotpad_handloom: buildKotpadDetails,
+  sambalpuri_bandha: buildSambalpuriDetails,
+};
+const PRODUCTION_RECORD_BUILDERS = {
+  sambalpuri_bandha: buildSambalpuriProductPayload,
+};
 
 function normalizeProductionType(value) {
-  return PRODUCTION_TYPE_CONFIG[value] ? value : "crop";
+  return PRODUCTION_TYPE_CONFIG[value] ? value : "shrimp";
 }
 
 function getProductionTypeConfig(value) {
@@ -1285,6 +1114,55 @@ function mergeDetails(base, details) {
     .map(([label, value]) => `${label}: ${value}`)
     .join(" | ");
   return [base, suffix].filter((value) => String(value || "").trim()).join(" | ");
+}
+
+function parseDetailsText(value = "") {
+  const parts = String(value || "")
+    .split(" | ")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const primary = (parts.shift() || "").replace(/^-+\s*/, "");
+  const details = new Map();
+
+  parts.forEach((part) => {
+    const index = part.indexOf(":");
+    if (index <= 0) return;
+    const label = part.slice(0, index).trim();
+    const detailValue = part.slice(index + 1).trim();
+    if (label && detailValue) details.set(label, detailValue);
+  });
+
+  return { primary, details };
+}
+
+function getCompactCropSummary(mode, variety) {
+  const { primary, details } = parseDetailsText(variety);
+  const labelSets = {
+    kotpad_handloom: ["Batch Number", "QR Verification Code", "Inspection Status"],
+    sambalpuri_bandha: ["Batch Number", "QR Verification Code", "Inspection Status"],
+  };
+  const labels = labelSets[mode] || [];
+  const tags = labels
+    .map((label) => ({ label, value: details.get(label) }))
+    .filter((item) => item.value)
+    .slice(0, 3);
+
+  if (!labels.length) {
+    return {
+      primary: primary || String(variety || "").trim(),
+      tags: [],
+    };
+  }
+
+  return {
+    primary:
+      primary ||
+      details.get("Design Pattern") ||
+      details.get("Bandha Pattern") ||
+      details.get("Product Name") ||
+      "GI-tagged batch",
+    tags,
+  };
 }
 
 function ConfirmDialog({ message, onConfirm, onCancel }) {
@@ -1876,7 +1754,7 @@ function GrowerDashboard({ navigate, toast }) {
   const { user } = useAuth();
   const { plantations, crops, harvests, packings, addPlantation, delPlantation, farms, selectedFarmId } = useData();
   const { confirm, dialog } = useConfirm();
-  const [form, setForm] = useState({ type: "crop", name: "", location: "" });
+  const [form, setForm] = useState({ type: "shrimp", name: "", location: "" });
   const mine = plantations;
   const mineIds = mine.map((p) => p.id);
   const totalHarvested = harvests.filter((h) => mineIds.includes(h.plantationId)).reduce((s, h) => s + (h.accepted || 0), 0);
@@ -1895,7 +1773,7 @@ function GrowerDashboard({ navigate, toast }) {
     try {
       await addPlantation({ ...form, status: "Active" });
       stabilizeTraceabilityViewport(() => {
-        setForm({ type: "crop", name: "", location: "" });
+        setForm({ type: "shrimp", name: "", location: "" });
         toast("Plantation created successfully!", "success");
       });
     } catch (e) {
@@ -1915,14 +1793,14 @@ function GrowerDashboard({ navigate, toast }) {
   };
 
   return (
-      <div className="page-container">
+      <div className={`page-container ${selectedProduction.themeClass || ""}`}>
         {dialog}
       <div className="dashboard-hero">
         <div className="dashboard-hero-copy">
           <div className="dashboard-kicker">Grower Workspace</div>
           <h1>Grower Dashboard</h1>
           <p className="dashboard-subtitle">
-            Welcome back, {user?.name}. Keep track of plantations, crop flow,
+            Welcome back, {user?.name}. Keep track of plantations, production flow,
             harvest numbers, and packing readiness from one clean view.
           </p>
           <div className="dashboard-pill-row">
@@ -1954,7 +1832,7 @@ function GrowerDashboard({ navigate, toast }) {
 
       <div className="stats-row">
         <StatCard icon={<FiGrid />} label="Plantations" value={mine.length} color="green" />
-        <StatCard icon={<FiStar />} label="Crops" value={crops.filter((c) => mineIds.includes(c.plantationId)).length} color="amber" />
+        <StatCard icon={<FiStar />} label="Trace Items" value={crops.filter((c) => mineIds.includes(c.plantationId)).length} color="amber" />
         <StatCard icon={<FiTrendingUp />} label="Harvested (kg)" value={totalHarvested} color="blue" />
         <StatCard icon={<FiPackage />} label="Packings" value={packings.filter((p) => mineIds.includes(p.plantationId)).length} color="purple" />
       </div>
@@ -2097,7 +1975,7 @@ function PlantationDetail({ plantationId, toast }) {
   };
 
   return (
-    <div className="page-container">
+    <div className={`page-container ${L.themeClass || ""}`}>
       {dialog}
       <div className="plantation-hero">
         <div className="plantation-hero-copy">
@@ -2215,6 +2093,7 @@ function PlantationDetail({ plantationId, toast }) {
           addProcessImage={addProcessImage}
           delProcessImage={delProcessImage}
           toast={toast}
+          L={L}
         />
       )}
 
@@ -2245,7 +2124,7 @@ function PlantationDetail({ plantationId, toast }) {
   );
 }
 
-function ProcessEntries({ stage, plantationId, pImgs, addProcessImage, delProcessImage, confirm, toast, variant = "process" }) {
+function ProcessEntries({ stage, plantationId, pImgs, addProcessImage, delProcessImage, confirm, toast, variant = "process", stampGiLogo = false, giProductLabel = "GI TAGGED" }) {
   const [cameraOpen, setCameraOpen] = useState(false);
   const [pendingName, setPendingName] = useState("");
   const [name, setName] = useState("");
@@ -2253,6 +2132,7 @@ function ProcessEntries({ stage, plantationId, pImgs, addProcessImage, delProces
   const fileInputRef = useRef(null);
   const list = pImgs.filter((x) => x.stage === stage);
   const isGiCertificate = variant === "gi-certificate";
+  const shouldStampGiLogo = isGiCertificate || stampGiLogo;
   const defaultEntryName = isGiCertificate ? "Kotpad GI Tag Certificate" : "";
 
   const uploadAndSave = async (imageUrl, entryName, successMessage) => {
@@ -2284,8 +2164,10 @@ function ProcessEntries({ stage, plantationId, pImgs, addProcessImage, delProces
   const uploadCertificate = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      toast("Please choose an image file.", "error");
+    const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    const isImage = file.type.startsWith("image/");
+    if (!isImage && !isPdf) {
+      toast("Please choose an image or PDF file.", "error");
       event.target.value = "";
       return;
     }
@@ -2293,11 +2175,25 @@ function ProcessEntries({ stage, plantationId, pImgs, addProcessImage, delProces
     setIsSaving(true);
     try {
       const dataUrl = await readFileAsDataUrl(file);
-      const stampedImage = await addGiCertificateStampToImage(dataUrl);
-      await Promise.all([
-        uploadAndSave(stampedImage, defaultEntryName, "GI certificate uploaded"),
-        delay(400),
-      ]);
+      if (isPdf) {
+        await Promise.all([
+          addProcessImage({
+            plantationId,
+            stage,
+            name: "Kotpad GI Certificate PDF",
+            date: TODAY,
+            imageUrl: dataUrl,
+          }),
+          delay(400),
+        ]);
+        toast("GI certificate PDF uploaded", "success");
+      } else {
+        const stampedImage = await addGiCertificateStampToImage(dataUrl);
+        await Promise.all([
+          uploadAndSave(stampedImage, defaultEntryName, "GI certificate uploaded"),
+          delay(400),
+        ]);
+      }
       stabilizeTraceabilityViewport(() => {
         setName("");
       });
@@ -2324,10 +2220,11 @@ function ProcessEntries({ stage, plantationId, pImgs, addProcessImage, delProces
         open={cameraOpen}
         name={pendingName}
         title={isGiCertificate ? "Click GI Tag Certificate" : "GPS Camera Capture"}
-        subtitle={isGiCertificate ? "Certificate photo will be marked as Certified GI." : "Overlay includes time + GPS + address. (Geofencing removed.)"}
+        subtitle={isGiCertificate ? "Certificate photo will be marked with the GI logo." : shouldStampGiLogo ? "Captured image will include the GI logo." : ""}
         captureLabel={isGiCertificate ? "Click Certificate" : "Capture"}
         useLabel={isGiCertificate ? "Use GI Certificate" : "Use Photo"}
-        stampGi={isGiCertificate}
+        stampGi={shouldStampGiLogo}
+        giProductLabel={giProductLabel}
         onClose={() => {
           if (isSaving) return;
           setCameraOpen(false);
@@ -2342,7 +2239,7 @@ function ProcessEntries({ stage, plantationId, pImgs, addProcessImage, delProces
               uploadAndSave(
                 imageUrl,
                 pendingName,
-                isGiCertificate ? "GI certificate captured" : "Image uploaded",
+                isGiCertificate ? "GI certificate captured" : shouldStampGiLogo ? "GI-tagged image uploaded" : "Image uploaded",
               ),
               delay(400),
             ]);
@@ -2363,13 +2260,25 @@ function ProcessEntries({ stage, plantationId, pImgs, addProcessImage, delProces
       {isGiCertificate ? (
         <>
           <p className="muted gi-certificate-help">
-            Add the Kotpad GI tag certificate here. Uploaded or clicked images are marked as Certified GI.
+            Add the Kotpad GI tag certificate here. Uploaded images and clicked photos are marked with the GI logo.
           </p>
+          <div className="gi-certificate-pdf-panel">
+            <img src={GI_LOGO_SRC} alt="GI tag logo" />
+            <div className="gi-certificate-pdf-copy">
+              <a href={KOTPAD_GI_CERTIFICATE_PDF_SRC} target="_blank" rel="noreferrer">
+                Kotpad GI Certificate PDF
+              </a>
+              <span><FiCheckCircle /> Verified checked</span>
+            </div>
+            <span className="gi-certified-badge gi-logo-badge">
+              <img src={GI_LOGO_SRC} alt="" /> GI Tag
+            </span>
+          </div>
           <div className="form-row gi-certificate-actions">
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/*,application/pdf,.pdf"
               onChange={uploadCertificate}
               style={{ display: "none" }}
             />
@@ -2392,11 +2301,15 @@ function ProcessEntries({ stage, plantationId, pImgs, addProcessImage, delProces
           {list.map((it) => (
             <div key={it.id} className="process-entry-card">
               <div className="process-entry-main">
-                {it.imageUrl && <img className="tc-thumb process-entry-thumb" src={it.imageUrl} alt={`${it.name} capture`} />}
+                {it.imageUrl && (
+                  isPdfUrl(it.imageUrl)
+                    ? <div className="tc-thumb process-entry-thumb process-entry-doc-thumb"><FiAward /></div>
+                    : <img className="tc-thumb process-entry-thumb" src={it.imageUrl} alt={`${it.name} capture`} />
+                )}
                 <div className="process-entry-copy">
                   <div className="process-entry-title">{it.name}</div>
                   <div className="process-entry-date">{it.date}</div>
-                  {isGiCertificate && (
+                  {shouldStampGiLogo && (
                     <span className="gi-certified-badge">
                       <FiAward /> Certified GI
                     </span>
@@ -2429,10 +2342,11 @@ function GeoCameraModal({
   toast,
   saving = false,
   title = "GPS Camera Capture",
-  subtitle = "Overlay includes time + GPS + address. (Geofencing removed.)",
+  subtitle = "",
   captureLabel = "Capture",
   useLabel = "Use Photo",
   stampGi = false,
+  giProductLabel = "GI TAGGED",
 }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -2551,7 +2465,7 @@ function GeoCameraModal({
         lon: coords.longitude,
       });
       if (stampGi) {
-        drawGiCertificateStamp(ctx, outputWidth, canvas.height);
+        await drawGiCertificateStamp(ctx, outputWidth, canvas.height, giProductLabel);
       }
 
       const dataUrl = canvas.toDataURL("image/png");
@@ -2573,7 +2487,7 @@ function GeoCameraModal({
       <div className="modal-box camera-modal">
         <button className="modal-close" onClick={onClose} type="button" disabled={saving}><FiX /></button>
         <h3>{title}</h3>
-        <div className="muted" style={{ fontSize: 13 }}>{subtitle}</div>
+        {subtitle ? <div className="muted camera-subtitle">{subtitle}</div> : null}
         <div className="camera-stage">
           <video ref={videoRef} autoPlay muted playsInline />
           <canvas ref={canvasRef} style={{ display: "none" }} />
@@ -2587,7 +2501,7 @@ function GeoCameraModal({
             <img src={previewUrl} alt="Captured preview" />
           </div>
         )}
-        <div className="actions right">
+        <div className="actions right camera-actions">
           <button className="btn btn-outline" onClick={capture} disabled={busy || saving}>
             {busy ? <LoadingIndicator label="Capturing..." /> : captureLabel}
           </button>
@@ -2601,150 +2515,33 @@ function GeoCameraModal({
 }
 
 function CropsStep({ L, pCrops, addCrop, delCrop, confirm, plantationId, pImgs, addProcessImage, delProcessImage, toast }) {
-  const mode = L.mode || "crop";
+  const mode = L.mode || "shrimp";
+  const ProductionFields = PRODUCTION_FIELD_COMPONENTS[mode] || ShrimpProductionFields;
+  const createTypeFields = PRODUCTION_INITIAL_FIELDS[mode] || createShrimpInitialFields;
+  const buildTypeDetails = PRODUCTION_DETAIL_BUILDERS[mode] || buildShrimpDetails;
+  const buildTypeRecord = PRODUCTION_RECORD_BUILDERS[mode];
   const emptyForm = () => ({
     name: "",
     customName: "",
     variety: "",
     sowingDate: TODAY,
     expectedHarvest: "",
-    landArea: "",
-    soilType: "",
-    irrigationMethod: "",
-    organicStatus: "",
-    seedSource: "",
-    pondSize: "",
-    waterType: "",
-    hatcherySource: "",
-    numberOfHives: "",
-    queenBeeAge: "",
-    floralSource: "",
-    artisanName: "",
-    workshopLocation: "",
-    yearsOfExperience: "",
-    numberOfWorkers: "",
-    productsManufactured: "",
-    rawMaterialsUsed: "",
-    monthlyProductionCapacity: "",
-    productionMethod: "",
-    ngoName: "",
-    registrationNumber: "",
-    coordinatorName: "",
-    womenMemberCount: "",
-    operationalDistricts: "",
-    familiesSupported: "",
-    incomeGenerated: "",
-    productsServicesOffered: "",
-    productName: "",
-    giTagNumber: "",
-    category: "Handloom / Textile",
-    giState: "Odisha",
-    district: "Koraput",
-    regionCluster: "Kotpad Village",
-    giRegistrationDate: "",
-    description: "",
-    culturalSignificance: "",
-    weaverName: "",
-    communityName: "Mirgan Community",
-    organizationType: "",
-    contactNumber: "",
-    emailId: "",
-    address: "",
-    weavingExperience: "",
-    familyMembersInvolved: "",
-    gpsLocation: "",
-    fabricType: "Cotton",
-    yarnSource: "",
-    naturalDyeUsed: "Aal Tree Bark",
-    dyePreparationMethod: "",
-    waterSource: "",
-    chemicalFreeStatus: "",
-    loomType: "",
-    weavingTechnique: "",
-    timeTakenPerFabric: "",
-    dailyProductionCapacity: "",
-    designPattern: "",
-    colorCombination: "",
-    handmadeVerification: "",
+    ...createTypeFields(),
   });
   const [f, setF] = useState(emptyForm);
   const add = async () => {
     const name = f.name === "Other" ? f.customName : f.name;
-    const detailMap = {
-      shrimp: {
-        "Pond Size": f.pondSize,
-        "Water Type": f.waterType,
-        "Hatchery Source": f.hatcherySource,
-      },
-      bee: {
-        "Number of Hives": f.numberOfHives,
-        "Queen Bee Age": f.queenBeeAge,
-        "Floral Source": f.floralSource,
-      },
-      artisan: {
-        "Artisan Name": f.artisanName,
-        "Workshop Location": f.workshopLocation,
-        "Years of Experience": f.yearsOfExperience,
-        "Number of Workers": f.numberOfWorkers,
-        "Products Manufactured": f.productsManufactured,
-        "Raw Materials Used": f.rawMaterialsUsed,
-        "Monthly Production Capacity": f.monthlyProductionCapacity,
-        "Handmade / Machine Assisted": f.productionMethod,
-      },
-      women_ngo: {
-        "NGO Name": f.ngoName,
-        "Registration Number": f.registrationNumber,
-        "Coordinator Name": f.coordinatorName,
-        "Women Member Count": f.womenMemberCount,
-        "Operational Districts": f.operationalDistricts,
-        "Families Supported": f.familiesSupported,
-        "Income Generated": f.incomeGenerated,
-        "Products / Services Offered": f.productsServicesOffered,
-      },
-      kotpad_handloom: {
-        "Product Name": f.productName,
-        "GI Tag Number": f.giTagNumber,
-        Category: f.category,
-        State: f.giState,
-        District: f.district,
-        "Region / Cluster": f.regionCluster,
-        "GI Registration Date": f.giRegistrationDate,
-        Description: f.description,
-        "Cultural Significance": f.culturalSignificance,
-        "Weaver Name": f.weaverName,
-        "Community Name": f.communityName,
-        "Organization Type": f.organizationType,
-        "Contact Number": f.contactNumber,
-        "Email ID": f.emailId,
-        Address: f.address,
-        "Experience in Weaving": f.weavingExperience,
-        "Number of Family Members Involved": f.familyMembersInvolved,
-        "GPS Location": f.gpsLocation,
-        "Fabric Type": f.fabricType,
-        "Yarn Source": f.yarnSource,
-        "Natural Dye Used": f.naturalDyeUsed,
-        "Dye Preparation Method": f.dyePreparationMethod,
-        "Water Source": f.waterSource,
-        "Chemical-Free Status": f.chemicalFreeStatus,
-        "Loom Type": f.loomType,
-        "Weaving Technique": f.weavingTechnique,
-        "Time Taken Per Fabric": f.timeTakenPerFabric,
-        "Daily Production Capacity": f.dailyProductionCapacity,
-        "Design Pattern": f.designPattern,
-        "Color Combination": f.colorCombination,
-        "Handmade Verification": f.handmadeVerification,
-      },
-      crop: {
-        "Land Area": f.landArea,
-        "Soil Type": f.soilType,
-        "Irrigation Method": f.irrigationMethod,
-        "Organic / Non-Organic": f.organicStatus,
-        "Seed Source": f.seedSource,
-      },
-    };
-    const variety = mergeDetails(f.variety, detailMap[mode] || detailMap.crop);
+    const variety = mergeDetails(f.variety, buildTypeDetails(f));
     if (!name || !f.variety || !f.sowingDate) return;
-    void addCrop({ plantationId, name, variety, sowingDate: f.sowingDate, expectedHarvest: f.expectedHarvest })
+    void addCrop({
+      plantationId,
+      name,
+      variety,
+      sowingDate: f.sowingDate,
+      expectedHarvest: f.expectedHarvest,
+      productionType: mode,
+      sambalpuri: buildTypeRecord ? buildTypeRecord(f, { name, variety }) : undefined,
+    })
       .then(() => {
         stabilizeTraceabilityViewport(() => {
           setF(emptyForm());
@@ -2766,7 +2563,7 @@ function CropsStep({ L, pCrops, addCrop, delCrop, confirm, plantationId, pImgs, 
   return (
     <>
       <WorkflowSection title={`Add ${L.crop}`}>
-        <div className={`form-grid ${mode === "kotpad_handloom" ? "kotpad-form-grid" : ""}`}>
+        <div className={`form-grid ${mode === "kotpad_handloom" ? "kotpad-form-grid" : ""} ${mode === "sambalpuri_bandha" ? "sambalpuri-form-grid" : ""}`}>
           <div className="field-wrap">
             <label className="field-label">{L.itemTypeLabel || `${L.crop} Type`} *</label>
             <select className="input" value={f.name} onChange={(e) => setF((x) => ({ ...x, name: e.target.value }))}>
@@ -2784,306 +2581,7 @@ function CropsStep({ L, pCrops, addCrop, delCrop, confirm, plantationId, pImgs, 
             <label className="field-label">{L.variety} *</label>
             <input className="input" placeholder={L.varietyPlaceholder || "Enter details"} value={f.variety} onChange={(e) => setF((x) => ({ ...x, variety: e.target.value }))} />
           </div>
-          {mode === "shrimp" ? (
-            <>
-              <div className="field-wrap">
-                <label className="field-label">Pond Size</label>
-                <input className="input" placeholder="e.g. 1.5 acre, 6000 sq ft" value={f.pondSize} onChange={(e) => setF((x) => ({ ...x, pondSize: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Water Type</label>
-                <select className="input" value={f.waterType} onChange={(e) => setF((x) => ({ ...x, waterType: e.target.value }))}>
-                  <option value="">Select water type...</option>
-                  {WATER_TYPE_OPTIONS.map((o) => <option key={o}>{o}</option>)}
-                </select>
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Hatchery Source</label>
-                <input className="input" placeholder="e.g. certified hatchery name" value={f.hatcherySource} onChange={(e) => setF((x) => ({ ...x, hatcherySource: e.target.value }))} />
-              </div>
-            </>
-          ) : mode === "bee" ? (
-            <>
-              <div className="field-wrap">
-                <label className="field-label">Number of Hives</label>
-                <input className="input" type="number" placeholder="e.g. 25" value={f.numberOfHives} onChange={(e) => setF((x) => ({ ...x, numberOfHives: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Queen Bee Age</label>
-                <input className="input" placeholder="e.g. 8 months" value={f.queenBeeAge} onChange={(e) => setF((x) => ({ ...x, queenBeeAge: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Floral Source</label>
-                <input className="input" placeholder="e.g. mustard, forest flora" value={f.floralSource} onChange={(e) => setF((x) => ({ ...x, floralSource: e.target.value }))} />
-              </div>
-            </>
-          ) : mode === "artisan" ? (
-            <>
-              <div className="field-wrap">
-                <label className="field-label">Artisan Name</label>
-                <input className="input" placeholder="e.g. local artisan or group name" value={f.artisanName} onChange={(e) => setF((x) => ({ ...x, artisanName: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Workshop Location</label>
-                <input className="input" placeholder="e.g. village, district" value={f.workshopLocation} onChange={(e) => setF((x) => ({ ...x, workshopLocation: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Years of Experience</label>
-                <input className="input" type="number" placeholder="e.g. 5" value={f.yearsOfExperience} onChange={(e) => setF((x) => ({ ...x, yearsOfExperience: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Number of Workers</label>
-                <input className="input" type="number" placeholder="e.g. 12" value={f.numberOfWorkers} onChange={(e) => setF((x) => ({ ...x, numberOfWorkers: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Products Manufactured</label>
-                <input className="input" placeholder="e.g. baskets, textiles" value={f.productsManufactured} onChange={(e) => setF((x) => ({ ...x, productsManufactured: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Raw Materials Used</label>
-                <input className="input" placeholder="e.g. bamboo, cotton" value={f.rawMaterialsUsed} onChange={(e) => setF((x) => ({ ...x, rawMaterialsUsed: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Monthly Production Capacity</label>
-                <input className="input" placeholder="e.g. 500 pieces" value={f.monthlyProductionCapacity} onChange={(e) => setF((x) => ({ ...x, monthlyProductionCapacity: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Handmade / Machine Assisted</label>
-                <select className="input" value={f.productionMethod} onChange={(e) => setF((x) => ({ ...x, productionMethod: e.target.value }))}>
-                  <option value="">Select method...</option>
-                  <option>Handmade</option>
-                  <option>Machine Assisted</option>
-                  <option>Mixed</option>
-                </select>
-              </div>
-            </>
-          ) : mode === "women_ngo" ? (
-            <>
-              <div className="field-wrap">
-                <label className="field-label">NGO Name</label>
-                <input className="input" placeholder="e.g. local NGO name" value={f.ngoName} onChange={(e) => setF((x) => ({ ...x, ngoName: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Registration Number</label>
-                <input className="input" placeholder="e.g. NGO registration ID" value={f.registrationNumber} onChange={(e) => setF((x) => ({ ...x, registrationNumber: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Coordinator Name</label>
-                <input className="input" placeholder="e.g. program coordinator" value={f.coordinatorName} onChange={(e) => setF((x) => ({ ...x, coordinatorName: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Women Member Count</label>
-                <input className="input" type="number" placeholder="e.g. 40" value={f.womenMemberCount} onChange={(e) => setF((x) => ({ ...x, womenMemberCount: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Operational Districts</label>
-                <input className="input" placeholder="e.g. Puri, Khordha" value={f.operationalDistricts} onChange={(e) => setF((x) => ({ ...x, operationalDistricts: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Families Supported</label>
-                <input className="input" type="number" placeholder="e.g. 120" value={f.familiesSupported} onChange={(e) => setF((x) => ({ ...x, familiesSupported: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Income Generated</label>
-                <input className="input" type="number" placeholder="e.g. 250000" value={f.incomeGenerated} onChange={(e) => setF((x) => ({ ...x, incomeGenerated: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Products / Services Offered</label>
-                <input className="input" placeholder="e.g. stitched products, food items" value={f.productsServicesOffered} onChange={(e) => setF((x) => ({ ...x, productsServicesOffered: e.target.value }))} />
-              </div>
-            </>
-          ) : mode === "kotpad_handloom" ? (
-            <>
-              <div className="form-section-label">Basic Product Information</div>
-              <div className="field-wrap">
-                <label className="field-label">Product Name</label>
-                <input className="input" placeholder="Kotpad Handloom Fabric" value={f.productName} onChange={(e) => setF((x) => ({ ...x, productName: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">GI Tag Number</label>
-                <input className="input" placeholder="GI registered ID" value={f.giTagNumber} onChange={(e) => setF((x) => ({ ...x, giTagNumber: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Category</label>
-                <input className="input" placeholder="Handloom / Textile" value={f.category} onChange={(e) => setF((x) => ({ ...x, category: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">State</label>
-                <input className="input" placeholder="Odisha" value={f.giState} onChange={(e) => setF((x) => ({ ...x, giState: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">District</label>
-                <input className="input" placeholder="Koraput" value={f.district} onChange={(e) => setF((x) => ({ ...x, district: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Region / Cluster</label>
-                <input className="input" placeholder="Kotpad Village" value={f.regionCluster} onChange={(e) => setF((x) => ({ ...x, regionCluster: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">GI Reg. Date</label>
-                <input className="input" type="date" value={f.giRegistrationDate} onChange={(e) => setF((x) => ({ ...x, giRegistrationDate: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Description</label>
-                <input className="input" placeholder="Naturally dyed tribal woven fabric" value={f.description} onChange={(e) => setF((x) => ({ ...x, description: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Cultural Significance</label>
-                <input className="input" placeholder="Traditional tribal weaving heritage" value={f.culturalSignificance} onChange={(e) => setF((x) => ({ ...x, culturalSignificance: e.target.value }))} />
-              </div>
-              <div className="form-section-label">Artisan / Weaver Details</div>
-              <div className="field-wrap">
-                <label className="field-label">Weaver Name</label>
-                <input className="input" placeholder="Individual or SHG name" value={f.weaverName} onChange={(e) => setF((x) => ({ ...x, weaverName: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Community Name</label>
-                <input className="input" placeholder="Mirgan Community" value={f.communityName} onChange={(e) => setF((x) => ({ ...x, communityName: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Organization Type</label>
-                <select className="input" value={f.organizationType} onChange={(e) => setF((x) => ({ ...x, organizationType: e.target.value }))}>
-                  <option value="">Select organization type...</option>
-                  <option>Artisan</option>
-                  <option>Cooperative</option>
-                  <option>SHG</option>
-                  <option>Producer Group</option>
-                </select>
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Contact Number</label>
-                <input className="input" placeholder="Mobile number" value={f.contactNumber} onChange={(e) => setF((x) => ({ ...x, contactNumber: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Email ID</label>
-                <input className="input" placeholder="Optional email" value={f.emailId} onChange={(e) => setF((x) => ({ ...x, emailId: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Address</label>
-                <input className="input" placeholder="Full address" value={f.address} onChange={(e) => setF((x) => ({ ...x, address: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Weaving Experience</label>
-                <input className="input" placeholder="e.g. 8 years" value={f.weavingExperience} onChange={(e) => setF((x) => ({ ...x, weavingExperience: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Family Members</label>
-                <input className="input" type="number" placeholder="Numeric value" value={f.familyMembersInvolved} onChange={(e) => setF((x) => ({ ...x, familyMembersInvolved: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">GPS Location</label>
-                <input className="input" placeholder="Latitude, longitude" value={f.gpsLocation} onChange={(e) => setF((x) => ({ ...x, gpsLocation: e.target.value }))} />
-              </div>
-              <div className="form-section-label">Raw Material Details</div>
-              <div className="field-wrap">
-                <label className="field-label">Fabric Type</label>
-                <input className="input" placeholder="Cotton" value={f.fabricType} onChange={(e) => setF((x) => ({ ...x, fabricType: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Yarn Source</label>
-                <select className="input" value={f.yarnSource} onChange={(e) => setF((x) => ({ ...x, yarnSource: e.target.value }))}>
-                  <option value="">Select yarn source...</option>
-                  <option>Local</option>
-                  <option>External</option>
-                  <option>Local + External</option>
-                </select>
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Natural Dye Used</label>
-                <input className="input" placeholder="Aal Tree Bark" value={f.naturalDyeUsed} onChange={(e) => setF((x) => ({ ...x, naturalDyeUsed: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Dye Method</label>
-                <input className="input" placeholder="Traditional boiling process" value={f.dyePreparationMethod} onChange={(e) => setF((x) => ({ ...x, dyePreparationMethod: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Water Source</label>
-                <select className="input" value={f.waterSource} onChange={(e) => setF((x) => ({ ...x, waterSource: e.target.value }))}>
-                  <option value="">Select water source...</option>
-                  <option>River</option>
-                  <option>Well</option>
-                  <option>Borewell</option>
-                  <option>Pond</option>
-                  <option>Other</option>
-                </select>
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Chemical-Free Status</label>
-                <select className="input" value={f.chemicalFreeStatus} onChange={(e) => setF((x) => ({ ...x, chemicalFreeStatus: e.target.value }))}>
-                  <option value="">Select status...</option>
-                  <option>Yes</option>
-                  <option>No</option>
-                  <option>Pending Verification</option>
-                </select>
-              </div>
-              <div className="form-section-label">Weaving & Production</div>
-              <div className="field-wrap">
-                <label className="field-label">Loom Type</label>
-                <input className="input" placeholder="Pit Loom" value={f.loomType} onChange={(e) => setF((x) => ({ ...x, loomType: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Weaving Technique</label>
-                <input className="input" placeholder="Traditional Handloom" value={f.weavingTechnique} onChange={(e) => setF((x) => ({ ...x, weavingTechnique: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Time Taken Per Fabric</label>
-                <input className="input" placeholder="e.g. 7 days" value={f.timeTakenPerFabric} onChange={(e) => setF((x) => ({ ...x, timeTakenPerFabric: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Daily Capacity</label>
-                <input className="input" placeholder="Quantity" value={f.dailyProductionCapacity} onChange={(e) => setF((x) => ({ ...x, dailyProductionCapacity: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Design Pattern</label>
-                <input className="input" placeholder="Tribal motifs" value={f.designPattern} onChange={(e) => setF((x) => ({ ...x, designPattern: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Color Combination</label>
-                <input className="input" placeholder="Maroon, Black, Brown" value={f.colorCombination} onChange={(e) => setF((x) => ({ ...x, colorCombination: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Handmade Check</label>
-                <select className="input" value={f.handmadeVerification} onChange={(e) => setF((x) => ({ ...x, handmadeVerification: e.target.value }))}>
-                  <option value="">Select verification...</option>
-                  <option>Yes</option>
-                  <option>No</option>
-                  <option>Pending</option>
-                </select>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="field-wrap">
-                <label className="field-label">Land Area</label>
-                <input className="input" placeholder="e.g. 2 acres" value={f.landArea} onChange={(e) => setF((x) => ({ ...x, landArea: e.target.value }))} />
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Soil Type</label>
-                <select className="input" value={f.soilType} onChange={(e) => setF((x) => ({ ...x, soilType: e.target.value }))}>
-                  <option value="">Select soil type...</option>
-                  {SOIL_TYPE_OPTIONS.map((o) => <option key={o}>{o}</option>)}
-                </select>
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Irrigation Method</label>
-                <select className="input" value={f.irrigationMethod} onChange={(e) => setF((x) => ({ ...x, irrigationMethod: e.target.value }))}>
-                  <option value="">Select irrigation method...</option>
-                  {IRRIGATION_METHOD_OPTIONS.map((o) => <option key={o}>{o}</option>)}
-                </select>
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Organic / Non-Organic</label>
-                <select className="input" value={f.organicStatus} onChange={(e) => setF((x) => ({ ...x, organicStatus: e.target.value }))}>
-                  <option value="">Select status...</option>
-                  {ORGANIC_STATUS_OPTIONS.map((o) => <option key={o}>{o}</option>)}
-                </select>
-              </div>
-              <div className="field-wrap">
-                <label className="field-label">Seed Source</label>
-                <input className="input" placeholder="e.g. certified seed supplier" value={f.seedSource} onChange={(e) => setF((x) => ({ ...x, seedSource: e.target.value }))} />
-              </div>
-            </>
-          )}
+          <ProductionFields form={f} setForm={setF} />
           <div className="field-wrap">
             <label className="field-label">{L.startDateLabel || "Start Date *"}</label>
             <input className="input" type="date" value={f.sowingDate} onChange={(e) => setF((x) => ({ ...x, sowingDate: e.target.value }))} />
@@ -3098,16 +2596,39 @@ function CropsStep({ L, pCrops, addCrop, delCrop, confirm, plantationId, pImgs, 
         </div>
         {pCrops.length > 0 && (
           <div className="record-list mt">
-            {pCrops.map((c) => (
-              <div key={c.id} className="record-row">
-                <span className="record-text"><FiStar style={{ color: "#f59e0b" }} /> <strong>{c.name}</strong> - {c.variety} - <span className="muted">{L.startVerb || "Started"} {c.sowingDate}</span></span>
-                <button className="icon-btn danger" onClick={() => remove(c.id)}><FiTrash2 /></button>
-              </div>
-            ))}
+            {pCrops.map((c) => {
+              const summary = getCompactCropSummary(mode, c.variety);
+              return (
+                <div key={c.id} className="record-row compact-record-row">
+                  <span className="record-text compact-record-text">
+                    <FiStar style={{ color: "#f59e0b" }} />
+                    <strong>{c.name}</strong>
+                    {summary.primary && <span className="record-summary-main">- {summary.primary}</span>}
+                    {summary.tags.map((tag) => (
+                      <span className="record-summary-chip" key={tag.label}>
+                        {tag.label.replace(" Verification", "")}: {tag.value}
+                      </span>
+                    ))}
+                    <span className="muted">{L.startVerb || "Started"} {c.sowingDate}</span>
+                  </span>
+                  <button className="icon-btn danger" onClick={() => remove(c.id)}><FiTrash2 /></button>
+                </div>
+              );
+            })}
           </div>
         )}
       </WorkflowSection>
-      <ProcessEntries stage={L.crops} plantationId={plantationId} pImgs={pImgs} addProcessImage={addProcessImage} delProcessImage={delProcessImage} confirm={confirm} toast={toast} />
+      <ProcessEntries
+        stage={L.crops}
+        plantationId={plantationId}
+        pImgs={pImgs}
+        addProcessImage={addProcessImage}
+        delProcessImage={delProcessImage}
+        confirm={confirm}
+        toast={toast}
+        stampGiLogo={isGiLogoProduction(L.mode)}
+        giProductLabel={L.badge || "GI TAGGED"}
+      />
     </>
   );
 }
@@ -3183,7 +2704,17 @@ function MonitoringStep({ L, pMon, addMonitoring, delMonitoring, pCrops, confirm
           </div>
         )}
       </WorkflowSection>
-      <ProcessEntries stage="Monitoring" plantationId={plantationId} pImgs={pImgs} addProcessImage={addProcessImage} delProcessImage={delProcessImage} confirm={confirm} toast={toast} />
+      <ProcessEntries
+        stage="Monitoring"
+        plantationId={plantationId}
+        pImgs={pImgs}
+        addProcessImage={addProcessImage}
+        delProcessImage={delProcessImage}
+        confirm={confirm}
+        toast={toast}
+        stampGiLogo={isGiLogoProduction(L.mode)}
+        giProductLabel={L.badge || "GI TAGGED"}
+      />
     </>
   );
 }
@@ -3266,6 +2797,8 @@ function VerificationStep({ pVer, addVerification, delVerification, pCrops, conf
         confirm={confirm}
         toast={toast}
         variant={L.mode === "kotpad_handloom" ? "gi-certificate" : "process"}
+        stampGiLogo={isGiLogoProduction(L.mode)}
+        giProductLabel={L.badge || "GI TAGGED"}
       />
     </>
   );
@@ -3347,12 +2880,22 @@ function HarvestStep({ pHar, addHarvest, delHarvest, pCrops, confirm, plantation
           </div>
         )}
       </WorkflowSection>
-      <ProcessEntries stage="Harvest" plantationId={plantationId} pImgs={pImgs} addProcessImage={addProcessImage} delProcessImage={delProcessImage} confirm={confirm} toast={toast} />
+      <ProcessEntries
+        stage="Harvest"
+        plantationId={plantationId}
+        pImgs={pImgs}
+        addProcessImage={addProcessImage}
+        delProcessImage={delProcessImage}
+        confirm={confirm}
+        toast={toast}
+        stampGiLogo={isGiLogoProduction(L.mode)}
+        giProductLabel={L.badge || "GI TAGGED"}
+      />
     </>
   );
 }
 
-function PackingStep({ pPack, pHar, addPacking, delPacking, confirm, plantationId, pImgs, addProcessImage, delProcessImage, toast }) {
+function PackingStep({ pPack, pHar, addPacking, delPacking, confirm, plantationId, pImgs, addProcessImage, delProcessImage, toast, L }) {
   const [f, setF] = useState({
     packingDate: TODAY,
     harvestId: "",
@@ -3493,7 +3036,17 @@ function PackingStep({ pPack, pHar, addPacking, delPacking, confirm, plantationI
           </div>
         )}
       </WorkflowSection>
-      <ProcessEntries stage="Packing" plantationId={plantationId} pImgs={pImgs} addProcessImage={addProcessImage} delProcessImage={delProcessImage} confirm={confirm} toast={toast} />
+      <ProcessEntries
+        stage="Packing"
+        plantationId={plantationId}
+        pImgs={pImgs}
+        addProcessImage={addProcessImage}
+        delProcessImage={delProcessImage}
+        confirm={confirm}
+        toast={toast}
+        stampGiLogo={isGiLogoProduction(L?.mode)}
+        giProductLabel={L?.badge || "GI TAGGED"}
+      />
     </>
   );
 }
@@ -4158,7 +3711,7 @@ function SupplierDashboard({ navigate, toast }) {
                     <div>
                       <strong>{trace.plantationName}</strong>
                       <p>
-                        {trace.cropName} • {trace.netWeight} kg •{" "}
+                        {trace.cropName} â€¢ {trace.netWeight} kg â€¢{" "}
                         {trace.packingDate || "Packing date pending"}
                       </p>
                     </div>
@@ -4282,6 +3835,8 @@ function QRCode({ value, size = 160 }) {
 
 function ReportsPage() {
   const { plantations, crops, harvests } = useData();
+  const plantationById = new Map(plantations.map((p) => [Number(p.id), p]));
+
   return (
     <div className="page-container reports-page">
       <div className="page-header">
@@ -4306,7 +3861,27 @@ function ReportsPage() {
             <thead><tr><th>Crop</th><th>Variety</th><th>Sowing Date</th><th>Expected Harvest</th></tr></thead>
             <tbody>
               {crops.length === 0 ? <tr><td colSpan={4} className="table-empty">No data</td></tr>
-                : crops.map((c) => <tr key={c.id}><td><strong>{c.name}</strong></td><td>{c.variety || "â€”"}</td><td>{c.sowingDate}</td><td>{c.expectedHarvest || "â€”"}</td></tr>)}
+                : crops.map((c) => {
+                    const productionMode = plantationById.get(Number(c.plantationId))?.type;
+                    const summary = getCompactCropSummary(productionMode, c.variety);
+                    return (
+                      <tr key={c.id}>
+                        <td><strong>{c.name}</strong></td>
+                        <td>
+                          <div className="report-variety-cell">
+                            <span>{summary.primary || c.variety || "-"}</span>
+                            {summary.tags.map((tag) => (
+                              <span className="record-summary-chip" key={tag.label}>
+                                {tag.label.replace(" Verification", "")}: {tag.value}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td>{c.sowingDate || "-"}</td>
+                        <td>{c.expectedHarvest || "-"}</td>
+                      </tr>
+                    );
+                  })}
             </tbody>
           </table>
         </div>
@@ -4334,15 +3909,19 @@ function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(user?.name || "");
   const [activeGalleryStage, setActiveGalleryStage] = useState(TRACE_STAGES[0]);
-  const mine = plantations.filter((p) => p.userId === user?.id);
-  const mineIds = mine.map((p) => p.id);
-  const mineCrops = crops.filter((c) => mineIds.includes(c.plantationId));
-  const mineHarvests = harvests.filter((h) => mineIds.includes(h.plantationId));
-  const minePackings = packings.filter((p) => mineIds.includes(p.plantationId));
-  const mineBatches = batches.filter((b) => b.supplierId === user?.id);
-  const mineImages = processImages.filter((i) => mineIds.includes(i.plantationId));
-  const stages = TRACE_STAGES;
-  const activeStageImages = mineImages.filter((img) => img.stage === activeGalleryStage);
+  const currentUserId = Number(user?.user_id || user?.id);
+  const mine = plantations.filter((p) => Number(p.userId) === currentUserId);
+  const mineIdSet = new Set(mine.map((p) => Number(p.id)));
+  const mineCrops = crops.filter((c) => mineIdSet.has(Number(c.plantationId)));
+  const mineHarvests = harvests.filter((h) => mineIdSet.has(Number(h.plantationId)));
+  const minePackings = packings.filter((p) => mineIdSet.has(Number(p.plantationId)));
+  const mineBatches = batches.filter((b) => Number(b.supplierId) === currentUserId);
+  const mineImages = processImages.filter((i) => mineIdSet.has(Number(i.plantationId)));
+  const stagesWithImages = TRACE_STAGES.filter((stage) => mineImages.some((img) => img.stage === stage));
+  const stages = stagesWithImages.length > 0 ? stagesWithImages : TRACE_STAGES;
+  const visibleGalleryStage = stages.includes(activeGalleryStage) ? activeGalleryStage : stages[0];
+  const activeStageImages = mineImages.filter((img) => img.stage === visibleGalleryStage);
+  const plantationById = new Map(mine.map((p) => [Number(p.id), p]));
 
   const removeImage = async (id) => { const ok = await confirm("Delete this entry?"); if (!ok) return; delProcessImage(id); };
 
@@ -4412,7 +3991,7 @@ function ProfilePage() {
               <button
                 key={stage}
                 type="button"
-                className={`stage-gallery-tab ${activeGalleryStage === stage ? "active" : ""}`}
+                className={`stage-gallery-tab ${visibleGalleryStage === stage ? "active" : ""}`}
                 onClick={() => setActiveGalleryStage(stage)}
               >
                 <span>{stage}</span>
@@ -4422,30 +4001,42 @@ function ProfilePage() {
           })}
         </div>
         <div className="gallery-group">
-          <div className="gallery-stage-label">{activeGalleryStage} Images</div>
+          <div className="gallery-stage-label">{visibleGalleryStage} Images</div>
           {activeStageImages.length > 0 ? (
             <div className="record-list process-entry-list">
-              {activeStageImages.map((img) => (
-                <div key={img.id} className="process-entry-card">
-                  <div className="process-entry-main">
-                    {img.imageUrl && <img className="tc-thumb process-entry-thumb" src={img.imageUrl} alt={`${activeGalleryStage} ${img.name}`} />}
-                    <div className="process-entry-copy">
-                      <div className="process-entry-title">{img.name}</div>
-                      <div className="process-entry-date">{img.date}</div>
+              {activeStageImages.map((img) => {
+                const plantation = plantationById.get(Number(img.plantationId));
+                return (
+                  <div key={img.id} className="process-entry-card">
+                    <div className="process-entry-main">
+                      {img.imageUrl && (
+                        isPdfUrl(img.imageUrl)
+                          ? <div className="tc-thumb process-entry-thumb process-entry-doc-thumb"><FiAward /></div>
+                          : <img className="tc-thumb process-entry-thumb" src={img.imageUrl} alt={`${visibleGalleryStage} ${img.name}`} />
+                      )}
+                      <div className="process-entry-copy">
+                        <div className="process-entry-title">{img.name}</div>
+                        <div className="process-entry-date">{img.date}</div>
+                        {plantation && (
+                          <div className="process-entry-plantation">
+                            <FiMapPin /> {plantation.name}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="process-entry-actions">
+                      {img.imageUrl && (
+                        <a className="process-entry-link" href={img.imageUrl} target="_blank" rel="noreferrer">
+                          View
+                        </a>
+                      )}
+                      <button className="process-entry-delete" onClick={() => removeImage(img.id)} type="button">
+                        Delete
+                      </button>
                     </div>
                   </div>
-                  <div className="process-entry-actions">
-                    {img.imageUrl && (
-                      <a className="process-entry-link" href={img.imageUrl} target="_blank" rel="noreferrer">
-                        View
-                      </a>
-                    )}
-                    <button className="process-entry-delete" onClick={() => removeImage(img.id)} type="button">
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="empty-gallery-box">
@@ -4588,10 +4179,10 @@ function TracePage({ patchId }) {
             <p className="trace-product-subtitle">Farm to batch traceability record</p>
           </div>
           <div className="trace-info-bar">
-            <div className="trace-info-item"><span className="amber-dot">•</span><span>Variety</span><strong>{cropRecord?.variety || "-"}</strong></div>
-            <div className="trace-info-item"><span className="amber-dot">•</span><span>Harvested</span><strong>{harvestRecord?.harvestDate || "-"}</strong></div>
-            <div className="trace-info-item"><span className="amber-dot">•</span><span>Origin</span><strong>{plantation?.location || "-"}</strong></div>
-            <div className="trace-info-item"><span className="amber-dot">•</span><span>Batch ID</span><strong className="mono">{batch.id}</strong></div>
+            <div className="trace-info-item"><span className="amber-dot">â€¢</span><span>Variety</span><strong>{cropRecord?.variety || "-"}</strong></div>
+            <div className="trace-info-item"><span className="amber-dot">â€¢</span><span>Harvested</span><strong>{harvestRecord?.harvestDate || "-"}</strong></div>
+            <div className="trace-info-item"><span className="amber-dot">â€¢</span><span>Origin</span><strong>{plantation?.location || "-"}</strong></div>
+            <div className="trace-info-item"><span className="amber-dot">â€¢</span><span>Batch ID</span><strong className="mono">{batch.id}</strong></div>
           </div>
         </div>
       </div>
@@ -4630,7 +4221,7 @@ function TracePage({ patchId }) {
         </div>
         {isShrimp ? (
           <div className="sustain-grid">
-            {[{ l: "Water Quality", v: "pH 7.5-8.5" }, { l: "Water Temp", v: "28-32°C" }, { l: "Dissolved O2", v: ">= 5 mg/L" }, { l: "Ammonia", v: "< 0.1 mg/L" }, { l: "Antibiotic Test", v: "Passed" }, { l: "Salinity", v: "15-25 ppt" }].map((i) => (
+            {[{ l: "Water Quality", v: "pH 7.5-8.5" }, { l: "Water Temp", v: "28-32Â°C" }, { l: "Dissolved O2", v: ">= 5 mg/L" }, { l: "Ammonia", v: "< 0.1 mg/L" }, { l: "Antibiotic Test", v: "Passed" }, { l: "Salinity", v: "15-25 ppt" }].map((i) => (
               <div key={i.l} className="sustain-item"><div className="sustain-label">{i.l}</div><div className="sustain-val">{i.v}</div></div>
             ))}
           </div>
@@ -4648,7 +4239,7 @@ function TracePage({ patchId }) {
         <div className="xfactor-grid">
           {xfactor.map((x) => (
             <div key={x.label} className="xfactor-item">
-              <span className="star">★★★★★</span>
+              <span className="star">â˜…â˜…â˜…â˜…â˜…</span>
               <div className="xfactor-label">{x.label}</div>
               <div className="xfactor-val">{x.val}</div>
             </div>
@@ -4672,7 +4263,7 @@ function TracePage({ patchId }) {
         <div className="supply-chain">
           {["Harvested", "Bulk Packed", "Supplier Packing", "Transported", "At Store"].map((s, i) => (
             <div key={s} className="chain-item">
-              <div className={`chain-dot ${i < 4 ? "chain-active" : "chain-inactive"}`}>{i < 4 ? "✓" : "○"}</div>
+              <div className={`chain-dot ${i < 4 ? "chain-active" : "chain-inactive"}`}>{i < 4 ? "âœ“" : "â—‹"}</div>
               <div className={`chain-label ${i < 4 ? "" : "muted"}`}>{s}</div>
               {i < 4 && <div className="chain-line" />}
             </div>
@@ -4764,6 +4355,7 @@ function AppShell() {
   const { toast, toasts } = useToast();
   const plantationMatch = route.match(/^\/plantation\/(.+)$/);
   const patchMatch = route.match(/^\/patch\/(.+)$/);
+  const dashboardRoute = user?.role === "supplier" ? "/supplier" : "/grower";
 
   useEffect(() => {
     if (loading) return;
@@ -4771,8 +4363,15 @@ function AppShell() {
 
   let page = null;
   if (patchMatch) page = <TracePage patchId={patchMatch[1]} />;
+  else if (route === "/") page = (
+    <TraceabilityPage
+      onStartMonitoring={() => navigate(user ? dashboardRoute : "/auth")}
+      onGoToDashboard={user ? () => navigate(dashboardRoute) : undefined}
+    />
+  );
   else if (loading) page = <div className="page-container"><div className="card">Loading...</div></div>;
-  else if (!user) page = <AuthEntryPage toast={toast} />;
+  else if (route === "/auth" && user) page = user.role === "grower" ? <GrowerDashboard navigate={navigate} toast={toast} /> : <SupplierDashboard navigate={navigate} toast={toast} />;
+  else if (route === "/auth" || !user) page = <AuthEntryPage toast={toast} />;
   else if (plantationMatch) page = <PlantationDetail plantationId={plantationMatch[1]} toast={toast} />;
   else if (route === "/grower") page = user.role === "grower" ? <GrowerDashboard navigate={navigate} toast={toast} /> : <div className="page-container">Access denied</div>;
   else if (route === "/supplier") page = user.role === "supplier" ? <SupplierDashboard navigate={navigate} toast={toast} /> : <div className="page-container">Access denied</div>;
@@ -4821,6 +4420,7 @@ export default function TraceConnect() {
     </div>
   );
 }
+
 
 
 
