@@ -1,5 +1,6 @@
 export function getApiUrl() {
-  return "http://localhost:5000";
+  const url = import.meta.env?.VITE_API_URL || "http://localhost:5000";
+  return url.replace(/\/+$/, "");
 }
 
 const AUTH_TOKEN_KEY = "traceconnect_auth_token";
@@ -74,6 +75,10 @@ export const authApi = {
     body: JSON.stringify({ identifier }),
   }),
   logout: () => apiRequest("/api/auth/logout", { method: "POST" }),
+  updateProfile: (payload) => apiRequest("/api/auth/profile", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  }),
 };
 
 export const traceabilityApi = {
@@ -156,6 +161,10 @@ export const traceabilityApi = {
 
   createProcessImage: (payload) => apiRequest("/api/traceability/process-images", {
     method: "POST",
+    body: JSON.stringify(payload),
+  }),
+  updateProcessImage: (id, payload) => apiRequest(`/api/traceability/process-images/${encodeURIComponent(id)}`, {
+    method: "PUT",
     body: JSON.stringify(payload),
   }),
   deleteProcessImage: (id) => apiRequest(`/api/traceability/process-images/${encodeURIComponent(id)}`, {

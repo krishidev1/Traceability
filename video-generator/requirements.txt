@@ -1,0 +1,11 @@
+moviepy<2.0.0
+numpy>=1.26.4
+Pillow>=9.5.0
+fastapi>=0.115.0
+uvicorn>=0.30.6
+python-multipart>=0.0.9
+imageio-ffmpeg>=0.4.9
+psutil>=5.9.8
+setuptools>=70.3.0
+cloudinary
+python-dotenv

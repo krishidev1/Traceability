@@ -57,7 +57,7 @@ function getAuthenticatedWeaverDetails() {
 export const SAMBALPURI_PRODUCTION_CONFIG = {
   value: "sambalpuri_bandha",
   label: "Sambalpuri Bandha",
-  badge: "Sambalpuri GI",
+  badge: "Sambalpuri Bandha GI",
   badgeClass: "sambalpuri",
   themeClass: "production-theme-sambalpuri",
   nameLabel: "Sambalpuri Production Name",
