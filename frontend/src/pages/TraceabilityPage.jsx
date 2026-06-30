@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import {
   ArrowRight,
@@ -221,5 +220,3 @@ export default function TraceabilityPage({
     </div>
   );
 }
-
-

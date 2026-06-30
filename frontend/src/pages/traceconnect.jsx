@@ -1,12 +1,13 @@
-﻿
+
 import { useState, useEffect, useContext, createContext, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   FiLock, FiCheckCircle, FiUser, FiLogOut,
   FiHome, FiList, FiBarChart2, FiPackage, FiAlertTriangle,
-  FiTrash2, FiEdit2, FiPlus, FiArrowRight, FiMapPin,
+  FiTrash2, FiEdit2, FiPlus, FiArrowRight, FiArrowLeft, FiMapPin,
   FiCalendar, FiDroplet, FiVideo, FiCamera, FiCheck,
   FiX, FiMail, FiShield, FiStar, FiTrendingUp, FiGrid,
-  FiChevronDown, FiUpload, FiAward
+  FiChevronDown, FiUpload, FiAward, FiExternalLink, FiDownload
 } from "react-icons/fi";
 import "../styles/traceconnect.css";
 import { authApi, clearAuth, getApiUrl, getStoredAuth, storeAuth, traceabilityApi } from "../api/traceabilityApi";
@@ -41,6 +42,11 @@ const TRACE_CONNECT_LOGO_SRC = "/Traceconnect sample.jpeg";
 const LOADING_GIF_SRC = "/loading.gif";
 const GI_LOGO_SRC = "/gi-logo.svg";
 const KOTPAD_GI_CERTIFICATE_PDF_SRC = "/kotpad-gi-certificate.pdf";
+const MAATI_AI_LOGO_SRC = "/Maati AI logo.png";
+const VIDEO_GENERATOR_BASE_URL = (
+  import.meta.env?.VITE_VIDEO_GENERATOR_URL ||
+  (import.meta.env.DEV ? "http://localhost:8000" : "https://maatiaivideogenerator.onrender.com")
+).replace(/\/+$/, "");
 
 function delay(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -52,6 +58,130 @@ function LoadingIndicator({ label = "Loading..." }) {
       <img src={LOADING_GIF_SRC} alt="" />
       <span>{label}</span>
     </span>
+  );
+}
+
+function AppBusyBar({ active, label = "Loading..." }) {
+  if (!active) return null;
+  return (
+    <div className="app-busy-bar" role="status" aria-live="polite">
+      <div className="app-busy-progress" />
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function GlobalVideoProgressBar({ active, progress, progressPercent, onCancel }) {
+  if (!active) return null;
+  return (
+    <div className="global-video-progress-bar" style={{
+      position: "fixed",
+      bottom: "24px",
+      right: "24px",
+      zIndex: 9999,
+      background: "rgba(255, 255, 255, 0.95)",
+      backdropFilter: "blur(12px)",
+      boxShadow: "0 12px 40px rgba(0, 0, 0, 0.18)",
+      border: "1px solid rgba(74, 124, 89, 0.15)",
+      borderRadius: "16px",
+      padding: "18px 22px",
+      width: "340px",
+      display: "flex",
+      flexDirection: "column",
+      gap: "10px",
+      transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+      fontFamily: "'DM Sans', sans-serif",
+      animation: "tcSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards"
+    }}>
+      <style>{`
+        @keyframes tcSlideIn {
+          from { transform: translateY(30px) scale(0.95); opacity: 0; }
+          to { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        .tc-pulse-icon {
+          animation: tcPulse 2s infinite ease-in-out;
+        }
+        @keyframes tcPulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.6; transform: scale(1.1); }
+        }
+      `}</style>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: "600", color: "#3d2b1f", fontSize: "14px" }}>
+          <FiVideo className="tc-pulse-icon" style={{ color: "#4a7c59", fontSize: "16px" }} />
+          <span>Generating Video...</span>
+        </div>
+        <span style={{ fontSize: "13px", color: "#4a7c59", fontWeight: "700" }}>{Math.round(progressPercent || 0)}%</span>
+      </div>
+      <div style={{ width: "100%", height: "6px", background: "#e8e0d0", borderRadius: "3px", overflow: "hidden" }}>
+        <div style={{ width: `${progressPercent || 0}%`, height: "100%", background: "linear-gradient(90deg, #4a7c59, #6aab79)", borderRadius: "3px", transition: "width 0.4s cubic-bezier(0.1, 0.8, 0.2, 1)" }} />
+      </div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginTop: "2px" }}>
+        <span style={{ fontSize: "11px", color: "#666", textTransform: "capitalize", fontWeight: "500" }}>{progress || "Processing..."}</span>
+        <button 
+          onClick={onCancel}
+          style={{
+            background: "none",
+            border: "none",
+            color: "#c0392b",
+            fontSize: "11px",
+            fontWeight: "600",
+            cursor: "pointer",
+            padding: "2px 6px",
+            borderRadius: "4px",
+            transition: "background 0.2s",
+            outline: "none",
+            fontFamily: "inherit"
+          }}
+          onMouseOver={(e) => e.target.style.background = "rgba(192, 57, 43, 0.08)"}
+          onMouseOut={(e) => e.target.style.background = "none"}
+          type="button"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PageSkeleton({ rows = 3, cards = 4, title = "Preparing workspace..." }) {
+  return (
+    <div className="page-container page-skeleton" aria-busy="true" aria-label={title}>
+      <div className="skeleton-hero">
+        <div className="skeleton-line wide" />
+        <div className="skeleton-line" />
+        <div className="skeleton-pill-row">
+          <span />
+          <span />
+          <span />
+        </div>
+      </div>
+      <div className="skeleton-grid">
+        {Array.from({ length: cards }).map((_, index) => (
+          <div className="skeleton-card" key={`card-${index}`}>
+            <div className="skeleton-icon" />
+            <div>
+              <div className="skeleton-line short" />
+              <div className="skeleton-line tiny" />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="skeleton-panel">
+        {Array.from({ length: rows }).map((_, index) => (
+          <div className="skeleton-row" key={`row-${index}`} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DataStatusBanner({ loading, error }) {
+  if (!loading && !error) return null;
+  return (
+    <div className={`data-status-banner ${error ? "error" : ""}`} role="status">
+      {loading ? <LoadingIndicator label="Syncing latest records..." /> : <><FiAlertTriangle /> {error}</>}
+    </div>
   );
 }
 
@@ -277,7 +407,20 @@ function stopMediaStream(stream) {
   }
 }
 
-function getCurrentLocation() {
+async function getCurrentLocation() {
+  try {
+    const res = await fetch("https://ipapi.co/json/");
+    const data = await res.json();
+    if (data && typeof data.latitude === "number" && typeof data.longitude === "number") {
+      return {
+        latitude: data.latitude,
+        longitude: data.longitude
+      };
+    }
+  } catch (e) {
+    // ignore
+  }
+
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
       reject(new Error("Geolocation not supported"));
@@ -287,7 +430,7 @@ function getCurrentLocation() {
     navigator.geolocation.getCurrentPosition(
       (pos) => resolve(pos.coords),
       (err) => reject(err),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
     );
   });
 }
@@ -317,6 +460,18 @@ function formatDateTime(date) {
   const second = lookup.second || "";
   const dayPeriod = lookup.dayPeriod || "";
   return `${weekday}, ${day}/${month}/${year}, ${hour}:${minute}:${second} ${dayPeriod}`;
+}
+
+function getUserSignupLocation(user = {}) {
+  const parts = [
+    user.village_area || user.villageArea,
+    user.district,
+    user.state || user.stateName,
+  ]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+
+  return Array.from(new Set(parts)).join(", ");
 }
 
 function drawRoundedRect(ctx, x, y, width, height, radius) {
@@ -488,11 +643,98 @@ function isPdfUrl(url = "") {
   return value.startsWith("data:application/pdf") || value.includes(".pdf");
 }
 
+function toVideoGeneratorUrl(path = "") {
+  const value = String(path || "").trim();
+  if (/^https?:\/\//i.test(value)) return value;
+  return `${VIDEO_GENERATOR_BASE_URL}${value.startsWith("/") ? value : `/${value}`}`;
+}
+
+function getOrderedVideoImages(images = [], stages = []) {
+  const stageIndex = new Map((stages || []).map((stage, index) => [stage, index]));
+  return [...(images || [])]
+    .filter((img) => img?.imageUrl && !isPdfUrl(img.imageUrl))
+    .sort((a, b) => {
+      const stageDelta = (stageIndex.get(a.stage) ?? 999) - (stageIndex.get(b.stage) ?? 999);
+      if (stageDelta) return stageDelta;
+      const dateDelta = String(a.date || "").localeCompare(String(b.date || ""));
+      if (dateDelta) return dateDelta;
+      return Number(a.id || 0) - Number(b.id || 0);
+    });
+}
+
+function pickCertificateImage(images = []) {
+  return images.find((img) => /certificate|certification|verified|verification/i.test(`${img.stage || ""} ${img.name || ""}`))
+    || images.find((img) => /verification/i.test(img.stage || ""))
+    || images[images.length - 1];
+}
+
+function buildTraceVideoPayload({ user, images, stages, template = "A" }) {
+  const orderedImages = getOrderedVideoImages(images, stages);
+  if (!orderedImages.length) {
+    throw new Error("Capture at least one stage image before generating the video.");
+  }
+
+  const firstImageUrl = orderedImages[0].imageUrl;
+  const lastImageUrl = orderedImages[orderedImages.length - 1].imageUrl;
+  const farmerImageUrl = user?.profile_image || firstImageUrl;
+  const certificateImageUrl = pickCertificateImage(orderedImages)?.imageUrl || lastImageUrl;
+
+  return {
+    template,
+    logo_url: MAATI_AI_LOGO_SRC,
+    intro_logo_url: user?.company_logo || MAATI_AI_LOGO_SRC,
+    farmer_img_url: farmerImageUrl,
+    farm_img_url: firstImageUrl,
+    process_image_urls: orderedImages.map((img) => img.imageUrl),
+    certificate_img_url: certificateImageUrl,
+    end_img_url: lastImageUrl,
+  };
+}
+
+async function renderTraceVideoFromImages({ user, images, stages, template = "A", onJobId, onProgress }) {
+  const payload = buildTraceVideoPayload({ user, images, stages, template });
+  onProgress?.({ progress: 1, stage: "starting" });
+  const renderResponse = await fetch(toVideoGeneratorUrl("/render-from-urls"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  const renderData = await renderResponse.json().catch(async () => ({ error: await renderResponse.text().catch(() => "") }));
+  if (!renderResponse.ok) {
+    throw new Error(renderData?.error || "Video render failed");
+  }
+
+  const jobId = renderData?.job_id;
+  if (!jobId) throw new Error("Video generator did not return a job id");
+  
+  onJobId?.(jobId);
+
+  for (let attempt = 0; attempt < 180; attempt += 1) {
+    await delay(1500);
+    const statusResponse = await fetch(toVideoGeneratorUrl(`/status/${jobId}`));
+    const statusData = await statusResponse.json().catch(() => ({}));
+    if (!statusResponse.ok) throw new Error(statusData?.error || "Unable to check video status");
+    onProgress?.({ progress: statusData.progress || 0, stage: statusData.stage || "processing" });
+    if (statusData.status === "done") {
+      return statusData.cloudinary_url || toVideoGeneratorUrl(statusData.download_url);
+    }
+    if (statusData.status === "error") {
+      throw new Error(statusData.error || "Video render failed");
+    }
+    if (statusData.status === "cancelled") {
+      throw new Error("Video render was cancelled");
+    }
+  }
+
+  throw new Error("Video generation is taking longer than expected. Please try again shortly.");
+}
+
 function isGiLogoProduction(mode) {
   return mode === "kotpad_handloom" || mode === "sambalpuri_bandha";
 }
 
-function drawGeoOverlay(ctx, width, topY, panelHeight, details) {
+async function drawGeoOverlay(ctx, width, topY, panelHeight, details) {
   const padding = Math.round(width * 0.04);
   const boxHeight = panelHeight;
   const boxY = topY;
@@ -514,7 +756,118 @@ function drawGeoOverlay(ctx, width, topY, panelHeight, details) {
   const mapRadius = Math.round(mapSize * 0.12);
   const mapX = padding;
   const mapY = boxY + Math.round((boxHeight - mapSize) / 2);
-  drawMapPlaceholder(ctx, mapX, mapY, mapSize, mapRadius);
+
+  // Draw leaflet map tiles directly if available in the DOM
+  const mapElement = document.getElementById("camera-leaflet-map");
+  if (mapElement) {
+    ctx.save();
+    drawRoundedRect(ctx, mapX, mapY, mapSize, mapSize, mapRadius);
+    ctx.clip();
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(mapX, mapY, mapSize, mapSize);
+
+    const tiles = mapElement.querySelectorAll(".leaflet-tile");
+    const mapRect = mapElement.getBoundingClientRect();
+    const scaleX = mapSize / mapRect.width;
+    const scaleY = mapSize / mapRect.height;
+
+    // Fetch and draw tiles using clean CORS-enabled blob requests to prevent taints
+    const tileDrawings = Array.from(tiles).map(async (tile) => {
+      const tileRect = tile.getBoundingClientRect();
+      const dx = tileRect.left - mapRect.left;
+      const dy = tileRect.top - mapRect.top;
+
+      try {
+        const response = await fetch(tile.src, { mode: "cors" });
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+
+        await new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            ctx.drawImage(
+              img,
+              mapX + dx * scaleX,
+              mapY + dy * scaleY,
+              tileRect.width * scaleX,
+              tileRect.height * scaleY
+            );
+            URL.revokeObjectURL(blobUrl);
+            resolve();
+          };
+          img.onerror = () => {
+            resolve();
+          };
+          img.src = blobUrl;
+        });
+      } catch (e) {
+        // Fallback: draw directly (might taint canvas in legacy/offline scenarios)
+        try {
+          ctx.drawImage(
+            tile,
+            mapX + dx * scaleX,
+            mapY + dy * scaleY,
+            tileRect.width * scaleX,
+            tileRect.height * scaleY
+          );
+        } catch {
+          // ignore
+        }
+      }
+    });
+
+    await Promise.all(tileDrawings);
+
+    // Draw markers using CORS blob fetching
+    const markers = mapElement.querySelectorAll(".leaflet-marker-icon");
+    const markerDrawings = Array.from(markers).map(async (marker) => {
+      const markerRect = marker.getBoundingClientRect();
+      const dx = markerRect.left - mapRect.left;
+      const dy = markerRect.top - mapRect.top;
+
+      try {
+        const response = await fetch(marker.src, { mode: "cors" });
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+
+        await new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            ctx.drawImage(
+              img,
+              mapX + dx * scaleX,
+              mapY + dy * scaleY,
+              markerRect.width * scaleX,
+              markerRect.height * scaleY
+            );
+            URL.revokeObjectURL(blobUrl);
+            resolve();
+          };
+          img.onerror = () => {
+            resolve();
+          };
+          img.src = blobUrl;
+        });
+      } catch (e) {
+        try {
+          ctx.drawImage(
+            marker,
+            mapX + dx * scaleX,
+            mapY + dy * scaleY,
+            markerRect.width * scaleX,
+            markerRect.height * scaleY
+          );
+        } catch {
+          // ignore
+        }
+      }
+    });
+
+    await Promise.all(markerDrawings);
+    ctx.restore();
+  } else {
+    drawMapPlaceholder(ctx, mapX, mapY, mapSize, mapRadius);
+  }
 
   const lineX = mapX + mapSize + Math.round(padding * 0.6);
   const lineY = mapY + 8;
@@ -535,36 +888,50 @@ function drawGeoOverlay(ctx, width, topY, panelHeight, details) {
   ctx.textAlign = "left";
   ctx.textBaseline = "top";
 
-  const nameFont = Math.max(16, Math.round(width * 0.026));
-  const textFont = Math.max(14, Math.round(width * 0.022));
-  const smallFont = Math.max(13, Math.round(width * 0.02));
+  const nameFont = 24;
+  const textFont = 18;
+  const smallFont = 15;
 
   let cursorY = mapY;
   const textX = lineX + Math.round(padding * 0.7);
 
+  // Stage Name (uppercase, highlighted green/lime)
+  if (details.stage) {
+    ctx.font = `700 ${nameFont}px Poppins, sans-serif`;
+    ctx.fillStyle = "rgba(178, 255, 70, 0.95)";
+    ctx.fillText(details.stage.toUpperCase(), textX, cursorY);
+    cursorY += nameFont + 6;
+  }
+
+  // Process Entry Name
   ctx.font = `600 ${nameFont}px Poppins, sans-serif`;
-  ctx.fillStyle = "rgba(255,255,255,0.95)";
+  ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
   ctx.fillText(details.name, textX, cursorY);
+  cursorY += nameFont + 6;
 
-  cursorY += nameFont + 10;
+  // DateTime
   ctx.font = `500 ${textFont}px Poppins, sans-serif`;
-  ctx.fillStyle = "rgba(255,255,255,0.9)";
+  ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
   ctx.fillText(details.dateTime, textX, cursorY);
+  cursorY += textFont + 6;
 
-  cursorY += textFont + 10;
-  const addressMaxHeight = mapY + mapSize - cursorY - (smallFont + 8);
-  ctx.fillStyle = "rgba(255,255,255,0.85)";
-  wrapText(ctx, details.address, textX, cursorY, width - textX - padding, textFont + 6, addressMaxHeight, 4);
+  // Address
+  ctx.font = `500 ${textFont}px Poppins, sans-serif`;
+  ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+  const addressMaxHeight = mapY + mapSize - cursorY - (smallFont + 6);
+  wrapText(ctx, details.address, textX, cursorY, width - textX - padding, textFont + 4, Math.max(addressMaxHeight, 30), 2);
 
+  // Lat/Lon
   const coordsLine = `Lat: ${formatCoords(details.lat)}, Long: ${formatCoords(details.lon)}`;
-  ctx.fillStyle = "rgba(255,255,255,0.78)";
+  ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
   ctx.font = `500 ${smallFont}px Poppins, sans-serif`;
   ctx.fillText(coordsLine, textX, mapY + mapSize - smallFont - 2);
 }
 
 function DataProvider({ children }) {
-  const { user } = useAuth();
+  const { user, unlockVideo } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState(0);
   const [backendError, setBackendError] = useState("");
   const [farms, setFarms] = useState([]);
   const [selectedFarmId, setSelectedFarmId] = useState(null);
@@ -579,6 +946,7 @@ function DataProvider({ children }) {
   const [processImages, setProcessImages] = useState([]);
 
   const run = async (fn, fallbackMessage) => {
+    setPendingRequests((count) => count + 1);
     try {
       setBackendError("");
       return await fn();
@@ -586,6 +954,8 @@ function DataProvider({ children }) {
       const msg = getTraceabilityErrorMessage(err) || fallbackMessage || "Request failed";
       setBackendError(msg);
       throw err;
+    } finally {
+      setPendingRequests((count) => Math.max(0, count - 1));
     }
   };
 
@@ -698,6 +1068,12 @@ function DataProvider({ children }) {
                 },
               ]);
           setSelectedFarmId(createdFarmId);
+        } else if (farm) {
+          setFarms((prev) => prev.map((item) => (
+            Number(item?.farm_id) === farmIdNum
+              ? { ...item, farm_location: p.location }
+              : item
+          )));
         }
       });
       return created;
@@ -926,6 +1302,7 @@ function DataProvider({ children }) {
       stabilizeTraceabilityViewport(() => {
         setProcessImages((prev) => [...prev, fromDbProcessImage(created)]);
       });
+      if (unlockVideo) unlockVideo();
       return created;
     }, "Failed to create process image");
   };
@@ -936,14 +1313,33 @@ function DataProvider({ children }) {
       stabilizeTraceabilityViewport(() => {
         setProcessImages((prev) => prev.filter((x) => x.id !== iid));
       });
+      if (unlockVideo) unlockVideo();
       return true;
     }, "Failed to delete process image");
+  };
+
+  const updateProcessImage = (iid, updates) => {
+    return run(async () => {
+      const updated = await traceabilityApi.updateProcessImage(iid, {
+        plantation_id: updates.plantationId === undefined ? undefined : Number(updates.plantationId),
+        stage: updates.stage,
+        process_name: updates.name,
+        image_url: updates.imageUrl,
+      });
+      stabilizeTraceabilityViewport(() => {
+        setProcessImages((prev) => prev.map((x) => (x.id === iid ? fromDbProcessImage(updated) : x)));
+      });
+      if (unlockVideo) unlockVideo();
+      return updated;
+    }, "Failed to update process image");
   };
 
   return (
     <DataContext.Provider
       value={{
         loading,
+        pendingRequests,
+        syncing: loading || pendingRequests > 0,
         backendError,
         farms,
         selectedFarmId,
@@ -971,6 +1367,7 @@ function DataProvider({ children }) {
         addBatch,
         delBatch,
         addProcessImage,
+        updateProcessImage,
         delProcessImage,
       }}
     >
@@ -983,6 +1380,12 @@ function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [rememberAuth, setRememberAuth] = useState(true);
+
+  // Global persistent video generation states
+  const [videoBusy, setVideoBusy] = useState(false);
+  const [videoProgress, setVideoProgress] = useState("");
+  const [videoProgressPercent, setVideoProgressPercent] = useState(0);
+  const [currentJobId, setCurrentJobId] = useState(null);
 
   useEffect(() => {
     const stored = getStoredAuth();
@@ -1001,9 +1404,87 @@ function AuthProvider({ children }) {
     return nextUser;
   };
 
+  const unlockVideo = () => {
+    // Mirror the backend reset locally so the button unlocks immediately
+    updateUser({ video_locked: false });
+  };
+
+  const updateUser = (updatedUserFields) => {
+    setUser((prev) => {
+      if (!prev) return null;
+      const next = { ...prev, ...updatedUserFields };
+      const token = localStorage.getItem("traceconnect_auth_token") || sessionStorage.getItem("traceconnect_auth_token");
+      if (token) {
+        const primary = localStorage.getItem("traceconnect_auth_token") ? localStorage : sessionStorage;
+        primary.setItem("traceconnect_auth_user", JSON.stringify(next));
+      }
+      return next;
+    });
+  };
+
   const signOut = () => {
     clearAuth();
     setUser(null);
+  };
+
+  const cancelVideoGeneration = async () => {
+    if (!currentJobId) return;
+    try {
+      await fetch(toVideoGeneratorUrl(`/cancel/${currentJobId}`), { method: "POST" });
+    } catch (e) {
+      // Silently catch
+    }
+    setVideoBusy(false);
+    setVideoProgress("");
+    setVideoProgressPercent(0);
+    setCurrentJobId(null);
+  };
+
+  const generateVideo = async (images, stages, template = "A") => {
+    if (videoBusy) return;
+    setVideoBusy(true);
+    setVideoProgress("Starting video generator...");
+    setVideoProgressPercent(1);
+    try {
+      const videoUrl = await renderTraceVideoFromImages({
+        user,
+        images,
+        stages,
+        template,
+        onJobId: (jobId) => setCurrentJobId(jobId),
+        onProgress: ({ progress, stage }) => {
+          setVideoProgress(stage || "Processing");
+          setVideoProgressPercent(Number(progress) || 0);
+        },
+      });
+
+      // Save video URL and lock generation for this account
+      const updatedUser = await authApi.updateProfile({ video_url: videoUrl, video_locked: true });
+      updateUser(updatedUser);
+
+      // Download to device
+      try {
+        const blob = await fetch(videoUrl).then((r) => r.blob());
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = "traceability-video.mp4";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+      } catch (_) {
+        // Fallback: open in new tab if blob download fails (e.g. CORS)
+        window.open(videoUrl, "_blank", "noopener,noreferrer");
+      }
+
+      return videoUrl;
+    } finally {
+      setVideoBusy(false);
+      setVideoProgress("");
+      setVideoProgressPercent(0);
+      setCurrentJobId(null);
+    }
   };
 
   return (
@@ -1013,6 +1494,13 @@ function AuthProvider({ children }) {
         loading,
         signOut,
         setRememberAuth,
+        updateUser,
+        videoBusy,
+        videoProgress,
+        videoProgressPercent,
+        generateVideo,
+        cancelVideoGeneration,
+        unlockVideo,
         login: async (payload, remember) => completeAuth(await authApi.login(payload), remember),
         signup: async (payload) => completeAuth(await authApi.signup(payload), true),
         forgotPassword: authApi.forgotPassword,
@@ -1071,6 +1559,7 @@ const PACKAGING_METHOD_OPTIONS = ["Bag", "Sack", "Box", "Bottle / Jar", "Vacuum 
 const TRANSPORT_METHOD_OPTIONS = ["Road Transport", "Refrigerated Vehicle", "Rail", "Air Cargo", "Sea Freight", "Courier", "Other"];
 const COLD_STORAGE_OPTIONS = ["Not Required", "Required", "Available", "Not Available"];
 const TRACE_STAGES = ["Ponds", "Apiaries", "Kotpad Fabric", "Sambalpuri Product", "Monitoring", "Verification", "Harvest", "Packing"];
+const SHARED_TRACE_STAGES = ["Monitoring", "Verification", "Harvest", "Packing"];
 const PRODUCTION_TYPE_CONFIG = {
   shrimp: SHRIMP_PRODUCTION_CONFIG,
   bee: BEE_PRODUCTION_CONFIG,
@@ -1099,6 +1588,20 @@ const PRODUCTION_DETAIL_BUILDERS = {
 const PRODUCTION_RECORD_BUILDERS = {
   sambalpuri_bandha: buildSambalpuriProductPayload,
 };
+
+function uniqueList(items) {
+  return Array.from(new Set(items.filter(Boolean)));
+}
+
+function getTraceStagesForProductionType(type) {
+  const config = PRODUCTION_TYPE_CONFIG[normalizeProductionType(type)] || SHRIMP_PRODUCTION_CONFIG;
+  return uniqueList([config.crops, ...SHARED_TRACE_STAGES]);
+}
+
+function getTraceStagesForPlantations(plantations) {
+  const stageNames = plantations.flatMap((plantation) => getTraceStagesForProductionType(plantation.type));
+  return uniqueList(stageNames.length ? stageNames : TRACE_STAGES);
+}
 
 function normalizeProductionType(value) {
   return PRODUCTION_TYPE_CONFIG[value] ? value : "shrimp";
@@ -1166,19 +1669,26 @@ function getCompactCropSummary(mode, variety) {
 }
 
 function ConfirmDialog({ message, onConfirm, onCancel }) {
-  return (
-    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onCancel()}>
-      <div className="confirm-box">
-        <button className="modal-close" onClick={onCancel} type="button"><FiX /></button>
-        <div className="confirm-icon"><FiAlertTriangle /></div>
-        <h3>Confirm Delete</h3>
-        <p className="muted">{message}</p>
-        <div className="confirm-actions">
-          <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
-          <button className="btn btn-danger" onClick={onConfirm}>Delete</button>
+  const auth = useContext(AuthContext);
+  const user = auth?.user;
+  const themeClass = user?.role === "grower" ? "theme-grower" : "";
+
+  return createPortal(
+    <div className={`tc-root ${themeClass}`}>
+      <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onCancel()}>
+        <div className="confirm-box">
+          <button className="modal-close" onClick={onCancel} type="button"><FiX /></button>
+          <div className="confirm-icon"><FiAlertTriangle /></div>
+          <h3>Confirm Delete</h3>
+          <p className="muted">{message}</p>
+          <div className="confirm-actions">
+            <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
+            <button className="btn btn-danger" onClick={onConfirm}>Delete</button>
+          </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -1239,8 +1749,13 @@ const INDIA_STATE_DISTRICTS = {
   "West Bengal": ["Alipurduar", "Bankura", "Birbhum", "Cooch Behar", "Dakshin Dinajpur", "Darjeeling", "Hooghly", "Howrah", "Jalpaiguri", "Jhargram", "Kalimpong", "Kolkata", "Malda", "Murshidabad", "Nadia", "North 24 Parganas", "Paschim Bardhaman", "Paschim Medinipur", "Purba Bardhaman", "Purba Medinipur", "Purulia", "South 24 Parganas", "Uttar Dinajpur"],
 };
 
-function AuthEntryPage({ toast }) {
+const FARM_LOCATION_OPTIONS = Object.entries(INDIA_STATE_DISTRICTS).flatMap(([state, districts]) =>
+  districts.map((district) => `${district}, ${state}`),
+);
+
+function AuthEntryPage({ toast, modal = false, onClose }) {
   const { login, signup, forgotPassword, setRememberAuth } = useAuth();
+  const { navigate } = useRouter();
   const [mode, setMode] = useState("login");
   const [signupStep, setSignupStep] = useState(1);
   const [accountType, setAccountType] = useState("grower");
@@ -1250,6 +1765,7 @@ function AuthEntryPage({ toast }) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [profileImage, setProfileImage] = useState("");
+  const [companyLogo, setCompanyLogo] = useState("");
   const [villageArea, setVillageArea] = useState("");
   const [district, setDistrict] = useState("");
   const [stateName, setStateName] = useState("");
@@ -1266,18 +1782,21 @@ function AuthEntryPage({ toast }) {
   const [stepLoading, setStepLoading] = useState(false);
   const [photoLoading, setPhotoLoading] = useState(false);
   const [districtFocused, setDistrictFocused] = useState(false);
+  const [addressFocused, setAddressFocused] = useState(false);
 
   const isSignup = mode === "signup";
   const stateOptions = Object.keys(INDIA_STATE_DISTRICTS);
   const districtOptions = stateName ? (INDIA_STATE_DISTRICTS[stateName] || []) : [];
   const districtSearch = district.trim().toLowerCase();
   const districtSuggestions = districtOptions
-    .filter((name) => !districtSearch || name.toLowerCase().includes(districtSearch))
-    .slice(0, 8);
+    .filter((name) => !districtSearch || name.toLowerCase().includes(districtSearch));
+  const addressSearch = villageArea.trim().toLowerCase();
   const addressSuggestions = district
     ? [district, `${district} town`, `${district} rural area`, `${district} main market`, `${district} village area`]
+        .filter((suggestion) => !addressSearch || suggestion.toLowerCase().includes(addressSearch))
     : [];
   const isWorking = busy || stepLoading;
+  const showGpsLocationControls = false;
 
   const switchMode = (nextMode) => {
     setMode(nextMode);
@@ -1290,12 +1809,24 @@ function AuthEntryPage({ toast }) {
     setStateName(value);
     setDistrict("");
     setVillageArea("");
+    setAddressFocused(false);
   };
 
   const handleDistrictChange = (value) => {
     setDistrict(value);
     setVillageArea("");
     setDistrictFocused(false);
+    setAddressFocused(false);
+  };
+
+  const handleAddressChange = (value) => {
+    setVillageArea(value);
+    setAddressFocused(true);
+  };
+
+  const handleAddressSuggestion = (value) => {
+    setVillageArea(value);
+    setAddressFocused(false);
   };
 
   const goToSignupStep = (nextStep) => {
@@ -1321,6 +1852,25 @@ function AuthEntryPage({ toast }) {
     reader.onerror = () => {
       setPhotoLoading(false);
       setError("Unable to read profile photo.");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCompanyLogo = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setPhotoLoading(true);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCompanyLogo(String(reader.result || ""));
+      window.setTimeout(() => {
+        setPhotoLoading(false);
+        toast("Company logo ready", "success");
+      }, 350);
+    };
+    reader.onerror = () => {
+      setPhotoLoading(false);
+      setError("Unable to read company logo.");
     };
     reader.readAsDataURL(file);
   };
@@ -1378,6 +1928,7 @@ function AuthEntryPage({ toast }) {
           password,
           confirm_password: confirmPassword,
           profile_image: profileImage,
+          company_logo: companyLogo || null,
           village_area: villageArea,
           district,
           state: stateName,
@@ -1421,10 +1972,15 @@ function AuthEntryPage({ toast }) {
   };
 
   return (
-    <div className="auth-entry-page page-container">
+    <div className={`auth-entry-page page-container ${modal ? "auth-entry-modal" : ""}`}>
       <div className="auth-modal">
+        {modal && (
+          <button className="auth-popup-close" onClick={onClose} type="button" aria-label="Close login popup">
+            <FiX />
+          </button>
+        )}
         <div className="auth-left-panel">
-          <div className="auth-left-brand">
+          <div className="auth-left-brand" onClick={() => navigate("/")} style={{ cursor: "pointer" }}>
             <span className="auth-left-logo">
               <img src={TRACE_CONNECT_LOGO_SRC} alt="TraceConnect Logo" />
             </span>
@@ -1543,6 +2099,15 @@ function AuthEntryPage({ toast }) {
                       <img src={profileImage} alt="Profile preview" />
                     </div>
                   )}
+                  <label className="auth-input-wrap">
+                    <span className="auth-field-label">Company logo (Optional)</span>
+                    <input className="input" type="file" accept="image/*" onChange={handleCompanyLogo} disabled={isWorking} />
+                  </label>
+                  {companyLogo && (
+                    <div className="auth-photo-preview">
+                      <img src={companyLogo} alt="Company logo preview" />
+                    </div>
+                  )}
                 </>
               )}
 
@@ -1574,6 +2139,7 @@ function AuthEntryPage({ toast }) {
                         }}
                         onFocus={() => setDistrictFocused(true)}
                         placeholder={stateName ? "Type district name" : "Select state first"}
+                        autoComplete="off"
                         disabled={!stateName || isWorking}
                         required
                       />
@@ -1595,20 +2161,33 @@ function AuthEntryPage({ toast }) {
                   </label>
                   <label className="auth-input-wrap">
                     <span className="auth-field-label">Address / village area</span>
-                    <input
-                      className="input"
-                      list="address-area-suggestions"
-                      value={villageArea}
-                      onChange={(e) => setVillageArea(e.target.value)}
-                      placeholder={district ? "Type address, village, or area" : "Select district first"}
-                      disabled={!district || isWorking}
-                      required
-                    />
-                    <datalist id="address-area-suggestions">
-                      {addressSuggestions.map((suggestion) => (
-                        <option key={suggestion} value={suggestion} />
-                      ))}
-                    </datalist>
+                    <span className="auth-combobox">
+                      <input
+                        className="input"
+                        value={villageArea}
+                        onBlur={() => window.setTimeout(() => setAddressFocused(false), 120)}
+                        onChange={(e) => handleAddressChange(e.target.value)}
+                        onFocus={() => setAddressFocused(true)}
+                        placeholder={district ? "Type address, village, or area" : "Select district first"}
+                        autoComplete="off"
+                        disabled={!district || isWorking}
+                        required
+                      />
+                      {district && addressFocused && addressSuggestions.length > 0 && (
+                        <div className="auth-suggestion-menu auth-address-suggestion-menu">
+                          {addressSuggestions.map((suggestion) => (
+                            <button
+                              key={suggestion}
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => handleAddressSuggestion(suggestion)}
+                              type="button"
+                            >
+                              {suggestion}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </span>
                   </label>
                   <label className="auth-input-wrap">
                     <span className="auth-field-label">Country</span>
@@ -1616,15 +2195,20 @@ function AuthEntryPage({ toast }) {
                   </label>
                   <label className="auth-input-wrap">
                     <span className="auth-field-label">Pincode</span>
-                    <input className="input" value={pincode} onChange={(e) => setPincode(e.target.value)} placeholder="Enter pincode" disabled={isWorking} required />
+                    <input className="input" value={pincode} onChange={(e) => setPincode(e.target.value)} placeholder="Enter pincode (optional)" disabled={isWorking} />
                   </label>
-                  <label className="auth-input-wrap">
-                    <span className="auth-field-label">GPS coordinates</span>
-                    <input className="input" value={gpsCoordinates} onChange={(e) => setGpsCoordinates(e.target.value)} placeholder="Latitude, longitude" disabled={isWorking} />
-                  </label>
-                  <button className="auth-social-btn" onClick={captureLocation} disabled={isWorking} type="button">
-                    Capture live location
-                  </button>
+                  {/* GPS controls intentionally hidden for signup. Keep this block ready if location capture is needed later. */}
+                  {showGpsLocationControls && (
+                    <>
+                      <label className="auth-input-wrap">
+                        <span className="auth-field-label">GPS coordinates</span>
+                        <input className="input" value={gpsCoordinates} onChange={(e) => setGpsCoordinates(e.target.value)} placeholder="Latitude, longitude" disabled={isWorking} />
+                      </label>
+                      <button className="auth-social-btn" onClick={captureLocation} disabled={isWorking} type="button">
+                        Capture live location
+                      </button>
+                    </>
+                  )}
                 </>
               )}
 
@@ -1680,7 +2264,7 @@ function Header({ route, navigate }) {
     : [{ label: "Dashboard", path: "/supplier", icon: <FiHome /> }, { label: "Reports", path: "/reports", icon: <FiBarChart2 /> }];
   return (
     <header className="app-header">
-      <button className="brand" onClick={() => navigate(user.role === "grower" ? "/grower" : "/supplier")}>
+      <button className="brand" onClick={() => navigate("/")}>
         <span className="brand-icon"><img src={TRACE_CONNECT_LOGO_SRC} alt="TraceConnect Logo" /></span>
         <span className="brand-text">TRACECONNECT</span>
       </button>
@@ -1723,9 +2307,10 @@ function Header({ route, navigate }) {
 }
 
 function SiteFooter() {
+  const { navigate } = useRouter();
   return (
     <footer className="site-footer">
-      <div className="site-footer-brand">
+      <div className="site-footer-brand" onClick={() => navigate("/")} style={{ cursor: "pointer" }}>
         <img src={TRACE_CONNECT_LOGO_SRC} alt="TraceConnect Logo" />
         <span>TRACECONNECT</span>
       </div>
@@ -1752,9 +2337,10 @@ function StatCard({ icon, label, value, color }) {
 
 function GrowerDashboard({ navigate, toast }) {
   const { user } = useAuth();
-  const { plantations, crops, harvests, packings, addPlantation, delPlantation, farms, selectedFarmId } = useData();
+  const { plantations, crops, harvests, packings, addPlantation, delPlantation, farms, selectedFarmId, loading, backendError } = useData();
   const { confirm, dialog } = useConfirm();
   const [form, setForm] = useState({ type: "shrimp", name: "", location: "" });
+  const [creating, setCreating] = useState(false);
   const mine = plantations;
   const mineIds = mine.map((p) => p.id);
   const totalHarvested = harvests.filter((h) => mineIds.includes(h.plantationId)).reduce((s, h) => s + (h.accepted || 0), 0);
@@ -1764,20 +2350,30 @@ function GrowerDashboard({ navigate, toast }) {
     "Farm";
   const selectedProduction = getProductionTypeConfig(form.type);
   const growerId = user?.user_id || user?.id || "";
+  const signupLocation = getUserSignupLocation(user);
+
+  useEffect(() => {
+    if (!signupLocation) return;
+    setForm((current) => (current.location ? current : { ...current, location: signupLocation }));
+  }, [signupLocation]);
 
   const create = async () => {
     if (!form.name || !form.location) {
       toast(`Please fill in ${selectedProduction.nameLabel.toLowerCase()} and ${selectedProduction.locationLabel.toLowerCase()}`, "error");
       return;
     }
+    if (creating) return;
+    setCreating(true);
     try {
       await addPlantation({ ...form, status: "Active" });
       stabilizeTraceabilityViewport(() => {
-        setForm({ type: "shrimp", name: "", location: "" });
+        setForm({ type: "shrimp", name: "", location: signupLocation });
         toast("Plantation created successfully!", "success");
       });
     } catch (e) {
       toast(getTraceabilityErrorMessage(e) || "Failed to create plantation", "error");
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -1795,6 +2391,7 @@ function GrowerDashboard({ navigate, toast }) {
   return (
       <div className={`page-container ${selectedProduction.themeClass || ""}`}>
         {dialog}
+      <DataStatusBanner loading={loading && mine.length > 0} error={backendError} />
       <div className="dashboard-hero">
         <div className="dashboard-hero-copy">
           <div className="dashboard-kicker">Grower Workspace</div>
@@ -1854,15 +2451,24 @@ function GrowerDashboard({ navigate, toast }) {
           </div>
           <div className="field-wrap">
             <label className="field-label">{selectedProduction.locationLabel} *</label>
-            <input className="input" placeholder={selectedProduction.locationPlaceholder} value={form.location} onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))} />
+            <input
+              className="input"
+              placeholder={selectedProduction.locationPlaceholder}
+              value={form.location}
+              onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
+            />
           </div>
           <div className="field-wrap field-btn-wrap">
-            <button className="btn btn-primary" onClick={create}><FiPlus /> Create</button>
+            <button className="btn btn-primary" onClick={create} disabled={creating}>
+              {creating ? <LoadingIndicator label="Creating..." /> : <><FiPlus /> Create</>}
+            </button>
           </div>
         </div>
       </div>
 
-      {mine.length === 0 ? (
+      {loading && mine.length === 0 ? (
+        <PageSkeleton title="Loading dashboard..." rows={1} cards={4} />
+      ) : mine.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon"><FiGrid /></div>
           <p>No plantations yet. Create your first one above.</p>
@@ -1892,9 +2498,13 @@ function GrowerDashboard({ navigate, toast }) {
 }
 
 function PlantationsPage({ navigate, toast }) {
-  const { plantations, delPlantation } = useData();
+  const { plantations, delPlantation, loading, backendError } = useData();
   const { confirm, dialog } = useConfirm();
   const mine = plantations;
+
+  if (loading && mine.length === 0) {
+    return <PageSkeleton title="Loading plantations..." rows={2} cards={3} />;
+  }
 
   const remove = async (id) => {
     const ok = await confirm("Delete this plantation?");
@@ -1910,6 +2520,10 @@ function PlantationsPage({ navigate, toast }) {
   return (
     <div className="page-container">
       {dialog}
+      <DataStatusBanner loading={loading} error={backendError} />
+      <button className="btn-back-minimal" onClick={() => navigate("/grower")}>
+        <FiArrowLeft /> Back to Dashboard
+      </button>
       <div className="page-header">
         <div><h1>All Plantations</h1><p className="page-subtitle">Manage all your registered plantations</p></div>
         <button className="btn btn-primary" onClick={() => navigate("/grower")}><FiPlus /> New Plantation</button>
@@ -1946,7 +2560,9 @@ function WorkflowSection({ title, children }) {
 }
 
 function PlantationDetail({ plantationId, toast }) {
-  const { plantations, crops, monitoring, verification, harvests, packings, processImages, addCrop, delCrop, addMonitoring, delMonitoring, addVerification, delVerification, addHarvest, delHarvest, addPacking, delPacking, addProcessImage, delProcessImage } = useData();
+  const { navigate } = useRouter();
+  const { user, videoBusy, videoProgress, generateVideo, videoUnlockedOnce } = useAuth();
+  const { plantations, crops, monitoring, verification, harvests, packings, processImages, addCrop, delCrop, addMonitoring, delMonitoring, addVerification, delVerification, addHarvest, delHarvest, addPacking, delPacking, addProcessImage, delProcessImage, loading, backendError } = useData();
   const { confirm, dialog } = useConfirm();
   const [step, setStep] = useState(0);
   const plantationIdNum = Number(plantationId);
@@ -1957,6 +2573,7 @@ function PlantationDetail({ plantationId, toast }) {
   const pHar = harvests.filter((h) => h.plantationId === plantationIdNum);
   const pPack = packings.filter((pk) => pk.plantationId === plantationIdNum);
   const pImgs = processImages.filter((img) => img.plantationId === plantationIdNum);
+  if (!plantation && loading) return <PageSkeleton title="Loading plantation..." rows={4} cards={3} />;
   if (!plantation) return <div className="page-container"><div className="empty-state">Plantation not found.</div></div>;
   const L = getProductionTypeConfig(plantation.type);
   const unlocked = [true, pCrops.length > 0, pMon.length > 0, pVer.length > 0, pHar.length > 0];
@@ -1974,9 +2591,24 @@ function PlantationDetail({ plantationId, toast }) {
     setStep(i);
   };
 
+  const generatePlantationVideo = async () => {
+    if (videoBusy) return;
+    try {
+      toast("Preparing saved images for video...", "success");
+      await generateVideo(pImgs, names, "A");
+      toast("Video generated and saved to profile successfully.", "success");
+    } catch (error) {
+      toast(error?.message || "Video service unavailable right now.", "error");
+    }
+  };
+
   return (
     <div className={`page-container ${L.themeClass || ""}`}>
       {dialog}
+      <DataStatusBanner loading={loading} error={backendError} />
+      <button className="btn-back-minimal" onClick={() => navigate("/grower")}>
+        <FiArrowLeft /> Back to Dashboard
+      </button>
       <div className="plantation-hero">
         <div className="plantation-hero-copy">
           <div className="plantation-kicker">Plantation Lifecycle</div>
@@ -2112,12 +2744,15 @@ function PlantationDetail({ plantationId, toast }) {
               <p className="muted">Create a lifecycle video for this farm to share with customers.</p>
             </div>
           </div>
-          <button className="btn btn-primary" onClick={async () => {
-            try {
-              await fetch("https://maatiaivideogenerator.onrender.com", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ logo: "", intro_logo: "", farmer_img: "", farm_img: "", process_images: pImgs.map((x) => x.imageUrl).filter(Boolean), certificate_img: "", end_img: "" }) });
-              toast("Video generation initiated!", "success");
-            } catch { toast("Video service unavailable right now.", "error"); }
-          }}>Generate</button>
+          {user?.video_url && user?.video_locked ? (
+            <button className="btn" disabled style={{ backgroundColor: "#eaeaea", color: "#888", border: "1px solid #ddd", cursor: "not-allowed", display: "flex", alignItems: "center", gap: 8, padding: "10px 20px" }} type="button">
+              <FiCheckCircle /> Video Already Generated
+            </button>
+          ) : (
+            <button className="btn btn-primary" onClick={generatePlantationVideo} disabled={videoBusy} type="button">
+              {videoBusy ? <LoadingIndicator label={videoProgress || "Generating..."} /> : <><FiVideo /> Generate</>}
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -2225,6 +2860,7 @@ function ProcessEntries({ stage, plantationId, pImgs, addProcessImage, delProces
         useLabel={isGiCertificate ? "Use GI Certificate" : "Use Photo"}
         stampGi={shouldStampGiLogo}
         giProductLabel={giProductLabel}
+        stage={stage}
         onClose={() => {
           if (isSaving) return;
           setCameraOpen(false);
@@ -2266,13 +2902,10 @@ function ProcessEntries({ stage, plantationId, pImgs, addProcessImage, delProces
             <img src={GI_LOGO_SRC} alt="GI tag logo" />
             <div className="gi-certificate-pdf-copy">
               <a href={KOTPAD_GI_CERTIFICATE_PDF_SRC} target="_blank" rel="noreferrer">
-                Kotpad GI Certificate PDF
+                <strong>GI Kotpad Fabric Tag Certificate</strong>
               </a>
               <span><FiCheckCircle /> Verified checked</span>
             </div>
-            <span className="gi-certified-badge gi-logo-badge">
-              <img src={GI_LOGO_SRC} alt="" /> GI Tag
-            </span>
           </div>
           <div className="form-row gi-certificate-actions">
             <input
@@ -2311,7 +2944,7 @@ function ProcessEntries({ stage, plantationId, pImgs, addProcessImage, delProces
                   <div className="process-entry-date">{it.date}</div>
                   {shouldStampGiLogo && (
                     <span className="gi-certified-badge">
-                      <FiAward /> Certified GI
+                      <FiAward /> GI Certified
                     </span>
                   )}
                 </div>
@@ -2347,14 +2980,24 @@ function GeoCameraModal({
   useLabel = "Use Photo",
   stampGi = false,
   giProductLabel = "GI TAGGED",
+  stage = "",
 }) {
+  const auth = useContext(AuthContext);
+  const user = auth?.user;
+  const themeClass = user?.role === "grower" ? "theme-grower" : "";
+
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
+  const mapRef = useRef(null);
+  const markerRef = useRef(null);
+
   const [status, setStatus] = useState("Initializing...");
   const [error, setError] = useState("");
   const [previewUrl, setPreviewUrl] = useState("");
   const [busy, setBusy] = useState(false);
+  const [mapCoords, setMapCoords] = useState({ lat: 20.2961, lon: 85.8245 });
+  const [geocodedAddress, setGeocodedAddress] = useState("");
 
   useEffect(() => {
     if (!open) return undefined;
@@ -2410,11 +3053,131 @@ function GeoCameraModal({
     };
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const signupLoc = getUserSignupLocation(user);
+    setGeocodedAddress(signupLoc || "Odisha, India");
+
+    let isCancelled = false;
+
+    (async () => {
+      let resolvedLat = 20.2961;
+      let resolvedLon = 85.8245;
+      let signupCoordsResolved = false;
+
+      if (signupLoc) {
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(signupLoc)}&format=json&limit=1`);
+          const data = await res.json();
+          if (data && data.length > 0 && !isCancelled) {
+            resolvedLat = parseFloat(data[0].lat);
+            resolvedLon = parseFloat(data[0].lon);
+            signupCoordsResolved = true;
+          }
+        } catch (e) {
+          // ignore
+        }
+
+        if (!signupCoordsResolved) {
+          const gps = user?.gps_coordinates || "";
+          if (gps.includes(",")) {
+            const [latStr, lonStr] = gps.split(",");
+            resolvedLat = parseFloat(latStr.trim()) || resolvedLat;
+            resolvedLon = parseFloat(lonStr.trim()) || resolvedLon;
+            signupCoordsResolved = true;
+          } else if (user?.latitude && user?.longitude) {
+            resolvedLat = parseFloat(user.latitude) || resolvedLat;
+            resolvedLon = parseFloat(user.longitude) || resolvedLon;
+            signupCoordsResolved = true;
+          }
+        }
+      }
+
+      if (!signupCoordsResolved) {
+        try {
+          const coords = await getCurrentLocation();
+          const isSwissMock = Math.abs(coords.latitude - 47.4) < 1.0 && Math.abs(coords.longitude - 8.5) < 1.0;
+          if (!isSwissMock) {
+            resolvedLat = coords.latitude;
+            resolvedLon = coords.longitude;
+          }
+        } catch (err) {
+          // ignore
+        }
+      }
+
+      if (isCancelled) return;
+      setMapCoords({ lat: resolvedLat, lon: resolvedLon });
+
+      // Delay briefly to allow map DOM container to mount
+      await delay(150);
+      if (isCancelled) return;
+
+      const mapElement = document.getElementById("camera-leaflet-map");
+      if (mapElement && window.L) {
+        if (mapRef.current) {
+          try {
+            mapRef.current.remove();
+          } catch {
+            // ignore
+          }
+          mapRef.current = null;
+        }
+
+        // Fix standard Leaflet default marker icons issue in bundled applications
+        if (window.L.Icon?.Default) {
+          delete window.L.Icon.Default.prototype._getIconUrl;
+          window.L.Icon.Default.mergeOptions({
+            iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+            iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+            shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+          });
+        }
+
+        const map = window.L.map("camera-leaflet-map", {
+          center: [resolvedLat, resolvedLon],
+          zoom: 14,
+          zoomControl: false,
+          attributionControl: false,
+        });
+        mapRef.current = map;
+
+        window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19,
+          crossOrigin: true, // Enables canvas capture without tainted origins
+        }).addTo(map);
+
+        const marker = window.L.marker([resolvedLat, resolvedLon]).addTo(map);
+        markerRef.current = marker;
+
+        setTimeout(() => {
+          if (mapRef.current) {
+            mapRef.current.invalidateSize();
+          }
+        }, 100);
+      }
+    })();
+
+    return () => {
+      isCancelled = true;
+      if (mapRef.current) {
+        try {
+          mapRef.current.remove();
+        } catch {
+          // ignore
+        }
+        mapRef.current = null;
+      }
+      markerRef.current = null;
+    };
+  }, [open, user]);
+
   const capture = async () => {
     try {
       setBusy(true);
       setError("");
-      setStatus("Fetching location...");
+      setStatus("Capturing image...");
       const video = videoRef.current;
       const canvas = canvasRef.current;
       if (!video || !canvas) throw new Error("Camera not ready");
@@ -2422,31 +3185,18 @@ function GeoCameraModal({
       if (!s) throw new Error("Camera stream unavailable");
       if (video.readyState < 2) throw new Error("Camera not ready yet");
 
-      const coords = await getCurrentLocation();
-
-      let address = "Address unavailable";
-      try {
-        const res = await fetch(
-          `${API_URL}/api/location/reverse?lat=${encodeURIComponent(coords.latitude)}&lon=${encodeURIComponent(coords.longitude)}`,
-          { method: "GET", credentials: "include" },
-        );
-        const json = await res.json().catch(() => null);
-        address = json?.display_name || address;
-      } catch {
-        // ignore
-      }
-
       const outputWidth = 1280;
       const photoHeight = 720;
       const geoHeight = 280;
+      const totalHeight = photoHeight + geoHeight;
       canvas.width = outputWidth;
-      canvas.height = photoHeight + geoHeight;
+      canvas.height = totalHeight;
       const ctx = canvas.getContext("2d");
 
       const srcW = video.videoWidth;
       const srcH = video.videoHeight;
       const srcAspect = srcW / srcH;
-      const dstAspect = outputWidth / photoHeight;
+      const dstAspect = outputWidth / totalHeight;
       let sx = 0; let sy = 0; let sWidth = srcW; let sHeight = srcH;
       if (srcAspect > dstAspect) {
         sWidth = srcH * dstAspect;
@@ -2455,14 +3205,29 @@ function GeoCameraModal({
         sHeight = srcW / dstAspect;
         sy = (srcH - sHeight) / 2;
       }
-      ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, outputWidth, photoHeight);
+      ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, outputWidth, totalHeight);
 
-      drawGeoOverlay(ctx, outputWidth, photoHeight, geoHeight, {
+      // Fetch live current location for coordinates tag
+      let liveLat = mapCoords.lat;
+      let liveLon = mapCoords.lon;
+      try {
+        const coords = await getCurrentLocation();
+        const isSwissMock = Math.abs(coords.latitude - 47.4) < 1.0 && Math.abs(coords.longitude - 8.5) < 1.0;
+        if (!isSwissMock) {
+          liveLat = coords.latitude;
+          liveLon = coords.longitude;
+        }
+      } catch (err) {
+        // ignore and fallback to mapCoords
+      }
+
+      await drawGeoOverlay(ctx, outputWidth, photoHeight, geoHeight, {
         name: name || "Process Capture",
         dateTime: formatDateTime(new Date()),
-        address,
-        lat: coords.latitude,
-        lon: coords.longitude,
+        address: geocodedAddress || "Address unavailable",
+        lat: liveLat,
+        lon: liveLon,
+        stage: stage,
       });
       if (stampGi) {
         await drawGiCertificateStamp(ctx, outputWidth, canvas.height, giProductLabel);
@@ -2482,35 +3247,43 @@ function GeoCameraModal({
 
   if (!open) return null;
 
-  return (
-    <div className="modal-overlay" role="dialog" aria-modal="true" onClick={(e) => e.target === e.currentTarget && !saving && onClose()}>
-      <div className="modal-box camera-modal">
-        <button className="modal-close" onClick={onClose} type="button" disabled={saving}><FiX /></button>
-        <h3>{title}</h3>
-        {subtitle ? <div className="muted camera-subtitle">{subtitle}</div> : null}
-        <div className="camera-stage">
-          <video ref={videoRef} autoPlay muted playsInline />
-          <canvas ref={canvasRef} style={{ display: "none" }} />
-          <div className="camera-status">
-            {saving || busy ? <LoadingIndicator label={saving ? "Saving photo..." : status} /> : status}
+  return createPortal(
+    <div className={`tc-root ${themeClass}`}>
+      <div className="modal-overlay" role="dialog" aria-modal="true" onClick={(e) => e.target === e.currentTarget && !saving && onClose()}>
+        <div className="modal-box camera-modal" style={{ maxWidth: "540px" }}>
+          <button className="modal-close" onClick={onClose} type="button" disabled={saving}><FiX /></button>
+          <h3>{title}</h3>
+          {subtitle ? <div className="muted camera-subtitle">{subtitle}</div> : null}
+
+          <div className="camera-stage">
+            <video ref={videoRef} autoPlay muted playsInline />
+            <canvas ref={canvasRef} style={{ display: "none" }} />
+            <div className="camera-status">
+              {saving || busy ? <LoadingIndicator label={saving ? "Saving photo..." : status} /> : status}
+            </div>
           </div>
-        </div>
-        {error && <div className="inline-alert error">{error}</div>}
-        {previewUrl && (
-          <div className="camera-preview">
-            <img src={previewUrl} alt="Captured preview" />
+          
+          {/* Leaflet map is rendered off-screen so tiles can still be loaded and drawn on the canvas */}
+          <div id="camera-leaflet-map" style={{ width: "200px", height: "200px", position: "absolute", left: "-9999px", top: "-9999px" }} />
+
+          {error && <div className="inline-alert error">{error}</div>}
+          {previewUrl && (
+            <div className="camera-preview">
+              <img src={previewUrl} alt="Captured preview" />
+            </div>
+          )}
+          <div className="actions right camera-actions">
+            <button className="btn btn-outline" onClick={capture} disabled={busy || saving}>
+              {busy ? <LoadingIndicator label="Capturing..." /> : captureLabel}
+            </button>
+            <button className="btn btn-primary" onClick={() => { void onUse(previewUrl); }} disabled={!previewUrl || busy || saving}>
+              {saving ? <LoadingIndicator label="Using photo..." /> : useLabel}
+            </button>
           </div>
-        )}
-        <div className="actions right camera-actions">
-          <button className="btn btn-outline" onClick={capture} disabled={busy || saving}>
-            {busy ? <LoadingIndicator label="Capturing..." /> : captureLabel}
-          </button>
-          <button className="btn btn-primary" onClick={() => { void onUse(previewUrl); }} disabled={!previewUrl || busy || saving}>
-            {saving ? <LoadingIndicator label="Using photo..." /> : useLabel}
-          </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -3711,8 +4484,7 @@ function SupplierDashboard({ navigate, toast }) {
                     <div>
                       <strong>{trace.plantationName}</strong>
                       <p>
-                        {trace.cropName} â€¢ {trace.netWeight} kg â€¢{" "}
-                        {trace.packingDate || "Packing date pending"}
+                        {trace.cropName} • {trace.netWeight} kg • {trace.packingDate || "Packing date pending"}
                       </p>
                     </div>
                     <button
@@ -3743,36 +4515,43 @@ function SupplierDashboard({ navigate, toast }) {
 }
 
 function BatchModal({ batch, onClose, navigate }) {
+  const auth = useContext(AuthContext);
+  const user = auth?.user;
+  const themeClass = user?.role === "grower" ? "theme-grower" : "";
   const qrValue = `${window.location.origin}/patch/${batch.id}`;
-  return (
-    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal-box batch-modal">
-        <button className="modal-close" onClick={onClose}><FiX /></button>
-        <div className="batch-modal-header">
-          <div className="batch-modal-icon"><FiCheck /></div>
-          <h3>Batch Created!</h3>
-        </div>
-        <div className="qr-box">
-          <div className="qr-shell">
-            <QRCode value={qrValue} size={188} />
-            <span className="qr-logo-mark">
-              <img src={TRACE_CONNECT_LOGO_SRC} alt="" />
-            </span>
+
+  return createPortal(
+    <div className={`tc-root ${themeClass}`}>
+      <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+        <div className="modal-box batch-modal">
+          <button className="modal-close" onClick={onClose}><FiX /></button>
+          <div className="batch-modal-header">
+            <div className="batch-modal-icon"><FiCheck /></div>
+            <h3>Batch Created!</h3>
           </div>
-          <span className="qr-caption">Scan to open batch trace</span>
+          <div className="qr-box">
+            <div className="qr-shell">
+              <QRCode value={qrValue} size={188} />
+              <span className="qr-logo-mark">
+                <img src={TRACE_CONNECT_LOGO_SRC} alt="" />
+              </span>
+            </div>
+            <span className="qr-caption">Scan to open batch trace</span>
+          </div>
+          <div className="batch-modal-info">
+            <div className="kv-pair"><span>Batch ID</span><code>{batch.id}</code></div>
+            <div className="kv-pair"><span>Total Weight</span><strong>{batch.totalWeight} kg</strong></div>
+            <div className="kv-pair"><span>Description</span><strong>{batch.description || "-"}</strong></div>
+            <div className="kv-pair"><span>Created</span><strong>{batch.createdAt}</strong></div>
+            <div className="kv-pair"><span>Items</span><strong>{batch.packingIds.length} packings</strong></div>
+          </div>
+          <button className="btn btn-primary full-width" onClick={() => { onClose(); navigate(`/patch/${batch.id}`); }}>
+            View Public Trace Page <FiArrowRight />
+          </button>
         </div>
-        <div className="batch-modal-info">
-          <div className="kv-pair"><span>Batch ID</span><code>{batch.id}</code></div>
-          <div className="kv-pair"><span>Total Weight</span><strong>{batch.totalWeight} kg</strong></div>
-          <div className="kv-pair"><span>Description</span><strong>{batch.description || "-"}</strong></div>
-          <div className="kv-pair"><span>Created</span><strong>{batch.createdAt}</strong></div>
-          <div className="kv-pair"><span>Items</span><strong>{batch.packingIds.length} packings</strong></div>
-        </div>
-        <button className="btn btn-primary full-width" onClick={() => { onClose(); navigate(`/patch/${batch.id}`); }}>
-          View Public Trace Page <FiArrowRight />
-        </button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -3834,11 +4613,22 @@ function QRCode({ value, size = 160 }) {
 }
 
 function ReportsPage() {
-  const { plantations, crops, harvests } = useData();
+  const { navigate } = useRouter();
+  const { user } = useAuth();
+  const { plantations, crops, harvests, loading, backendError } = useData();
+  const dashboardRoute = user?.role === "supplier" ? "/supplier" : "/grower";
   const plantationById = new Map(plantations.map((p) => [Number(p.id), p]));
+
+  if (loading && plantations.length === 0 && crops.length === 0 && harvests.length === 0) {
+    return <PageSkeleton title="Loading reports..." rows={5} cards={3} />;
+  }
 
   return (
     <div className="page-container reports-page">
+      <DataStatusBanner loading={loading} error={backendError} />
+      <button className="btn-back-minimal" onClick={() => navigate(dashboardRoute)}>
+        <FiArrowLeft /> Back to Dashboard
+      </button>
       <div className="page-header">
         <div><h1>Reports</h1><p className="page-subtitle">Overview of all plantations, crops, and harvest data</p></div>
       </div>
@@ -3902,13 +4692,17 @@ function ReportsPage() {
   );
 }
 
-function ProfilePage() {
-  const { user, signOut } = useAuth();
-  const { plantations, crops, harvests, packings, batches, processImages, delProcessImage } = useData();
+function ProfilePage({ toast }) {
+  const { navigate } = useRouter();
+  const { user, signOut, updateUser, videoBusy, videoProgress, generateVideo, videoUnlockedOnce } = useAuth();
+  const { plantations, crops, harvests, packings, batches, processImages, updateProcessImage, delProcessImage } = useData();
   const { confirm, dialog } = useConfirm();
   const [editing, setEditing] = useState(false);
+  const [logo, setLogo] = useState(user?.company_logo || "");
   const [name, setName] = useState(user?.name || "");
   const [activeGalleryStage, setActiveGalleryStage] = useState(TRACE_STAGES[0]);
+  const [recapturingImage, setRecapturingImage] = useState(null);
+  const [recaptureSaving, setRecaptureSaving] = useState(false);
   const currentUserId = Number(user?.user_id || user?.id);
   const mine = plantations.filter((p) => Number(p.userId) === currentUserId);
   const mineIdSet = new Set(mine.map((p) => Number(p.id)));
@@ -3917,13 +4711,77 @@ function ProfilePage() {
   const minePackings = packings.filter((p) => mineIdSet.has(Number(p.plantationId)));
   const mineBatches = batches.filter((b) => Number(b.supplierId) === currentUserId);
   const mineImages = processImages.filter((i) => mineIdSet.has(Number(i.plantationId)));
-  const stagesWithImages = TRACE_STAGES.filter((stage) => mineImages.some((img) => img.stage === stage));
-  const stages = stagesWithImages.length > 0 ? stagesWithImages : TRACE_STAGES;
+  const stages = getTraceStagesForPlantations(mine);
   const visibleGalleryStage = stages.includes(activeGalleryStage) ? activeGalleryStage : stages[0];
   const activeStageImages = mineImages.filter((img) => img.stage === visibleGalleryStage);
   const plantationById = new Map(mine.map((p) => [Number(p.id), p]));
+  const allStagePhotosCaptured = stages.length > 0 && stages.every((stage) => (
+    mineImages.some((img) => img.stage === stage && img.imageUrl && !isPdfUrl(img.imageUrl))
+  ));
+  const recapturePlantation = recapturingImage ? plantationById.get(Number(recapturingImage.plantationId)) : null;
+  const recaptureConfig = getProductionTypeConfig(recapturePlantation?.type || "shrimp");
+  const recaptureStampGi = isGiLogoProduction(recaptureConfig.mode);
 
   const removeImage = async (id) => { const ok = await confirm("Delete this entry?"); if (!ok) return; delProcessImage(id); };
+
+  const recaptureImage = async (imageUrl) => {
+    if (!recapturingImage || recaptureSaving || !imageUrl) return;
+    setRecaptureSaving(true);
+    try {
+      const uploaded = await traceabilityApi.uploadTraceabilityImage({
+        data_url: imageUrl,
+        plantation_id: recapturingImage.plantationId,
+        stage: recapturingImage.stage,
+      });
+      const url = uploaded?.url;
+      if (!url) throw new Error("Upload failed");
+      await updateProcessImage(recapturingImage.id, {
+        plantationId: recapturingImage.plantationId,
+        stage: recapturingImage.stage,
+        name: recapturingImage.name || "Process Capture",
+        imageUrl: url,
+      });
+      setRecapturingImage(null);
+      toast("Photo recaptured", "success");
+    } catch (e) {
+      toast(getTraceabilityErrorMessage(e), "error");
+    } finally {
+      setRecaptureSaving(false);
+    }
+  };
+
+  const handleCompanyLogoEdit = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setLogo(String(reader.result || ""));
+      toast("Company logo uploaded", "success");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const saveProfile = async () => {
+    try {
+      const updated = await authApi.updateProfile({ name, company_logo: logo });
+      updateUser(updated);
+      setEditing(false);
+      toast("Profile updated successfully", "success");
+    } catch (e) {
+      toast("Failed to update profile", "error");
+    }
+  };
+
+  const generateProfileVideo = async () => {
+    if (!allStagePhotosCaptured || videoBusy) return;
+    try {
+      toast("Preparing saved images for video...", "success");
+      await generateVideo(mineImages, stages, "A");
+      toast("Video generated and saved to profile successfully.", "success");
+    } catch (error) {
+      toast(error?.message || "Video service unavailable right now.", "error");
+    }
+  };
 
   const handleSignOut = () => {
     signOut();
@@ -3933,6 +4791,27 @@ function ProfilePage() {
   return (
     <div className="page-container">
       {dialog}
+      <GeoCameraModal
+        open={Boolean(recapturingImage)}
+        name={recapturingImage?.name || "Process Capture"}
+        title="Recapture Process Photo"
+        subtitle="The new photo will replace this saved profile image."
+        captureLabel="Recapture"
+        useLabel="Update Photo"
+        stampGi={recaptureStampGi}
+        giProductLabel={recaptureConfig.badge || "GI TAGGED"}
+        stage={recapturingImage?.stage}
+        onClose={() => {
+          if (recaptureSaving) return;
+          setRecapturingImage(null);
+        }}
+        saving={recaptureSaving}
+        onUse={recaptureImage}
+        toast={toast}
+      />
+      <button className="btn-back-minimal" onClick={() => navigate(user?.role === "supplier" ? "/supplier" : "/grower")}>
+        <FiArrowLeft /> Back to Dashboard
+      </button>
       <div className="profile-banner">
         <div className="profile-avatar-lg">
           {user?.profile_image ? (
@@ -3951,10 +4830,16 @@ function ProfilePage() {
             <button className="btn btn-danger profile-edit-btn" onClick={handleSignOut}><FiLogOut /> Logout</button>
           </>
         ) : (
-          <div className="profile-edit-row">
+          <div className="profile-edit-row" style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "flex-start" }}>
             <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your full name" />
-            <button className="btn btn-primary" onClick={() => setEditing(false)}><FiCheck /> Save</button>
-            <button className="btn btn-ghost" onClick={() => { setName(user?.name || ""); setEditing(false); }}><FiX /></button>
+            <label style={{ display: "flex", flexDirection: "column", gap: 4, width: "100%" }}>
+              <span className="muted" style={{ fontSize: 12 }}>Update Company Logo:</span>
+              <input className="input" type="file" accept="image/*" onChange={handleCompanyLogoEdit} />
+            </label>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button className="btn btn-primary" onClick={saveProfile}><FiCheck /> Save</button>
+              <button className="btn btn-ghost" onClick={() => { setName(user?.name || ""); setLogo(user?.company_logo || ""); setEditing(false); }}><FiX /></button>
+            </div>
           </div>
         )}
       </div>
@@ -3964,6 +4849,15 @@ function ProfilePage() {
         <div className="info-item"><FiShield className="info-icon" /><span>Role</span><strong className="capitalize">{user?.role}</strong></div>
         <div className="info-item"><FiCalendar className="info-icon" /><span>Platform</span><strong>TRACECONNECT</strong></div>
         <div className="info-item"><FiCheck className="info-icon" /><span>Status</span><strong style={{ color: "#1f8a43" }}>Active</strong></div>
+        <div className="info-item">
+          <FiAward className="info-icon" />
+          <span>Company Logo</span>
+          {user?.company_logo ? (
+            <img src={user.company_logo} alt="Logo" style={{ height: 24, width: "auto", objectFit: "contain" }} />
+          ) : (
+            <strong className="muted" style={{ fontSize: 12 }}>Default (Maati AI)</strong>
+          )}
+        </div>
       </div>
 
       <div className="stats-row">
@@ -4027,11 +4921,16 @@ function ProfilePage() {
                     <div className="process-entry-actions">
                       {img.imageUrl && (
                         <a className="process-entry-link" href={img.imageUrl} target="_blank" rel="noreferrer">
-                          View
+                          <FiExternalLink /> View
                         </a>
                       )}
+                      {!isPdfUrl(img.imageUrl) && (
+                        <button className="process-entry-link" onClick={() => setRecapturingImage(img)} type="button">
+                          <FiCamera /> Recapture
+                        </button>
+                      )}
                       <button className="process-entry-delete" onClick={() => removeImage(img.id)} type="button">
-                        Delete
+                        <FiTrash2 /> Delete
                       </button>
                     </div>
                   </div>
@@ -4046,12 +4945,68 @@ function ProfilePage() {
             </div>
           )}
         </div>
+        {allStagePhotosCaptured && (
+          <div className="profile-video-action" style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", alignItems: "center" }}>
+            {user?.video_url && user?.video_locked ? (
+              <button className="btn" disabled style={{ backgroundColor: "#eaeaea", color: "#888", border: "1px solid #ddd", cursor: "not-allowed", display: "flex", alignItems: "center", gap: 8, padding: "10px 20px" }} type="button">
+                <FiCheckCircle /> Video Already Generated
+              </button>
+            ) : (
+              <button className="btn btn-primary" onClick={generateProfileVideo} disabled={videoBusy} type="button">
+                {videoBusy ? <LoadingIndicator label={videoProgress || "Generating..."} /> : <><FiVideo /> Generate Video</>}
+              </button>
+            )}
+          </div>
+        )}
       </div>
+
+      {user?.video_url && (
+        <div className="card profile-video-card" style={{ marginTop: 24, width: "100%" }}>
+          <div className="card-title" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <FiVideo /> Your Traceability Video
+          </div>
+          <p className="muted" style={{ fontSize: 12, marginBottom: 16 }}>
+            Lifecycle video generated from your stage photos. Saved to your account.
+            {user?.video_locked && <span style={{ marginLeft: 8, color: "#888", fontWeight: 600 }}>&#x1F512; Locked — add or update a stage photo to re-generate.</span>}
+          </p>
+          <div className="profile-video-player" style={{ position: "relative", borderRadius: 8, overflow: "hidden", backgroundColor: "#000", aspectRatio: "16/9", maxWidth: 640, margin: "0 auto" }}>
+            <video src={user.video_url} controls style={{ width: "100%", height: "100%" }} />
+          </div>
+          <div style={{ marginTop: 16, display: "flex", justifyContent: "center", gap: 12, flexWrap: "wrap" }}>
+            <a href={user.video_url} target="_blank" rel="noreferrer" className="btn btn-outline" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <FiExternalLink /> Open Video
+            </a>
+            <button
+              className="btn btn-primary"
+              style={{ display: "flex", alignItems: "center", gap: 8 }}
+              onClick={async () => {
+                try {
+                  const blob = await fetch(user.video_url).then((r) => r.blob());
+                  const blobUrl = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = blobUrl;
+                  a.download = "traceability-video.mp4";
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(blobUrl);
+                } catch (_) {
+                  window.open(user.video_url, "_blank", "noopener,noreferrer");
+                }
+              }}
+            >
+              <FiDownload /> Download Video
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 function TracePage({ patchId }) {
+  const { navigate } = useRouter();
+  const { user } = useAuth();
   const [state, setState] = useState({ loading: true, error: "", data: null });
 
   useEffect(() => {
@@ -4075,6 +5030,15 @@ function TracePage({ patchId }) {
   if (state.loading) {
     return (
       <div className="trace-page trace-public">
+        <header className="public-trace-header">
+          <button className="btn-back-minimal" onClick={() => { if (user) { navigate(user.role === "supplier" ? "/supplier" : "/grower"); } else { navigate("/"); } }}>
+            <FiArrowLeft /> {user ? "Back to Dashboard" : "Back to Home"}
+          </button>
+          <button className="public-brand-btn" onClick={() => navigate("/")}>
+            <span className="brand-icon"><img src={TRACE_CONNECT_LOGO_SRC} alt="Logo" /></span>
+            <span className="brand-text">TRACECONNECT</span>
+          </button>
+        </header>
         <div className="trace-card" style={{ textAlign: "center", padding: 36 }}>
           <h2>Loading trace...</h2>
           <p className="muted">Batch ID: <code>{patchId}</code></p>
@@ -4110,6 +5074,15 @@ function TracePage({ patchId }) {
   if (!batch) {
     return (
       <div className="trace-page trace-public">
+        <header className="public-trace-header">
+          <button className="btn-back-minimal" onClick={() => { if (user) { navigate(user.role === "supplier" ? "/supplier" : "/grower"); } else { navigate("/"); } }}>
+            <FiArrowLeft /> {user ? "Back to Dashboard" : "Back to Home"}
+          </button>
+          <button className="public-brand-btn" onClick={() => navigate("/")}>
+            <span className="brand-icon"><img src={TRACE_CONNECT_LOGO_SRC} alt="Logo" /></span>
+            <span className="brand-text">TRACECONNECT</span>
+          </button>
+        </header>
         <div className="trace-card" style={{ textAlign: "center", padding: 36 }}>
           <div style={{ fontSize: 40 }}><FiAlertTriangle /></div>
           <h2>Batch Not Found</h2>
@@ -4171,6 +5144,15 @@ function TracePage({ patchId }) {
 
   return (
     <div className="trace-page trace-public">
+      <header className="public-trace-header">
+        <button className="btn-back-minimal" onClick={() => { if (user) { navigate(user.role === "supplier" ? "/supplier" : "/grower"); } else { navigate("/"); } }}>
+          <FiArrowLeft /> {user ? "Back to Dashboard" : "Back to Home"}
+        </button>
+        <button className="public-brand-btn" onClick={() => navigate("/")}>
+          <span className="brand-icon"><img src={TRACE_CONNECT_LOGO_SRC} alt="Logo" /></span>
+          <span className="brand-text">TRACECONNECT</span>
+        </button>
+      </header>
       <div className="trace-hero">
         <div className="trace-hero-img">
           <div className="trace-hero-overlay">
@@ -4179,10 +5161,10 @@ function TracePage({ patchId }) {
             <p className="trace-product-subtitle">Farm to batch traceability record</p>
           </div>
           <div className="trace-info-bar">
-            <div className="trace-info-item"><span className="amber-dot">â€¢</span><span>Variety</span><strong>{cropRecord?.variety || "-"}</strong></div>
-            <div className="trace-info-item"><span className="amber-dot">â€¢</span><span>Harvested</span><strong>{harvestRecord?.harvestDate || "-"}</strong></div>
-            <div className="trace-info-item"><span className="amber-dot">â€¢</span><span>Origin</span><strong>{plantation?.location || "-"}</strong></div>
-            <div className="trace-info-item"><span className="amber-dot">â€¢</span><span>Batch ID</span><strong className="mono">{batch.id}</strong></div>
+            <div className="trace-info-item"><span className="amber-dot">•</span><span>Variety</span><strong>{cropRecord?.variety || "-"}</strong></div>
+            <div className="trace-info-item"><span className="amber-dot">•</span><span>Harvested</span><strong>{harvestRecord?.harvestDate || "-"}</strong></div>
+            <div className="trace-info-item"><span className="amber-dot">•</span><span>Origin</span><strong>{plantation?.location || "-"}</strong></div>
+            <div className="trace-info-item"><span className="amber-dot">•</span><span>Batch ID</span><strong className="mono">{batch.id}</strong></div>
           </div>
         </div>
       </div>
@@ -4350,41 +5332,71 @@ function TracePage({ patchId }) {
   );
 }
 function AppShell() {
-  const { user, loading } = useAuth();
+  const { user, loading, videoBusy, videoProgress, videoProgressPercent, cancelVideoGeneration } = useAuth();
+  const { loading: dataLoading, pendingRequests, backendError } = useData();
   const { route, navigate } = useRouter();
   const { toast, toasts } = useToast();
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const plantationMatch = route.match(/^\/plantation\/(.+)$/);
   const patchMatch = route.match(/^\/patch\/(.+)$/);
   const dashboardRoute = user?.role === "supplier" ? "/supplier" : "/grower";
+  const appBusy = loading || dataLoading || pendingRequests > 0;
+  const busyLabel = loading
+    ? "Checking session..."
+    : dataLoading
+      ? "Loading records..."
+      : "Saving changes...";
 
   useEffect(() => {
     if (loading) return;
+    if (!user && route === "/auth") {
+      setAuthModalOpen(true);
+      navigate("/");
+    }
+    if (user) setAuthModalOpen(false);
   }, [user, loading, route, patchMatch, navigate]);
 
   let page = null;
-  if (patchMatch) page = <TracePage patchId={patchMatch[1]} />;
+  if (patchMatch) page = <div className="theme-grower"><TracePage patchId={patchMatch[1]} /></div>;
   else if (route === "/") page = (
     <TraceabilityPage
-      onStartMonitoring={() => navigate(user ? dashboardRoute : "/auth")}
+      onStartMonitoring={() => (user ? navigate(dashboardRoute) : setAuthModalOpen(true))}
       onGoToDashboard={user ? () => navigate(dashboardRoute) : undefined}
     />
   );
-  else if (loading) page = <div className="page-container"><div className="card">Loading...</div></div>;
-  else if (route === "/auth" && user) page = user.role === "grower" ? <GrowerDashboard navigate={navigate} toast={toast} /> : <SupplierDashboard navigate={navigate} toast={toast} />;
-  else if (route === "/auth" || !user) page = <AuthEntryPage toast={toast} />;
-  else if (plantationMatch) page = <PlantationDetail plantationId={plantationMatch[1]} toast={toast} />;
-  else if (route === "/grower") page = user.role === "grower" ? <GrowerDashboard navigate={navigate} toast={toast} /> : <div className="page-container">Access denied</div>;
-  else if (route === "/supplier") page = user.role === "supplier" ? <SupplierDashboard navigate={navigate} toast={toast} /> : <div className="page-container">Access denied</div>;
-  else if (route === "/plantations") page = user.role === "grower" ? <PlantationsPage navigate={navigate} toast={toast} /> : <div className="page-container">Access denied</div>;
-  else if (route === "/reports") page = <ReportsPage />;
-  else if (route === "/profile") page = <ProfilePage />;
-  else page = user.role === "grower" ? <GrowerDashboard navigate={navigate} toast={toast} /> : <SupplierDashboard navigate={navigate} toast={toast} />;
+  else if (loading) page = <PageSkeleton title="Checking session..." />;
+  else if (route === "/auth" && user) page = user.role === "grower" ? <div className="theme-grower"><GrowerDashboard navigate={navigate} toast={toast} /></div> : <div className="theme-supplier"><SupplierDashboard navigate={navigate} toast={toast} /></div>;
+  else if (!user) page = (
+    <TraceabilityPage
+      onStartMonitoring={() => setAuthModalOpen(true)}
+      onGoToDashboard={undefined}
+    />
+  );
+  else if (plantationMatch) page = <div className="theme-grower"><PlantationDetail plantationId={plantationMatch[1]} toast={toast} /></div>;
+  else if (route === "/grower") page = user.role === "grower" ? <div className="theme-grower"><GrowerDashboard navigate={navigate} toast={toast} /></div> : <div className="page-container">Access denied</div>;
+  else if (route === "/supplier") page = <div className="theme-supplier"><SupplierDashboard navigate={navigate} toast={toast} /></div>;
+  else if (route === "/plantations") page = user.role === "grower" ? <div className="theme-grower"><PlantationsPage navigate={navigate} toast={toast} /></div> : <div className="page-container">Access denied</div>;
+  else if (route === "/reports") page = <div className="theme-reports"><ReportsPage /></div>;
+  else if (route === "/profile") page = <div className="theme-profile"><ProfilePage toast={toast} /></div>;
+  else page = user.role === "grower" ? <div className="theme-grower"><GrowerDashboard navigate={navigate} toast={toast} /></div> : <div className="theme-supplier"><SupplierDashboard navigate={navigate} toast={toast} /></div>;
 
   return (
     <div className="app-root">
+      <AppBusyBar active={appBusy} label={busyLabel} />
+      <GlobalVideoProgressBar active={videoBusy} progress={videoProgress} progressPercent={videoProgressPercent} onCancel={cancelVideoGeneration} />
       <Toasts toasts={toasts} />
       {user && !patchMatch && <Header route={route} navigate={navigate} />}
-      <main>{page}</main>
+      <main className={`${(route === "/" || !user) ? "main-fluid" : ""} ${appBusy ? "is-busy" : ""}`}>
+        {backendError && user && !patchMatch && <DataStatusBanner error={backendError} />}
+        {page}
+      </main>
+      {!user && authModalOpen && (
+        <div className="auth-popup-overlay" role="dialog" aria-modal="true" aria-label="Login or signup">
+          <div className="theme-auth" style={{ width: "100%", display: "flex", justifyContent: "center" }}>
+            <AuthEntryPage toast={toast} modal onClose={() => setAuthModalOpen(false)} />
+          </div>
+        </div>
+      )}
       <SiteFooter />
     </div>
   );

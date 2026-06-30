@@ -1,0 +1,11 @@
+# 4:3 output for 4:3 image uploads
+WIDTH = 1024
+HEIGHT = 768
+FPS = 24
+
+INTRO_DURATION = 3
+SPLIT_DURATION = 4
+PROCESS_DURATION = 4
+END_DURATION = 3
+
+WATERMARK_TEXT = "made with maatiAI"
