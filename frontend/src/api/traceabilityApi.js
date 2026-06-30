@@ -1,5 +1,6 @@
 export function getApiUrl() {
-  return "http://localhost:5000";
+  //return "http://localhost:5000";
+   return import.meta.env.VITE_API_URL;
 }
 
 const AUTH_TOKEN_KEY = "traceconnect_auth_token";
