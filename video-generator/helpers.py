@@ -11,7 +11,7 @@ def resize_and_crop(clip, target_w, target_h, resample=Image.LANCZOS, enhance_if
     try:
         clip = clip.resize(newsize=(new_w, new_h), resample=resample)
     except TypeError:
-        # Fallback for older MoviePy versions that don't accept resample.
+        # Fallback for older MoviePy versions that don't accept resam.ple.
         clip = clip.resize(newsize=(new_w, new_h))
 
     # Light sharpen only when we had to upscale.

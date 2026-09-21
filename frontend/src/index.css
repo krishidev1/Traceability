@@ -1,12 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,100..900;1,100..900&family=Manrope:wght@200..800&family=Outfit:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&display=swap');
 
 :root {
   /* Design System Tokens */
-  --font-sans: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-heading: 'Outfit', 'Manrope', sans-serif;
-  --font-mono: 'Hanken Grotesk', monospace;
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-heading: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  --font-mono: 'Outfit', monospace;
 
-  /* Global Color Neutrals - Pure Slate/Zinc */
+  /* Global Color Neutrals & Accents */
   --neutral-50: #f8fafc;
   --neutral-100: #f1f5f9;
   --neutral-200: #e2e8f0;
@@ -19,118 +19,344 @@
   --neutral-900: #0f172a;
   --neutral-950: #020617;
 
-  /* Premium Polish Globals */
+  --primary-navy: #1E3A8A;
+  --primary-blue: #2563EB;
+  --success-green: #16A34A;
+  --success-tint: #DCFCE7;
+
+  /* Layout Standard Rules */
+  --max-page-width: 1400px;
+  --page-padding: 32px;
+  --section-gap: 24px;
+  --grid-gap: 24px;
+
+  /* Standard Card Rules */
   --radius-xs: 6px;
   --radius-sm: 8px;
   --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
   --radius-full: 9999px;
 
-  /* Global Easing & Animations */
-  --transition-fast: 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-  --transition-smooth: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  --transition-slow: 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  /* Elevation Layers */
+  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.03);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.06);
+  --shadow-xl: 0 12px 32px rgba(0, 0, 0, 0.08);
 
-  /* Elevation Layers (Diffused Ambient Shadows) */
-  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.03), 0 1px 2px rgba(15, 23, 42, 0.02);
-  --shadow-md: 0 12px 30px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.03);
-  --shadow-lg: 0 20px 40px rgba(15, 23, 42, 0.06), 0 8px 20px rgba(15, 23, 42, 0.04);
-  --shadow-xl: 0 30px 60px rgba(15, 23, 42, 0.1), 0 12px 32px rgba(15, 23, 42, 0.06);
-  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  --shadow-glow: 0 0 20px rgba(16, 185, 129, 0.2);
+  /* Controls & Table Standards */
+  --control-height: 44px;
+  --control-radius: 8px;
+  --table-row-height: 48px;
+  --table-cell-padding: 16px;
 
-  /* Glassmorphism Helpers */
-  --glass-bg: rgba(255, 255, 255, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.3);
-  --glass-blur: blur(12px) saturate(180%);
-
-  /* Default Text System */
-  font: 15px/1.6 var(--font-sans);
+  font: 14px/1.5 var(--font-sans);
   letter-spacing: -0.01em;
   color-scheme: light;
-  color: var(--neutral-700);
+  color: var(--neutral-900);
   background: var(--neutral-50);
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
 }
 
-/* Base Styles & Resets */
+/* Base Resets */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   background-color: var(--neutral-50);
-  color: var(--neutral-700);
+  color: var(--neutral-900);
   overflow-x: hidden;
-}
-
-/* Custom Premium Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--neutral-300);
-  border-radius: var(--radius-full);
-  border: 2px solid var(--neutral-50);
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--neutral-400);
-}
-
-/* Text Selection */
-::selection {
-  background: rgba(16, 185, 129, 0.15);
-  color: #065f46;
 }
 
 #root {
   width: 100%;
-  max-width: 100%;
-  margin: 0 auto;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  box-sizing: border-box;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-heading);
-  font-weight: 800;
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--neutral-300);
+  border-radius: var(--radius-full);
+}
+
+/* ==========================================================================
+   GLOBAL LAYOUT & CONTAINER STANDARDIZATION (Max Width 1400px, 32px Padding)
+   ========================================================================== */
+
+.ta-container,
+.tc-container,
+.supplier-dashboard-page,
+.content-container,
+.bee-production-container,
+.shrimp-production-container,
+.kotpad-production-container,
+.sambalpuri-production-container {
+  max-width: 1400px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding-left: 32px !important;
+  padding-right: 32px !important;
+  box-sizing: border-box !important;
+}
+
+/* ==========================================================================
+   TYPOGRAPHY HIERARCHY STANDARDIZATION
+   ========================================================================== */
+
+h1, .page-title, .ta-hero-title, .tc-page-header h1 {
+  font-family: var(--font-heading) !important;
+  font-size: 32px !important;
+  font-weight: 700 !important;
+  line-height: 40px !important;
+  color: var(--neutral-900) !important;
+  letter-spacing: -0.02em !important;
+  margin: 0 0 12px 0;
+}
+
+h2, .section-title, .ta-section-title {
+  font-family: var(--font-heading) !important;
+  font-size: 24px !important;
+  font-weight: 600 !important;
+  line-height: 32px !important;
+  color: var(--neutral-900) !important;
+  margin: 0 0 12px 0;
+}
+
+h3, .card-title, .tc-card-title {
+  font-family: var(--font-heading) !important;
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  line-height: 24px !important;
+  color: var(--neutral-900) !important;
+  margin: 0 0 8px 0;
+}
+
+p, .body-text {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
   color: var(--neutral-900);
-  letter-spacing: -0.025em;
-  margin: 0;
 }
 
-p {
-  margin: 0;
-  line-height: 1.6;
+.caption-text, small, label {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--neutral-600);
 }
 
-/* Form and Interactive Element Resets */
-button, input, select, textarea {
-  font-family: inherit;
-  font-size: inherit;
-  box-sizing: border-box;
+/* ==========================================================================
+   CARD SYSTEM STANDARDIZATION
+   ========================================================================== */
+
+.card, .tc-card, .dashboard-card, .supplier-hero-card, .stat-card, .ta-feature-card {
+  background-color: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.04) !important;
+  padding: 24px !important;
+  box-sizing: border-box !important;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
-  transition: var(--transition-fast);
+/* KPI Cards Standardization (Fixed 120px Height) */
+.kpi-card, .tc-metric-card, .supplier-stat-card {
+  height: 120px !important;
+  min-height: 120px !important;
+  max-height: 120px !important;
+  background-color: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.04) !important;
+  padding: 0 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  box-sizing: border-box !important;
 }
 
-/* Global Micro-Animations */
+.kpi-card-number, .tc-metric-value, .metric-value, .supplier-stat-value {
+  font-family: var(--font-heading) !important;
+  font-size: 32px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  color: var(--neutral-900) !important;
+}
+
+.kpi-card-label, .tc-metric-label, .metric-label, .supplier-stat-label {
+  font-family: var(--font-sans) !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: var(--neutral-600) !important;
+}
+
+.kpi-card-icon, .tc-metric-icon, .metric-icon {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  min-height: 40px !important;
+  border-radius: 8px !important;
+  background-color: var(--success-tint) !important;
+  color: var(--success-green) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+}
+
+/* ==========================================================================
+   TABLE STANDARDIZATION (48px Row Height, 16px Padding, Sticky Header)
+   ========================================================================== */
+
+.table-container, .tc-table-wrapper, .supplier-table-container {
+  background-color: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.04) !important;
+  width: 100% !important;
+}
+
+table, .tc-table, .supplier-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  text-align: left !important;
+  font-family: var(--font-sans) !important;
+}
+
+thead tr, .tc-table thead tr, .supplier-table thead tr {
+  position: sticky !important;
+  top: 0 !important;
+  background-color: var(--neutral-50) !important;
+  z-index: 5 !important;
+  height: 48px !important;
+  border-bottom: 1px solid #E2E8F0 !important;
+}
+
+th, .tc-table th, .supplier-table th {
+  height: 48px !important;
+  padding: 0 16px !important;
+  font-family: var(--font-heading) !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: var(--neutral-900) !important;
+  border-bottom: 1px solid #E2E8F0 !important;
+  vertical-align: middle !important;
+}
+
+tbody tr, .tc-table tbody tr, .supplier-table tbody tr {
+  height: 48px !important;
+  border-bottom: 1px solid #E2E8F0 !important;
+  transition: background-color 0.15s ease !important;
+}
+
+tbody tr:hover, .tc-table tbody tr:hover, .supplier-table tbody tr:hover {
+  background-color: var(--neutral-50) !important;
+}
+
+td, .tc-table td, .supplier-table td {
+  height: 48px !important;
+  padding: 0 16px !important;
+  font-family: var(--font-sans) !important;
+  font-size: 14px !important;
+  color: var(--neutral-900) !important;
+  vertical-align: middle !important;
+}
+
+/* ==========================================================================
+   INPUTS & CONTROLS STANDARDIZATION (44px Height, 8px Radius)
+   ========================================================================== */
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+select,
+textarea,
+.form-input,
+.tc-input {
+  height: 44px !important;
+  border-radius: 8px !important;
+  padding: 0 14px !important;
+  border: 1px solid #E2E8F0 !important;
+  background-color: #FFFFFF !important;
+  font-family: var(--font-sans) !important;
+  font-size: 14px !important;
+  color: var(--neutral-900) !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+textarea {
+  height: auto !important;
+  min-height: 96px !important;
+  padding: 12px 14px !important;
+}
+
+input:focus, select:focus, textarea:focus, .form-input:focus, .tc-input:focus {
+  outline: none !important;
+  border-color: #2563EB !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+}
+
+/* Form 2-Column Grid Layout */
+.form-grid, .tc-form-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 24px !important;
+  width: 100% !important;
+}
+
+/* ==========================================================================
+   BUTTONS STANDARDIZATION (44px Height, 8px Radius)
+   ========================================================================== */
+
+button, .btn, .tc-btn {
+  font-family: var(--font-sans) !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  height: 44px !important;
+  border-radius: 8px !important;
+  padding: 0 16px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+  text-decoration: none !important;
+}
+
+.btn-primary, .tc-btn-primary {
+  background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%) !important;
+  color: #FFFFFF !important;
+  border: none !important;
+}
+
+.btn-secondary, .tc-btn-secondary {
+  background-color: #FFFFFF !important;
+  color: #16A34A !important;
+  border: 1px solid #16A34A !important;
+}
+
+/* ==========================================================================
+   UTILITY ANIMATIONS & TOAST NOTIFICATIONS
+   ========================================================================== */
+
 @keyframes pulseGlow {
   0%, 100% { transform: scale(1); opacity: 1; filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.2)); }
   50% { transform: scale(1.03); opacity: 0.95; filter: drop-shadow(0 0 12px rgba(16, 185, 129, 0.4)); }
@@ -161,4 +387,42 @@ a {
 
 .animate-fade-in {
   animation: fadeIn 0.4s ease-out forwards;
+}
+
+.toast-stack {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 99999;
+  max-width: 380px;
+  width: calc(100vw - 48px);
+  pointer-events: none;
+}
+
+.toast-item {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-radius: var(--radius-md);
+  background: var(--neutral-900);
+  color: #ffffff;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  font-family: var(--font-sans);
+}
+
+.loading-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.loading-inline img {
+  width: 16px;
+  height: 16px;
 }

@@ -32,6 +32,12 @@ export function clearAuth() {
   sessionStorage.removeItem(AUTH_USER_KEY);
 }
 
+let onUnauthorizedCallback = null;
+
+export function setUnauthorizedCallback(callback) {
+  onUnauthorizedCallback = callback;
+}
+
 function getAuthToken() {
   const stored = getStoredAuth();
   return stored?.token || null;
@@ -56,6 +62,12 @@ async function apiRequest(path, options = {}) {
   if (!response.ok) {
     const error = new Error(data.detail || data.error || "Request failed");
     error.status = response.status;
+    if (response.status === 401) {
+      clearAuth();
+      if (onUnauthorizedCallback) {
+        onUnauthorizedCallback();
+      }
+    }
     throw error;
   }
   return data;
@@ -87,7 +99,7 @@ export const traceabilityApi = {
     body: JSON.stringify(payload),
   }),
 
-  getTrace: (patchId) => apiRequest(`/api/traceability/trace/${encodeURIComponent(patchId)}`),
+  getTrace: (patchId) => apiRequest(`/api/traceability/trace/${encodeURIComponent(patchId)}?expand=all`),
 
   listFarms: () => apiRequest("/api/traceability/farms"),
   listPlantations: () => apiRequest("/api/traceability/plantations"),

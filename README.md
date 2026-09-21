@@ -1,278 +1,383 @@
 # TraceNew - Agricultural Product Traceability System
 
-A comprehensive platform for tracking agricultural products from farm to consumer, ensuring transparency, quality assurance, and supply chain integrity.
+This is the consolidated project guide for the TraceNew platform. It brings together setup, architecture, frontend, backend, and video-generator instructions from the older project documents into a single source of truth.
 
-## � Quick Navigation
+## Overview
 
-**New to TraceNew?** Start here based on your needs:
+TraceNew is a traceability and agricultural product monitoring platform designed to track agricultural goods from farm to consumer. It includes:
 
-| Task | File | Time |
-|------|------|------|
-| **First Time Setup** | [SETUP.md](SETUP.md) | 10-15 min |
-| **Quick Start Commands** | [COMMANDS.md](COMMANDS.md) | 2 min |
-| **Code Migration Reference** | [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md) | 5 min |
-| **System Architecture** | [docs/Architecture.md](docs/Architecture.md) | 5 min |
-| **API Documentation** | [docs/API.md](docs/API.md) | 10 min |
+- A Node.js + Express backend for APIs, authentication, and business logic
+- A React + Vite frontend for supplier and dashboard workflows
+- A Python FastAPI video generator for rendering product traceability videos
+- PostgreSQL-compatible database support with schema and migration scripts
 
-**For Windows users:**
-```powershell
-.\quick-start.ps1
-```
+## Project Structure
 
----
-
-## �🏗️ Project Structure
-
-```
+```text
 TraceNew/
-├── backend/                          # Node.js Express backend
+├── backend/                     # Node.js Express backend
 │   ├── src/
-│   │   ├── config/                   # Application configuration
-│   │   ├── middleware/               # Express middleware
-│   │   ├── modules/                  # Feature modules (one per domain)
-│   │   ├── services/                 # Shared services
-│   │   ├── utils/                    # Utility functions
-│   │   ├── routes/                   # Route handlers
-│   │   └── app.js                    # Express app initialization
-│   ├── sql/                          # Database migrations and scripts
-│   ├── uploads/                      # Uploaded files
-│   ├── server.js                     # Server entry point
-│   └── package.json
+│   │   ├── config/
+│   │   ├── middleware/
+│   │   ├── modules/
+│   │   ├── services/
+│   │   ├── utils/
+│   │   ├── routes/
+│   │   └── app.js
+│   ├── sql/
+│   │   ├── migrations/
+│   │   └── scripts/
+│   ├── server.js
+│   ├── package.json
+│   └── Dockerfile
 │
-├── video-generator/                  # Python FastAPI video service
-│   ├── api.py                        # FastAPI endpoints
-│   ├── pipeline.py                   # Video rendering pipeline
-│   ├── assets/                       # Audio, templates, images
-│   ├── output/                       # Generated videos
-│   ├── requirements.txt              # Python dependencies
-│   └── README.md                     # Video generator documentation
-│
-├── frontend/                         # React + Vite UI
+├── frontend/                    # React + Vite UI
 │   ├── src/
-│   │   ├── components/               # Reusable React components
-│   │   ├── pages/                    # Page components
-│   │   ├── api/                      # API client integration
-│   │   ├── services/                 # Frontend services
-│   │   └── ...
-│   ├── public/                       # Static assets
-│   └── package.json
+│   ├── public/
+│   ├── package.json
+│   ├── vite.config.js
+│   └── README.md (legacy; now consolidated here)
 │
-├── docs/                             # Project documentation
-│   ├── Architecture.md               # System architecture
-│   ├── API.md                        # API reference
-│   └── Database.md                   # Database schema
+├── video-generator/             # Python FastAPI video service
+│   ├── api.py
+│   ├── pipeline.py
+│   ├── scenes.py
+│   ├── config.py
+│   ├── cloudinary_uploader.py
+│   ├── requirements.txt
+│   ├── assets/
+│   ├── output/
+│   └── README.md (legacy; now consolidated here)
 │
-├── .gitignore                        # Git ignore rules
-└── README.md                         # This file
+├── docs/
+│   ├── Architecture.md
+│   ├── API.md
+│   └── other supporting docs
+│
+├── docker-compose.yml
+├── Dockerfile
+├── package.json
+├── quick-start.ps1
+├── README.md                   # This consolidated guide
+├── .gitignore
+├── .venv/                      # local Python environment (do not commit)
+└── .vscode/
 ```
 
-## 🚀 Quick Start
+## Prerequisites
 
-### Prerequisites
-- Node.js 16+ and npm
+Before starting, make sure you have:
+
+- Node.js 16+
+- npm
 - Python 3.12+
-- SQL Database (MySQL/PostgreSQL)
+- PostgreSQL or another compatible SQL database
+- Git (optional but recommended)
 
-### Backend Setup
+Verify the installation:
+
+```bash
+node --version
+npm --version
+python --version
+pip --version
+```
+
+## Quick Start
+
+### 1. Backend Setup
 
 ```bash
 cd backend
-
-# Install dependencies
 npm install
-
-# Configure environment variables
-cp .env.example .env
-# Edit .env with your settings
-
-# Run migrations (if applicable)
-npm run migrate
-
-# Start the server
-npm start
-# Development mode with auto-reload
-npm run dev
 ```
 
-### Video Generator Setup
+Create a `.env` file if needed and configure your database, secret key, and app settings. Typical values include:
+
+```env
+PORT=3000
+JWT_SECRET=your_secret_key
+DATABASE_URL=postgresql://user:password@localhost:5432/tracenew
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+```
+
+Run the backend:
 
 ```bash
-cd video-generator
-
-# Create virtual environment
-python3.12 -m venv .venv
-
-# Activate virtual environment
-# Windows:
-.venv\Scripts\activate
-# macOS/Linux:
-source .venv/bin/activate
-
-# Install Python dependencies
-pip install -r requirements.txt
-
-# Start the video service
-python -m uvicorn api:app --host 127.0.0.1 --port 8000
+cd backend
+npm run dev
+# or
+npm start
 ```
 
-### Frontend Setup
+The backend serves API routes on:
+
+```text
+http://localhost:3000/api
+```
+
+### 2. Frontend Setup
 
 ```bash
 cd frontend
-
-# Install dependencies
 npm install
-
-# Create environment file
-cp .env.example .env
-# Edit .env with backend URL
-
-# Start development server
 npm run dev
-
-# Build for production
-npm run build
 ```
 
-## 📦 Backend Modules
+The frontend runs by default on:
 
-Each module follows a consistent structure:
-- **Controller**: Handles HTTP requests
-- **Service**: Business logic
-- **Model**: Data schema
-- **Route**: Endpoint definitions
+```text
+http://localhost:5173
+```
 
-### Available Modules
-- `auth` - User authentication and authorization
-- `crop` - Crop management
-- `plantation` - Farm/plantation data
-- `harvest` - Harvest tracking
-- `monitoring` - Environmental monitoring
-- `packing` - Packaging operations
-- `trace` - Traceability chain
-- `media` - Media/file management
-- `verification` - QR/verification codes
-- `sambalpuriBandha` - Special product handling
-- `supplierTrace` - Supplier tracking
-- `processImage` - Image processing
-- `userRole` - Role management
-- `farm` - Farm information
-- `patch` - Patch/field management
+### 3. Video Generator Setup
 
-## 🔗 API Integration
-
-### Backend API
-- Base URL: `http://localhost:3000/api`
-- Authentication: JWT tokens
-- See [docs/API.md](docs/API.md) for full API reference
-
-### Video Generator API
-- Base URL: `http://localhost:8000`
-- Endpoints for rendering, status tracking, and downloads
-- See [video-generator/README.md](video-generator/README.md) for details
-
-## 🗄️ Database
-
-SQL database contains tables for:
-- Users and authentication
-- Crops and plantations
-- Harvest records
-- Monitoring data
-- Packing information
-- Traceability chains
-- Media files
-- Verification codes
-
-See [docs/Database.md](docs/Database.md) for schema details.
-
-## 🛠️ Development
-
-### Common Tasks
-
-**Start all services:**
 ```bash
-# Terminal 1: Backend
-cd backend && npm run dev
+cd video-generator
+python -m venv .venv
 
-# Terminal 2: Video Generator
-cd video-generator && python -m uvicorn api:app --reload
+# Windows
+.venv\Scripts\activate
 
-# Terminal 3: Frontend
-cd frontend && npm run dev
+# macOS/Linux
+source .venv/bin/activate
+
+pip install -r requirements.txt
+python -m uvicorn api:app --host 127.0.0.1 --port 8000
 ```
 
-**Run tests:**
+The video service is available at:
+
+```text
+http://127.0.0.1:8000
+```
+
+### Run All Services Together
+
+From the project root:
+
 ```bash
-cd backend && npm test
-cd frontend && npm test
+npm run dev
 ```
 
-**Build for production:**
+This starts backend and frontend together. For the Python video service, run it in a separate terminal.
+
+## Backend Modules
+
+The backend is organized by domain modules. Common module types include:
+
+- Controller: handles incoming HTTP requests
+- Service: holds application logic
+- Model: data access / schema handling
+- Route: defines exposed endpoints
+
+Key module areas include:
+
+- `auth`
+- `crop`
+- `farm`
+- `harvest`
+- `monitoring`
+- `packing`
+- `plantation`
+- `processImage`
+- `sambalpuriBandha`
+- `supplierTrace`
+- `trace`
+- `traceability`
+- `userRole`
+- `verification`
+
+Authentication service notes:
+
+- The auth routes are served through the backend API gateway
+- Auth endpoints are exposed under `/auth/*` and `/api/auth/*` depending on the gateway setup
+
+## Frontend Local Video Generator Setup
+
+This frontend can connect to the local FastAPI video generation service.
+
 ```bash
-cd backend && npm run build
-cd frontend && npm run build
-cd video-generator && pip install -r requirements.txt
+cd frontend
+python -m venv .venv
+# Windows
+.\.venv\Scripts\activate
+# Linux/macOS
+source .venv/bin/activate
+pip install -r src/requirements.txt
+npm install
 ```
 
-## 📝 Environment Configuration
+Start the backend video service in one terminal and then the frontend in another:
 
-### Backend (.env)
+```bash
+cd video-generator
+python -m uvicorn api:app --host 127.0.0.1 --port 8000
+```
+
+```bash
+cd frontend
+npm run dev
+```
+
+The default frontend video service URL is:
+
+```text
+http://localhost:8000
+```
+
+## Video Generator Service
+
+The Python service is used to generate traceability and production videos from uploaded image data.
+
+### Main endpoints
+
+- `POST /render-from-urls`
+- `GET /status/{job_id}`
+- `GET /download/{job_id}`
+- `POST /cancel/{job_id}`
+
+### Required environment variables
+
+Create a `.env` file inside `video-generator/`:
+
+```env
+CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+MAX_WORKERS=4
+BACKEND_URL=http://localhost:3000
+```
+
+### Deployment note for relative image URLs
+
+The video generator supports full URLs and also resolves relative image paths by prepending `BACKEND_URL` when needed. This prevents URL errors when frontend requests include paths like `/media/image.jpg`.
+
+## Database and Schema
+
+The project expects SQL schema and migration files under `backend/sql/`.
+
+Useful database-related files include:
+
+- `backend/sql/migrations/001_initial_schema.sql`
+- `backend/sql/scripts/*.sql`
+- `REQUIRED_DB_TABLES.txt` (legacy, now removed from project cleanup)
+
+To apply the base schema:
+
+```bash
+cd backend
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/migrations/001_initial_schema.sql
+```
+
+## Environment Configuration
+
+### Backend `.env`
+
 ```env
 NODE_ENV=development
 PORT=3000
-DATABASE_URL=mysql://user:password@localhost/tracenew
+DATABASE_URL=postgresql://user:password@localhost:5432/tracenew
 JWT_SECRET=your_secret_key
-CLOUDINARY_CLOUD_NAME=...
-CLOUDINARY_API_KEY=...
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
 ```
 
-### Video Generator (.env)
-```env
-CORS_ORIGINS=http://localhost:5173
-CLOUDINARY_CLOUD_NAME=...
-CLOUDINARY_API_KEY=...
-```
+### Frontend `.env`
 
-### Frontend (.env)
 ```env
 VITE_API_BASE_URL=http://localhost:3000/api
 VITE_VIDEO_GENERATOR_URL=http://localhost:8000
 ```
 
-## 🔐 Security Notes
+### Video Generator `.env`
 
-- Always use HTTPS in production
-- Keep JWT secrets secure
-- Use environment variables for sensitive data
-- Validate all inputs on both frontend and backend
-- Implement CORS properly
-- Use rate limiting
-- Keep dependencies updated
+```env
+CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+BACKEND_URL=http://localhost:3000
+```
 
-## 📚 Documentation
+## Documentation References
 
-- [Architecture Documentation](docs/Architecture.md)
-- [API Reference](docs/API.md)
-- [Database Schema](docs/Database.md)
-- [Video Generator Guide](video-generator/README.md)
+Additional project references:
 
-## 🤝 Contributing
+- [docs/Architecture.md](docs/Architecture.md)
+- [docs/API.md](docs/API.md)
 
-1. Create a feature branch
-2. Make your changes
-3. Ensure code follows project conventions
-4. Test thoroughly
-5. Submit a pull request
+## Migration / Reorganization Notes
 
-## 📄 License
+The project went through a structural reorganization. Main points to remember:
 
-[Add your license here]
+- Backend services now live under `backend/src/modules/...`
+- Shared services live under `backend/src/services/...`
+- Some earlier docs referenced older import paths; the current code layout should be followed instead
+- The project root README is now the single source of setup and troubleshooting guidance
 
-## 📞 Support
+Example import pattern:
 
-For issues and questions, please open an issue on the repository.
+```javascript
+const cropController = require('../../modules/crop/controllers/cropController');
+const traceService = require('../../services/trace/traceService');
+```
+
+## Common Tasks
+
+### Start backend
+
+```bash
+cd backend
+npm run dev
+```
+
+### Start frontend
+
+```bash
+cd frontend
+npm run dev
+```
+
+### Start video generator
+
+```bash
+cd video-generator
+python -m uvicorn api:app --host 127.0.0.1 --port 8000
+```
+
+### Build frontend
+
+```bash
+cd frontend
+npm run build
+```
+
+### Install dependencies
+
+```bash
+cd backend && npm install
+cd frontend && npm install
+cd video-generator && pip install -r requirements.txt
+```
+
+## Security Notes
+
+- Keep JWT secrets out of source control
+- Use environment variables for credentials
+- Always validate and sanitize user input
+- Use HTTPS in production
+- Configure CORS properly for frontend/backend communication
+
+## Notes on Cleanup
+
+The repository has been simplified to keep only the useful project documentation. Duplicate README files and unnecessary `.txt` reference files were removed, and the project now relies on this root README as the main developer guide.
+
+## Support
+
+For project issues, follow the local setup above and verify each service is running on the expected port before debugging deeper application logic.
 
 ---
 
-**Last Updated**: June 2026
-**Version**: 1.0.0
+Last updated: 2026-09-17

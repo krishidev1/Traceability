@@ -125,6 +125,16 @@ exports.getTrace = async (patch_id, { expand } = {}) => {
   if (expandSet.has('plantations')) {
     plantations = await getByIds('plantations', Array.from(plantationIds));
     data.plantations = plantations;
+    const uIds = Array.from(new Set(plantations.map(p => p.user_id).filter(Boolean)));
+    if (uIds.length) {
+      const growersResult = await db.query(
+        'SELECT user_id AS id, full_name AS name, company_logo, video_url FROM users WHERE user_id = ANY($1::int[]);',
+        [uIds]
+      );
+      data.growers = growersResult.rows;
+    } else {
+      data.growers = [];
+    }
   }
 
   if (expandSet.has('monitoring_records')) {
