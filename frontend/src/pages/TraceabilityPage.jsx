@@ -204,7 +204,7 @@ export default function TraceabilityPage({
               allowFullScreen
             />
             <div className="ta-video-brand-overlay">
-              <span className="ta-video-brand-text">TRACECONNECT</span>
+              <span className="ta-video-brand-text">TraceConnect</span>
             </div>
           </div>
           <a

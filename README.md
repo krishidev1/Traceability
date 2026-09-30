@@ -186,7 +186,7 @@ Key module areas include:
 - `sambalpuriBandha`
 - `supplierTrace`
 - `trace`
-- `traceability`
+- `trace`
 - `userRole`
 - `verification`
 
@@ -321,7 +321,7 @@ Example import pattern:
 
 ```javascript
 const cropController = require('../../modules/crop/controllers/cropController');
-const traceService = require('../../services/trace/traceService');
+const traceService = require('../../modules/trace/services/traceService');
 ```
 
 ## Common Tasks

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FiX, FiShield, FiChevronDown } from "react-icons/fi";
 import {
   useAuth,
@@ -42,6 +42,8 @@ export default function AuthEntryPage({ toast, modal = false, onClose }) {
   const [photoLoading, setPhotoLoading] = useState(false);
   const [districtFocused, setDistrictFocused] = useState(false);
   const [addressFocused, setAddressFocused] = useState(false);
+  const [addressSuggestions, setAddressSuggestions] = useState([]);
+  const [addressLoading, setAddressLoading] = useState(false);
 
   const isSignup = mode === "signup";
   const stateOptions = Object.keys(INDIA_STATE_DISTRICTS);
@@ -49,13 +51,38 @@ export default function AuthEntryPage({ toast, modal = false, onClose }) {
   const districtSearch = district.trim().toLowerCase();
   const districtSuggestions = districtOptions
     .filter((name) => !districtSearch || name.toLowerCase().includes(districtSearch));
-  const addressSearch = villageArea.trim().toLowerCase();
-  const addressSuggestions = district
-    ? [district, `${district} town`, `${district} rural area`, `${district} main market`, `${district} village area`]
-        .filter((suggestion) => !addressSearch || suggestion.toLowerCase().includes(addressSearch))
-    : [];
   const isWorking = busy || stepLoading;
   const showGpsLocationControls = false;
+
+  useEffect(() => {
+    if (!stateName || !district) return undefined;
+
+    const controller = new AbortController();
+    const loadMapPlaces = async () => {
+      setAddressLoading(true);
+      try {
+        const query = encodeURIComponent(`${district}, ${stateName}, India`);
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=20&countrycodes=in&q=${query}`,
+          { signal: controller.signal, headers: { "Accept-Language": "en" } },
+        );
+        if (!response.ok) throw new Error("Map search failed");
+        const results = await response.json();
+        const places = results
+          .map((result) => String(result.display_name || "").trim())
+          .filter(Boolean)
+          .filter((place, index, all) => all.indexOf(place) === index);
+        setAddressSuggestions(places);
+      } catch (err) {
+        if (err?.name !== "AbortError") setAddressSuggestions([]);
+      } finally {
+        if (!controller.signal.aborted) setAddressLoading(false);
+      }
+    };
+
+    loadMapPlaces();
+    return () => controller.abort();
+  }, [stateName, district]);
 
   const switchMode = (nextMode) => {
     setMode(nextMode);
@@ -68,12 +95,16 @@ export default function AuthEntryPage({ toast, modal = false, onClose }) {
     setStateName(value);
     setDistrict("");
     setVillageArea("");
+    setAddressSuggestions([]);
+    setAddressLoading(false);
     setAddressFocused(false);
   };
 
   const handleDistrictChange = (value) => {
     setDistrict(value);
     setVillageArea("");
+    setAddressSuggestions([]);
+    setAddressLoading(false);
     setDistrictFocused(false);
     setAddressFocused(false);
   };
@@ -82,6 +113,10 @@ export default function AuthEntryPage({ toast, modal = false, onClose }) {
     setVillageArea(value);
     setAddressFocused(true);
   };
+
+  const filteredAddressSuggestions = addressSuggestions.filter((suggestion) =>
+    !villageArea.trim() || suggestion.toLowerCase().includes(villageArea.trim().toLowerCase()),
+  );
 
   const handleAddressSuggestion = (value) => {
     setVillageArea(value);
@@ -432,9 +467,10 @@ export default function AuthEntryPage({ toast, modal = false, onClose }) {
                         disabled={!district || isWorking}
                         required
                       />
-                      {district && addressFocused && addressSuggestions.length > 0 && (
+                      {district && addressFocused && (addressLoading || filteredAddressSuggestions.length > 0) && (
                         <div className="auth-suggestion-menu auth-address-suggestion-menu">
-                          {addressSuggestions.map((suggestion) => (
+                          {addressLoading && <div className="auth-suggestion-status">Searching map locations...</div>}
+                          {!addressLoading && filteredAddressSuggestions.map((suggestion) => (
                             <button
                               key={suggestion}
                               onMouseDown={(e) => e.preventDefault()}

@@ -1,4 +1,9 @@
 
+/* eslint-disable react-refresh/only-export-components */
+/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable react-hooks/purity */
+/* eslint-disable no-useless-assignment */
+
 import { useState, useEffect, useContext, createContext, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -7,7 +12,7 @@ import {
   FiTrash2, FiEdit2, FiPlus, FiArrowRight, FiArrowLeft, FiMapPin,
   FiCalendar, FiDroplet, FiVideo, FiCamera, FiCheck,
   FiX, FiMail, FiShield, FiStar, FiTrendingUp, FiGrid,
-  FiChevronDown, FiUpload, FiAward, FiExternalLink
+  FiUpload, FiAward, FiExternalLink
 } from "react-icons/fi";
 import "../styles/traceconnect.css";
 import { authApi, clearAuth, getApiUrl, getStoredAuth, storeAuth, traceabilityApi, setUnauthorizedCallback } from "../api/traceabilityApi";
@@ -39,7 +44,8 @@ export const AuthContext = createContext(null);
 const DataContext = createContext(null);
 const TODAY = new Date().toISOString().split("T")[0];
 export const API_URL = getApiUrl();
-export const TRACE_CONNECT_LOGO_SRC = "/Traceconnect sample.jpeg";
+export const TRACE_CONNECT_LOGO_SRC = "/Traceconnect Logo.svg";
+export const TRACE_CONNECT_LOGO_TEXT_SRC = "/Traceconnect Logo Text.svg";
 const LOADING_GIF_SRC = "/loading.gif";
 const GI_LOGO_SRC = "/gi-logo.svg";
 const KOTPAD_GI_CERTIFICATE_PDF_SRC = "/kotpad-gi-certificate.pdf";
@@ -418,7 +424,7 @@ async function getCurrentLocation() {
         longitude: data.longitude
       };
     }
-  } catch (e) {
+  } catch {
     // ignore
   }
 
@@ -801,7 +807,7 @@ async function drawGeoOverlay(ctx, width, topY, panelHeight, details) {
           };
           img.src = blobUrl;
         });
-      } catch (e) {
+      } catch {
         // Fallback: draw directly (might taint canvas in legacy/offline scenarios)
         try {
           ctx.drawImage(
@@ -849,7 +855,7 @@ async function drawGeoOverlay(ctx, width, topY, panelHeight, details) {
           };
           img.src = blobUrl;
         });
-      } catch (e) {
+      } catch {
         try {
           ctx.drawImage(
             marker,
@@ -1441,7 +1447,7 @@ function AuthProvider({ children }) {
     if (!currentJobId) return;
     try {
       await fetch(toVideoGeneratorUrl(`/cancel/${currentJobId}`), { method: "POST" });
-    } catch (e) {
+    } catch {
       // Silently catch
     }
     setVideoBusy(false);
@@ -1775,11 +1781,6 @@ export const INDIA_STATE_DISTRICTS = {
   "West Bengal": ["Alipurduar", "Bankura", "Birbhum", "Cooch Behar", "Dakshin Dinajpur", "Darjeeling", "Hooghly", "Howrah", "Jalpaiguri", "Jhargram", "Kalimpong", "Kolkata", "Malda", "Murshidabad", "Nadia", "North 24 Parganas", "Paschim Bardhaman", "Paschim Medinipur", "Purba Bardhaman", "Purba Medinipur", "Purulia", "South 24 Parganas", "Uttar Dinajpur"],
 };
 
-const FARM_LOCATION_OPTIONS = Object.entries(INDIA_STATE_DISTRICTS).flatMap(([state, districts]) =>
-  districts.map((district) => `${district}, ${state}`),
-);
-
-
 function Header({ route, navigate }) {
   const { user, signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -1847,7 +1848,7 @@ function SiteFooter() {
     <footer className="site-footer">
       <div className="site-footer-brand" onClick={() => navigate("/")} style={{ cursor: "pointer" }}>
         <img src={TRACE_CONNECT_LOGO_SRC} alt="TraceConnect Logo" />
-        <span>TRACECONNECT</span>
+        <span className="brand-text">TRACECONNECT</span>
       </div>
       <div className="site-footer-links">
         <span><FiShield /> Secure traceability</span>
@@ -2630,11 +2631,11 @@ function GeoCameraModal({
 
   useEffect(() => {
     if (!open) return undefined;
+    const video = videoRef.current;
     return () => {
       const s = streamRef.current;
       streamRef.current = null;
       stopMediaStream(s);
-      const video = videoRef.current;
       if (video) {
         try {
           video.srcObject = null;
@@ -2660,14 +2661,17 @@ function GeoCameraModal({
 
       if (signupLoc) {
         try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(signupLoc)}&format=json&limit=1`);
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&countrycodes=in&limit=1&q=${encodeURIComponent(signupLoc)}`,
+            { headers: { "Accept-Language": "en" } },
+          );
           const data = await res.json();
           if (data && data.length > 0 && !isCancelled) {
             resolvedLat = parseFloat(data[0].lat);
             resolvedLon = parseFloat(data[0].lon);
             signupCoordsResolved = true;
           }
-        } catch (e) {
+        } catch {
           // ignore
         }
 
@@ -2686,7 +2690,7 @@ function GeoCameraModal({
         }
       }
 
-      if (!signupCoordsResolved) {
+      if (!signupCoordsResolved && !signupLoc) {
         try {
           const coords = await getCurrentLocation();
           const isSwissMock = Math.abs(coords.latitude - 47.4) < 1.0 && Math.abs(coords.longitude - 8.5) < 1.0;
@@ -2694,7 +2698,7 @@ function GeoCameraModal({
             resolvedLat = coords.latitude;
             resolvedLon = coords.longitude;
           }
-        } catch (err) {
+        } catch {
           // ignore
         }
       }
@@ -2799,19 +2803,9 @@ function GeoCameraModal({
       }
       ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, outputWidth, totalHeight);
 
-      // Fetch live current location for coordinates tag
+      // Keep the map, marker, coordinates, and address tied to the selected signup location.
       let liveLat = mapCoords.lat;
       let liveLon = mapCoords.lon;
-      try {
-        const coords = await getCurrentLocation();
-        const isSwissMock = Math.abs(coords.latitude - 47.4) < 1.0 && Math.abs(coords.longitude - 8.5) < 1.0;
-        if (!isSwissMock) {
-          liveLat = coords.latitude;
-          liveLon = coords.longitude;
-        }
-      } catch (err) {
-        // ignore and fallback to mapCoords
-      }
 
       await drawGeoOverlay(ctx, outputWidth, photoHeight, geoHeight, {
         name: name || "Process Capture",
@@ -4400,7 +4394,7 @@ function ProfilePage({ toast }) {
       updateUser(updated);
       setEditing(false);
       toast("Profile updated successfully", "success");
-    } catch (e) {
+    } catch {
       toast("Failed to update profile", "error");
     }
   };
@@ -4657,7 +4651,7 @@ function TracePage({ patchId }) {
           </button>
           <button className="public-brand-btn" onClick={() => navigate("/")}>
             <span className="brand-icon"><img src={TRACE_CONNECT_LOGO_SRC} alt="Logo" /></span>
-            <span className="brand-text">TRACECONNECT</span>
+          <span className="brand-text">TRACECONNECT</span>
           </button>
         </header>
         <div className="trace-card" style={{ textAlign: "center", padding: 36 }}>
@@ -4703,7 +4697,7 @@ function TracePage({ patchId }) {
           </button>
           <button className="public-brand-btn" onClick={() => navigate("/")}>
             <span className="brand-icon"><img src={TRACE_CONNECT_LOGO_SRC} alt="Logo" /></span>
-            <span className="brand-text">TRACECONNECT</span>
+          <span className="brand-text">TRACECONNECT</span>
           </button>
         </header>
         <div className="trace-card" style={{ textAlign: "center", padding: 36 }}>
