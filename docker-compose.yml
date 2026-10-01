@@ -11,6 +11,7 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - DATABASE_URL=postgres://user:password@db:5432/tracenew
+      - CORS_ORIGINS=https://traceconnect.in,https://www.traceconnect.in
     depends_on:
       - db
 
