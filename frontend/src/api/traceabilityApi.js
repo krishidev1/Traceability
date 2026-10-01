@@ -1,6 +1,13 @@
 export function getApiUrl() {
-  const url = import.meta.env?.VITE_API_URL || "http://localhost:5000";
-  return url.replace(/\/+$/, "");
+  // Support both names so existing deployments using VITE_API_BASE_URL keep
+  // working. API paths below already include /api, so remove it if the
+  // configured base URL includes it.
+  const configuredUrl =
+    import.meta.env?.VITE_API_URL ||
+    import.meta.env?.VITE_API_BASE_URL ||
+    (import.meta.env?.DEV ? "http://localhost:3000" : "");
+
+  return configuredUrl.replace(/\/+$/, "").replace(/\/api$/i, "");
 }
 
 const AUTH_TOKEN_KEY = "traceconnect_auth_token";

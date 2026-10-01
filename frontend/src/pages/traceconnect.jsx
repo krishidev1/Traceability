@@ -225,7 +225,7 @@ function getTraceabilityErrorMessage(err) {
   }
 
   if (raw.includes("failed to fetch") || raw.includes("networkerror")) {
-    return "Cannot reach the backend. Ensure it is running on http://localhost:5000.";
+    return "Cannot reach the backend. Check that the HTTPS API URL is configured and the backend is running.";
   }
 
   if (raw.includes("not logged in")) {

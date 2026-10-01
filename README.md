@@ -290,9 +290,20 @@ CLOUDINARY_API_SECRET=your_api_secret
 ### Frontend `.env`
 
 ```env
+# Local development:
 VITE_API_BASE_URL=http://localhost:3000/api
 VITE_VIDEO_GENERATOR_URL=http://localhost:8000
+
+# Production: replace api.traceconnect.in with the HTTPS API hostname
+# VITE_API_BASE_URL=https://api.traceconnect.in/api
+# VITE_VIDEO_GENERATOR_URL=https://video.traceconnect.in
 ```
+
+The frontend accepts both `VITE_API_BASE_URL` and `VITE_API_URL`. Do not use
+an `http://` API URL in a production HTTPS deployment, because browsers block
+the request as mixed content. The API hostname must have a valid TLS
+certificate and the backend must allow the frontend origin through
+`CORS_ORIGINS`.
 
 ### Video Generator `.env`
 
