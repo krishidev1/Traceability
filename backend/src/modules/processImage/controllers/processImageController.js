@@ -1,4 +1,8 @@
 const model = require('../models/processImageModel');
+const db = require('../../../config/db');
+
+const resetVideoLock = (userId) =>
+  db.query('UPDATE users SET video_locked = false WHERE user_id = $1', [userId]);
 
 exports.create = async (req, res) => {
   try {
@@ -14,6 +18,7 @@ exports.create = async (req, res) => {
     }
 
     const result = await model.createProcessImage({ ...(req.body || {}), user_id: req.user.user_id });
+    await resetVideoLock(req.user.user_id);
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -65,6 +70,7 @@ exports.update = async (req, res) => {
     const result = await model.updateProcessImage(id, req.body || {});
     const row = result.rows[0];
     if (!row) return res.status(404).json({ error: 'Process image not found' });
+    await resetVideoLock(req.user.user_id);
     res.json(row);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -85,6 +91,7 @@ exports.remove = async (req, res) => {
     const result = await model.deleteProcessImage(id);
     const row = result.rows[0];
     if (!row) return res.status(404).json({ error: 'Process image not found' });
+    await resetVideoLock(req.user.user_id);
     res.json(row);
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -1394,7 +1394,6 @@ function AuthProvider({ children }) {
   const [videoProgress, setVideoProgress] = useState("");
   const [videoProgressPercent, setVideoProgressPercent] = useState(0);
   const [currentJobId, setCurrentJobId] = useState(null);
-  const [videoUnlockedOnce, setVideoUnlockedOnce] = useState(false);
 
   useEffect(() => {
     const stored = getStoredAuth();
@@ -1422,7 +1421,8 @@ function AuthProvider({ children }) {
   };
 
   const unlockVideo = () => {
-    setVideoUnlockedOnce(true);
+    // Mirror the backend reset locally so the button unlocks immediately
+    updateUser({ video_locked: false });
   };
 
   const updateUser = (updatedUserFields) => {
@@ -1474,12 +1474,26 @@ function AuthProvider({ children }) {
         },
       });
 
-      // Save the generated video URL to their database profile
-      const updatedUser = await authApi.updateProfile({ video_url: videoUrl });
+      // Save video URL and lock generation for this account
+      const updatedUser = await authApi.updateProfile({ video_url: videoUrl, video_locked: true });
       updateUser(updatedUser);
-      setVideoUnlockedOnce(false); // Relock the button after successful generation!
 
-      window.open(videoUrl, "_blank", "noopener,noreferrer");
+      // Download to device
+      try {
+        const blob = await fetch(videoUrl).then((r) => r.blob());
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = "traceability-video.mp4";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+      } catch (_) {
+        // Fallback: open in new tab if blob download fails (e.g. CORS)
+        window.open(videoUrl, "_blank", "noopener,noreferrer");
+      }
+
       return videoUrl;
     } finally {
       setVideoBusy(false);
@@ -1502,7 +1516,6 @@ function AuthProvider({ children }) {
         videoProgressPercent,
         generateVideo,
         cancelVideoGeneration,
-        videoUnlockedOnce,
         unlockVideo,
         login: async (payload, remember) => completeAuth(await authApi.login(payload), remember),
         signup: async (payload) => completeAuth(await authApi.signup(payload), true),
@@ -1989,10 +2002,9 @@ function GrowerDashboard({ navigate, toast }) {
             <label className="field-label">{selectedProduction.locationLabel} *</label>
             <input
               className="input"
-              readOnly
               placeholder={selectedProduction.locationPlaceholder}
               value={form.location}
-              style={{ cursor: "not-allowed", backgroundColor: "var(--neutral-100)", color: "var(--neutral-500)" }}
+              onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
             />
           </div>
           <div className="field-wrap field-btn-wrap">
@@ -2281,7 +2293,7 @@ function PlantationDetail({ plantationId, toast }) {
               <p className="muted">Create a lifecycle video for this farm to share with customers.</p>
             </div>
           </div>
-          {user?.video_url && !videoUnlockedOnce ? (
+          {user?.video_url && user?.video_locked ? (
             <button className="btn" disabled style={{ backgroundColor: "#eaeaea", color: "#888", border: "1px solid #ddd", cursor: "not-allowed", display: "flex", alignItems: "center", gap: 8, padding: "10px 20px" }} type="button">
               <FiCheckCircle /> Video Already Generated
             </button>
@@ -4586,7 +4598,7 @@ function ProfilePage({ toast }) {
         </div>
         {allStagePhotosCaptured && (
           <div className="profile-video-action" style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", alignItems: "center" }}>
-            {user?.video_url && !videoUnlockedOnce ? (
+            {user?.video_url && user?.video_locked ? (
               <button className="btn" disabled style={{ backgroundColor: "#eaeaea", color: "#888", border: "1px solid #ddd", cursor: "not-allowed", display: "flex", alignItems: "center", gap: 8, padding: "10px 20px" }} type="button">
                 <FiCheckCircle /> Video Already Generated
               </button>
@@ -4601,15 +4613,41 @@ function ProfilePage({ toast }) {
 
       {user?.video_url && (
         <div className="card profile-video-card" style={{ marginTop: 24, width: "100%" }}>
-          <div className="card-title" style={{ display: "flex", alignItems: "center", gap: 8 }}><FiVideo /> Your Traceability Video</div>
-          <p className="muted" style={{ fontSize: 12, marginBottom: 16 }}>This is the lifecycle video generated from your process images. It is saved in your internal storage.</p>
+          <div className="card-title" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <FiVideo /> Your Traceability Video
+          </div>
+          <p className="muted" style={{ fontSize: 12, marginBottom: 16 }}>
+            Lifecycle video generated from your stage photos. Saved to your account.
+            {user?.video_locked && <span style={{ marginLeft: 8, color: "#888", fontWeight: 600 }}>&#x1F512; Locked — add or update a stage photo to re-generate.</span>}
+          </p>
           <div className="profile-video-player" style={{ position: "relative", borderRadius: 8, overflow: "hidden", backgroundColor: "#000", aspectRatio: "16/9", maxWidth: 640, margin: "0 auto" }}>
             <video src={user.video_url} controls style={{ width: "100%", height: "100%" }} />
           </div>
-          <div style={{ marginTop: 16, display: "flex", justifyContent: "center", gap: 12 }}>
+          <div style={{ marginTop: 16, display: "flex", justifyContent: "center", gap: 12, flexWrap: "wrap" }}>
             <a href={user.video_url} target="_blank" rel="noreferrer" className="btn btn-outline" style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <FiExternalLink /> Open Video
             </a>
+            <button
+              className="btn btn-primary"
+              style={{ display: "flex", alignItems: "center", gap: 8 }}
+              onClick={async () => {
+                try {
+                  const blob = await fetch(user.video_url).then((r) => r.blob());
+                  const blobUrl = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = blobUrl;
+                  a.download = "traceability-video.mp4";
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(blobUrl);
+                } catch (_) {
+                  window.open(user.video_url, "_blank", "noopener,noreferrer");
+                }
+              }}
+            >
+              <FiDownload /> Download Video
+            </button>
           </div>
         </div>
       )}

@@ -80,6 +80,7 @@ async function ensureAuthSchema() {
           ADD COLUMN IF NOT EXISTS profile_image text,
           ADD COLUMN IF NOT EXISTS company_logo text,
           ADD COLUMN IF NOT EXISTS video_url text,
+          ADD COLUMN IF NOT EXISTS video_locked boolean DEFAULT false,
           ADD COLUMN IF NOT EXISTS village_area character varying(150),
           ADD COLUMN IF NOT EXISTS district character varying(100),
           ADD COLUMN IF NOT EXISTS state character varying(100),
@@ -276,6 +277,7 @@ function authResponse(user) {
       profile_image: user.profile_image || '',
       company_logo: user.company_logo || '',
       video_url: user.video_url || '',
+      video_locked: Boolean(user.video_locked),
       village_area: user.village_area || '',
       district: user.district || '',
       state: user.state || '',
@@ -412,7 +414,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 router.put('/profile', authMiddleware, async (req, res, next) => {
   try {
     const userId = req.user.user_id;
-    const { name, company_logo, video_url } = req.body;
+    const { name, company_logo, video_url, video_locked } = req.body;
 
     const fields = [];
     const values = [];
@@ -431,6 +433,11 @@ router.put('/profile', authMiddleware, async (req, res, next) => {
     if (video_url !== undefined) {
       fields.push(`video_url = $${count}`);
       values.push(video_url);
+      count++;
+    }
+    if (video_locked !== undefined) {
+      fields.push(`video_locked = $${count}`);
+      values.push(Boolean(video_locked));
       count++;
     }
 
