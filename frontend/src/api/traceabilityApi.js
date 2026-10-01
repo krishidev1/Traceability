@@ -6,6 +6,16 @@ export function getApiUrl() {
 const AUTH_TOKEN_KEY = "traceconnect_auth_token";
 const AUTH_USER_KEY = "traceconnect_auth_user";
 
+function getPersistableUser(user) {
+  const persisted = { ...(user || {}) };
+  ["profile_image", "company_logo"].forEach((key) => {
+    if (typeof persisted[key] === "string" && (persisted[key].startsWith("data:") || persisted[key].length > 200000)) {
+      delete persisted[key];
+    }
+  });
+  return persisted;
+}
+
 export function getStoredAuth() {
   try {
     const token = localStorage.getItem(AUTH_TOKEN_KEY) || sessionStorage.getItem(AUTH_TOKEN_KEY);
@@ -22,7 +32,27 @@ export function storeAuth({ access_token, user, remember = true }) {
   secondary.removeItem(AUTH_TOKEN_KEY);
   secondary.removeItem(AUTH_USER_KEY);
   primary.setItem(AUTH_TOKEN_KEY, access_token);
-  primary.setItem(AUTH_USER_KEY, JSON.stringify(user));
+  const persistedUser = getPersistableUser(user);
+  try {
+    primary.setItem(AUTH_USER_KEY, JSON.stringify(persistedUser));
+  } catch (error) {
+    if (error?.name !== "QuotaExceededError") throw error;
+    primary.removeItem(AUTH_USER_KEY);
+    primary.setItem(AUTH_USER_KEY, JSON.stringify({
+      id: persistedUser.id,
+      name: persistedUser.name,
+      email: persistedUser.email,
+      phone: persistedUser.phone,
+      role: persistedUser.role,
+      rawRole: persistedUser.rawRole,
+      account_type: persistedUser.account_type,
+      village_area: persistedUser.village_area,
+      district: persistedUser.district,
+      state: persistedUser.state,
+      country: persistedUser.country,
+      pincode: persistedUser.pincode,
+    }));
+  }
 }
 
 export function clearAuth() {
@@ -30,6 +60,12 @@ export function clearAuth() {
   localStorage.removeItem(AUTH_USER_KEY);
   sessionStorage.removeItem(AUTH_TOKEN_KEY);
   sessionStorage.removeItem(AUTH_USER_KEY);
+}
+
+let onUnauthorizedCallback = null;
+
+export function setUnauthorizedCallback(callback) {
+  onUnauthorizedCallback = callback;
 }
 
 function getAuthToken() {
@@ -56,6 +92,12 @@ async function apiRequest(path, options = {}) {
   if (!response.ok) {
     const error = new Error(data.detail || data.error || "Request failed");
     error.status = response.status;
+    if (response.status === 401) {
+      clearAuth();
+      if (onUnauthorizedCallback) {
+        onUnauthorizedCallback();
+      }
+    }
     throw error;
   }
   return data;
@@ -87,7 +129,7 @@ export const traceabilityApi = {
     body: JSON.stringify(payload),
   }),
 
-  getTrace: (patchId) => apiRequest(`/api/traceability/trace/${encodeURIComponent(patchId)}`),
+  getTrace: (patchId) => apiRequest(`/api/traceability/trace/${encodeURIComponent(patchId)}?expand=all`),
 
   listFarms: () => apiRequest("/api/traceability/farms"),
   listPlantations: () => apiRequest("/api/traceability/plantations"),

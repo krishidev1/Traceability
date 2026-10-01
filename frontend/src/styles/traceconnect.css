@@ -2309,17 +2309,17 @@ body.traceconnect-body {
   left: 0;
   right: 0;
   z-index: 1000;
-  margin-top: 4px;
+   margin-top: 0;
   background: #ffffff;
   border: 1px solid var(--neutral-300, #cbd5e1);
-  border-radius: var(--radius-md);
+   border-radius: 0;
   box-shadow: var(--shadow-lg);
   max-height: 200px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  padding: 6px;
-  gap: 2px;
+   padding: 0;
+   gap: 0;
 }
 
 .tc-root .auth-suggestion-menu button {
@@ -2327,20 +2327,26 @@ body.traceconnect-body {
   text-align: left;
   background: none;
   border: none;
-  padding: 8px 12px;
-  font-size: 13px;
-  color: var(--neutral-750, #334155);
-  border-radius: var(--radius-sm);
+   padding: 8px 18px;
+   font-size: 16px;
+   color: #0f172a;
+   border-radius: 0;
   cursor: pointer;
   font-family: var(--font-sans);
-  font-weight: 600;
+   font-weight: 400;
   transition: var(--transition-fast);
   display: block;
 }
 
 .tc-root .auth-suggestion-menu button:hover {
-  background: var(--neutral-100);
-  color: var(--theme-primary, #0f766e);
+   background: #e2e8f0;
+   color: #0f172a;
+}
+
+.tc-root .auth-suggestion-status {
+   padding: 8px 18px;
+   font-size: 14px;
+   color: var(--neutral-500, #64748b);
 }
 
 /* 2. Grower & Profile Dashboard Stats Grid Card Redesign */
@@ -5046,91 +5052,46 @@ body.traceconnect-body {
   background: rgba(59, 130, 246, 0.04) !important;
 }
 
-/* ==========================================================================
-   Toast Notifications — fixed top-right
-   ========================================================================== */
-
-.toast-stack {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 99999;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  pointer-events: none;
+/* Shared TraceConnect brand lockup */
+.tc-root .brand,
+.tc-root .public-brand-btn {
+  gap: 8px;
 }
 
-@keyframes toast-in {
-  from {
-    opacity: 0;
-    transform: translateX(60px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
+.tc-root .brand .brand-icon img,
+.tc-root .public-brand-btn .brand-icon img {
+  width: 38px !important;
+  height: 38px !important;
+  object-fit: contain !important;
+  border-radius: 8px !important;
 }
 
-.toast-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 280px;
-  max-width: 380px;
-  padding: 13px 18px;
-  border-radius: var(--radius-md);
-  font-family: var(--font-sans);
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.4;
-  box-shadow: var(--shadow-lg);
-  border-left: 4px solid transparent;
-  animation: toast-in 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
-  pointer-events: auto;
+.tc-root .brand .brand-text-logo,
+.tc-root .public-brand-btn .brand-text-logo,
+.tc-root .site-footer-brand .brand-text-logo {
+  display: block !important;
+  width: 154px !important;
+  height: 28px !important;
+  object-fit: contain !important;
+  border-radius: 0 !important;
 }
 
-.toast-icon {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  font-size: 17px;
+.tc-root .brand .brand-text,
+.tc-root .public-brand-btn .brand-text,
+.tc-root .site-footer-brand .brand-text {
+  display: inline-block !important;
+  color: #12372a !important;
+  font-family: 'Poppins', sans-serif !important;
+  font-size: 21px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.045em !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
 }
 
-.toast-msg {
-  flex: 1;
-}
-
-/* Success — emerald green */
-.toast-success {
-  background: #f0fdf4;
-  color: #14532d;
-  border-left-color: #16a34a;
-}
-
-.toast-success .toast-icon {
-  color: #16a34a;
-}
-
-/* Error — rose red */
-.toast-error {
-  background: #fff1f2;
-  color: #881337;
-  border-left-color: #e11d48;
-}
-
-.toast-error .toast-icon {
-  color: #e11d48;
-}
-
-/* Info / default — blue */
-.toast-info {
-  background: #eff6ff;
-  color: #1e3a5f;
-  border-left-color: #2563eb;
-}
-
-.toast-info .toast-icon {
-  color: #2563eb;
+.tc-root .site-footer-brand > img:first-child {
+  width: 38px !important;
+  height: 38px !important;
+  object-fit: contain !important;
 }
 

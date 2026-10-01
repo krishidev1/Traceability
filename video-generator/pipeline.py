@@ -870,9 +870,6 @@ def render_video(
     if is_cancelled and is_cancelled():
         raise RuntimeError("cancelled")
 
-    # -------------------------
-    # DURATIONS (<= 30s)
-    # -------------------------
     INTRO_DURATION = 2.0
     FARMER_DURATION = 2.0
     FARM_DURATION = 2.0
@@ -880,7 +877,7 @@ def render_video(
     END_DURATION = 2.0
     BASE_TARGET_TOTAL = 30.0
     MAX_TOTAL = 30.0
-    # Crossfade is memory-expensive; default off for low-RAM environments.
+  
     try:
         CROSSFADE = float(os.getenv("CROSSFADE", "0"))
     except Exception:
@@ -917,9 +914,6 @@ def render_video(
     else:
         process_duration = 0.0
 
-    # -------------------------
-    # OVERLAYS
-    # -------------------------
     TOTAL_DURATION = (
         INTRO_DURATION +
         FARMER_DURATION +

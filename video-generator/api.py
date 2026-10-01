@@ -815,18 +815,36 @@ def _save_image_source(source: str | None, dir_path: str, prefix: str, fallback_
             f.write(base64.b64decode(encoded))
         return path
 
+    # Handle relative paths by prepending the backend domain
     parsed = urlparse(value)
+    if not parsed.scheme or parsed.scheme not in ("http", "https", "data"):
+        # This is a relative URL without scheme
+        backend_url = os.getenv("BACKEND_URL", "http://localhost:3000").rstrip("/")
+        if value.startswith("/"):
+            value = f"{backend_url}{value}"
+        else:
+            value = f"{backend_url}/{value}"
+        parsed = urlparse(value)
+
     if parsed.scheme in ("http", "https"):
-        req = urllib.request.Request(value, headers={"User-Agent": "MaatiVideoGenerator/1.0"})
-        with urllib.request.urlopen(req, timeout=30) as response:
-            content_type = response.headers.get("Content-Type")
-            if content_type and not content_type.lower().startswith("image/"):
-                raise ValueError(f"{prefix} URL is not an image")
-            filename = _safe_download_name(value, prefix, content_type)
-            path = os.path.join(dir_path, filename)
-            with open(path, "wb") as f:
-                shutil.copyfileobj(response, f)
-        return path
+        try:
+            req = urllib.request.Request(value, headers={"User-Agent": "MaatiVideoGenerator/1.0"})
+            with urllib.request.urlopen(req, timeout=30) as response:
+                content_type = response.headers.get("Content-Type")
+                if content_type and not content_type.lower().startswith("image/"):
+                    raise ValueError(f"{prefix} URL is not an image")
+                filename = _safe_download_name(value, prefix, content_type)
+                path = os.path.join(dir_path, filename)
+                with open(path, "wb") as f:
+                    shutil.copyfileobj(response, f)
+            return path
+        except Exception as e:
+            print(f"[warn] Failed to download {prefix} from {value}: {e}", flush=True)
+            if fallback_path and os.path.exists(fallback_path):
+                dst = os.path.join(dir_path, f"{prefix}_{os.path.basename(fallback_path)}")
+                shutil.copyfile(fallback_path, dst)
+                return dst
+            raise ValueError(f"Unable to download {prefix} image from {value}: {e}")
 
     if value.startswith("/"):
         local_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "public", value.lstrip("/")))
@@ -1050,8 +1068,6 @@ async def render(
     job_id = _create_job()
 
     try:
-        # Some browsers/OS file pickers return multi-select files in reverse order.
-        # PROCESS_REVERSE can be: "1" (force reverse), "0" (never), "auto" (default).
         reverse_mode = os.getenv("PROCESS_REVERSE", "auto").strip().lower()
         if reverse_mode in ("1", "true", "yes"):
             process_images = list(reversed(process_images))
