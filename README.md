@@ -1,41 +1,205 @@
-# TraceConnect
+<div align="center">
 
-TraceConnect is an agricultural product traceability platform. It combines a React frontend, an Express API, PostgreSQL storage, and an optional FastAPI service for generating traceability videos.
+# 🔗 TRACECONNECT
 
-## Current stack
+### Digital Traceability Platform for Agricultural Products
 
-- **Frontend:** React 19, Vite 8, Recharts, Lucide React, React Icons
-- **Backend:** Node.js, Express 5, PostgreSQL (`pg`), JWT authentication
-- **Video generator:** Python 3.12, FastAPI, MoviePy 1.x, Pillow, FFmpeg
-- **Optional media services:** Cloudinary for traceability media and generated videos
-- **Database:** PostgreSQL 15 is used by the provided Docker Compose configuration
+**From origin → journey → verification → consumer**
 
-## Repository layout
+<br>
+
+[![React](https://img.shields.io/badge/Frontend-React%2019-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![Node.js](https://img.shields.io/badge/Backend-Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Express](https://img.shields.io/badge/API-Express%205-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
+[![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL%2015-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Python](https://img.shields.io/badge/Video%20Service-Python%203.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/Service-FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+
+<br>
+
+[![GitHub Repository](https://img.shields.io/badge/VIEW%20SOURCE%20CODE-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/krishidev1/Traceability)
+
+</div>
+
+---
+
+## 🌾 ABOUT TRACECONNECT
+
+**TraceConnect** is an agricultural product traceability platform designed to connect a product with its journey through the supply chain.
+
+The platform combines a **React frontend**, **Express API**, **PostgreSQL database**, and an optional **FastAPI-based video generation service**.
+
+The goal is simple:
+
+> **Make the journey of an agricultural product more visible, structured and traceable.**
+
+The repository currently contains the frontend, backend, database scripts, documentation and optional video-generation service. :chatgpt-content-reference{index="1"}
+
+---
+
+# 🚀 WHAT IT DOES
+
+TraceConnect brings together multiple parts of a traceability workflow into one technical platform.
+
+### 🔗 Traceability
+
+Track information associated with agricultural products across their journey.
+
+### 🗄️ Structured Data
+
+Store application and traceability information using **PostgreSQL 15**.
+
+### 🔐 Authentication
+
+Backend authentication is implemented using **JWT-based authentication**.
+
+### 🖥️ Web Application
+
+A modern React-based frontend built with **React 19 and Vite 8**.
+
+### 🎬 Traceability Videos
+
+An optional Python/FastAPI service can generate traceability videos using **MoviePy, Pillow and FFmpeg**.
+
+### ☁️ Media Services
+
+Cloudinary can optionally be used for traceability media and generated videos. :chatgpt-content-reference{index="2"}
+
+---
+
+# 🔄 TRACEABILITY FLOW
+
+```text
+                    ┌─────────────────┐
+                    │    PRODUCT      │
+                    │    ORIGIN       │
+                    └────────┬────────┘
+                             │
+                             ▼
+                    ┌─────────────────┐
+                    │   TRACEABILITY  │
+                    │      DATA       │
+                    └────────┬────────┘
+                             │
+                             ▼
+                    ┌─────────────────┐
+                    │    PROCESSES    │
+                    │   & EVENTS      │
+                    └────────┬────────┘
+                             │
+                             ▼
+                    ┌─────────────────┐
+                    │   VERIFICATION  │
+                    │   & RECORDS     │
+                    └────────┬────────┘
+                             │
+                             ▼
+                    ┌─────────────────┐
+                    │    CONSUMER     │
+                    │    VISIBILITY   │
+                    └─────────────────┘
+```
+
+---
+
+# 🧩 PLATFORM COMPONENTS
+
+TraceConnect is structured around three major application layers:
+
+```text
+┌──────────────────────────────────────────────────────────────┐
+│                         TRACECONNECT                         │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│   🌐 FRONTEND                                                │
+│   React 19 + Vite + Recharts + UI Libraries                │
+│                         │                                    │
+│                         ▼                                    │
+│   ⚙️ BACKEND                                                 │
+│   Node.js + Express 5 + JWT + REST APIs                     │
+│                         │                                    │
+│                         ▼                                    │
+│   🗄️ DATABASE                                                │
+│   PostgreSQL 15                                              │
+│                                                              │
+│                         │                                    │
+│                         ▼                                    │
+│   🎬 OPTIONAL VIDEO SERVICE                                  │
+│   Python + FastAPI + MoviePy + Pillow + FFmpeg              │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+---
+
+# 🛠️ TECHNOLOGY STACK
+
+## 🌐 Frontend
+
+- React 19
+- Vite 8
+- Recharts
+- Lucide React
+- React Icons
+
+## ⚙️ Backend
+
+- Node.js
+- Express 5
+- PostgreSQL `pg`
+- JWT Authentication
+
+## 🎬 Video Generator
+
+- Python 3.12
+- FastAPI
+- MoviePy 1.x
+- Pillow
+- FFmpeg
+
+## 🗄️ Database
+
+- PostgreSQL 15
+
+## ☁️ Optional Media Services
+
+- Cloudinary
+
+:chatgpt-content-reference{index="3"}
+
+---
+
+# 📁 PROJECT STRUCTURE
 
 ```text
 TraceNew/
+│
 ├── backend/
 │   ├── src/
 │   │   ├── app.js
-│   │   ├── config/                 # PostgreSQL configuration
-│   │   ├── middleware/             # CORS, auth, and error middleware
-│   │   ├── modules/                # Domain modules and routes
-│   │   └── routes/                 # Authentication routes
+│   │   ├── config/
+│   │   ├── middleware/
+│   │   ├── modules/
+│   │   └── routes/
+│   │
 │   ├── sql/
-│   │   ├── migrations/             # Base schema
-│   │   └── scripts/                # Incremental schema/data changes
+│   │   ├── migrations/
+│   │   └── scripts/
+│   │
 │   ├── .env.example
 │   ├── server.js
 │   ├── package.json
 │   └── Dockerfile
+│
 ├── frontend/
 │   ├── src/
 │   ├── public/
 │   ├── package.json
 │   └── vite.config.js
+│
 ├── video-generator/
-│   ├── api.py                      # FastAPI application
-│   ├── pipeline.py                 # MoviePy rendering pipeline
+│   ├── api.py
+│   ├── pipeline.py
 │   ├── scenes.py
 │   ├── helpers.py
 │   ├── utils.py
@@ -44,26 +208,35 @@ TraceNew/
 │   ├── requirements.txt
 │   ├── assets/
 │   └── Dockerfile
+│
 ├── docs/
 │   ├── Architecture.md
 │   └── API.md
+│
 ├── docker-compose.yml
 ├── package.json
 └── README.md
 ```
 
-The generated `frontend/dist/`, `backend/uploads/`, and `video-generator/output/` directories are ignored by Git. Local virtual environments and `.env` files are also ignored.
+:chatgpt-content-reference{index="4"}
 
-## Prerequisites
+---
 
-Install the following before starting:
+# ⚡ GETTING STARTED
 
-- Node.js and npm
-- Python 3.12 or newer
-- PostgreSQL, or Docker Desktop for the Compose database
-- FFmpeg for local video rendering. The video-generator Docker image installs FFmpeg automatically.
+## 📋 Prerequisites
 
-Check the tool versions:
+Before running TraceConnect locally, install:
+
+- Node.js
+- npm
+- Python 3.12+
+- PostgreSQL or Docker Desktop
+- FFmpeg for local video rendering
+
+The video-generator Docker image installs FFmpeg automatically. :chatgpt-content-reference{index="5"}
+
+### Check versions
 
 ```bash
 node --version
@@ -74,17 +247,19 @@ psql --version
 ffmpeg -version
 ```
 
-## Environment configuration
+---
 
-### Backend
+# 🔐 ENVIRONMENT CONFIGURATION
 
-Copy the example file and fill in local values:
+## Backend
+
+Create your local environment file:
 
 ```powershell
 Copy-Item backend/.env.example backend/.env
 ```
 
-The current backend configuration uses PostgreSQL variables:
+Example configuration:
 
 ```env
 PORT=3000
@@ -95,42 +270,53 @@ PG_HOST=localhost
 PG_DATABASE=tracenew
 PG_PASSWORD=your_password
 PG_PORT=5432
-# Set to true when the database requires SSL.
 PG_SSL=false
 
 JWT_SECRET=replace_with_a_long_random_secret
-# JWT_SECRET_KEY is also accepted by the auth middleware.
 
 CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 VIDEO_GENERATOR_URL=http://localhost:8000
 LOG_LEVEL=info
 ```
 
-The backend also accepts `DATABASE_URL` when no `PG_*` database variables are present. Keep credentials, JWT secrets, SMTP credentials, API keys, and Cloudinary credentials out of source control.
+The backend can also use `DATABASE_URL` when `PG_*` variables are not provided.
 
-Optional variables in `backend/.env.example` include:
+**Never commit:**
 
-- `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
-- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`
-- `OPENCAGE_API_KEY`
+- Database passwords
+- JWT secrets
+- SMTP credentials
+- API keys
+- Cloudinary credentials
+- `.env` files
 
-### Frontend
+:chatgpt-content-reference{index="6"}
 
-Create `frontend/.env` only when the defaults need to be changed:
+---
+
+# 🌐 FRONTEND CONFIGURATION
+
+Create `frontend/.env` when you need to override the defaults:
 
 ```env
-# Either variable name is supported by the API client.
 VITE_API_URL=http://localhost:3000
-# VITE_API_BASE_URL=http://localhost:3000/api
+
+VITE_API_BASE_URL=http://localhost:3000/api
 
 VITE_VIDEO_GENERATOR_URL=http://localhost:8000
 ```
 
-The frontend normalizes an API value ending in `/api`, so both `http://localhost:3000` and `http://localhost:3000/api` work. In production, use HTTPS URLs for both services when the frontend is served over HTTPS.
+Both `VITE_API_URL` and `VITE_API_BASE_URL` are supported.
 
-### Video generator
+For production deployments, use **HTTPS** when the frontend is served over HTTPS. :chatgpt-content-reference{index="7"}
 
-The video service loads a `.env` file from its working directory if one exists. Typical local settings are:
+---
+
+# 🎬 VIDEO GENERATOR
+
+The video generator runs as a separate Python service.
+
+Typical configuration:
 
 ```env
 BACKEND_URL=http://localhost:3000
@@ -141,20 +327,23 @@ PROCESS_REVERSE=auto
 LOG_LEVEL=INFO
 ```
 
-Cloudinary upload is disabled by default. To enable it, configure:
+Optional Cloudinary configuration:
 
 ```env
 CLOUDINARY_ENABLED=1
 CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
-# Alternatively use CLOUDINARY_URL.
 CLOUDINARY_FOLDER=maati_videos
 ```
 
-## Local development
+:chatgpt-content-reference{index="8"}
 
-### Install JavaScript dependencies
+---
+
+# 🚀 LOCAL DEVELOPMENT
+
+## 1️⃣ Install dependencies
 
 From the repository root:
 
@@ -162,104 +351,157 @@ From the repository root:
 npm install
 ```
 
-The root `postinstall` script installs dependencies in both `backend/` and `frontend/`. You can also install them separately:
+The root `postinstall` script installs dependencies for both backend and frontend.
+
+Alternatively:
 
 ```bash
-cd backend && npm install
-cd ../frontend && npm install
+cd backend
+npm install
+
+cd ../frontend
+npm install
 ```
 
-### Start PostgreSQL
+:chatgpt-content-reference{index="9"}
 
-Start a local PostgreSQL instance and create a database named `tracenew`, or start the database from Compose:
+---
+
+## 2️⃣ Start PostgreSQL
+
+Using Docker:
 
 ```bash
 docker compose up -d db
 ```
 
-Apply the base schema from the repository root:
+Or use a local PostgreSQL installation.
 
-```powershell
-psql "$env:DATABASE_URL" -v ON_ERROR_STOP=1 -f backend/sql/migrations/001_initial_schema.sql
+Create a database named:
+
+```text
+tracenew
 ```
 
-If using the `PG_*` variables instead of `DATABASE_URL`, connect with your normal `psql` options, for example:
+Then apply the initial schema:
 
 ```bash
-psql -h localhost -U postgres -d tracenew -v ON_ERROR_STOP=1 -f backend/sql/migrations/001_initial_schema.sql
+psql -h localhost -U postgres -d tracenew \
+-v ON_ERROR_STOP=1 \
+-f backend/sql/migrations/001_initial_schema.sql
 ```
 
-Apply the scripts in `backend/sql/scripts/` only when the corresponding schema/data change is required. They are incremental scripts, not a guaranteed ordered migration runner.
+:chatgpt-content-reference{index="10"}
 
-### Start the backend
+---
+
+## 3️⃣ Start the backend
 
 ```bash
 cd backend
 npm run dev
 ```
 
-For a normal Node process:
+Or:
 
 ```bash
 npm start
 ```
 
-The backend listens on `http://localhost:3000` by default.
+Backend:
 
-### Start the frontend
+```text
+http://localhost:3000
+```
 
-In a second terminal:
+:chatgpt-content-reference{index="11"}
+
+---
+
+## 4️⃣ Start the frontend
+
+Open another terminal:
 
 ```bash
 cd frontend
 npm run dev
 ```
 
-Vite serves the frontend at `http://localhost:5173` by default.
+Frontend:
 
-### Start the video generator
+```text
+http://localhost:5173
+```
 
-Create a Python virtual environment inside `video-generator`:
+:chatgpt-content-reference{index="12"}
+
+---
+
+## 5️⃣ Start the video generator
 
 ```powershell
 cd video-generator
+
 python -m venv .venv
+
 .\.venv\Scripts\Activate.ps1
+
 pip install -r requirements.txt
+
 python -m uvicorn api:app --host 127.0.0.1 --port 8000
 ```
 
-On macOS/Linux, activate it with:
+On macOS/Linux:
 
 ```bash
 source .venv/bin/activate
 ```
 
-The video service is available at `http://localhost:8000`. The frontend can submit both uploaded images and image URLs. Relative image URLs are resolved against `BACKEND_URL`.
+Video service:
 
-### Start frontend and backend together
+```text
+http://localhost:8000
+```
 
-From the repository root:
+:chatgpt-content-reference{index="13"}
+
+---
+
+# ⚡ RUN FRONTEND + BACKEND TOGETHER
+
+From the root:
 
 ```bash
 npm run dev
 ```
 
-This runs the root `concurrently` script, which starts the backend and frontend. It does not start the Python video generator; run that service separately.
+This starts:
 
-## Available scripts
-
-### Root scripts
-
-```bash
-npm install              # Install backend and frontend dependencies
-npm run dev              # Start backend and frontend together
-npm run build            # Build the frontend
-npm run build:frontend   # Build the frontend
-npm start                # Start the backend
+```text
+Backend
+   +
+Frontend
 ```
 
-### Frontend scripts
+The Python video generator must still be started separately.
+
+:chatgpt-content-reference{index="14"}
+
+---
+
+# 📜 AVAILABLE COMMANDS
+
+## Root
+
+```bash
+npm install
+npm run dev
+npm run build
+npm run build:frontend
+npm start
+```
+
+## Frontend
 
 ```bash
 npm run dev
@@ -268,79 +510,85 @@ npm run lint
 npm run preview
 ```
 
-### Backend scripts
+## Backend
 
 ```bash
-npm run dev              # nodemon server.js
-npm start                # node server.js
+npm run dev
+npm start
 ```
 
-There is currently no implemented backend test suite; `npm test` is the placeholder script from `backend/package.json`.
+There is currently no implemented backend test suite; `npm test` remains the placeholder script from `backend/package.json`. :chatgpt-content-reference{index="15"}
 
-## Backend API
+---
 
-The Express application mounts these route groups under `/api`:
+# 🔌 BACKEND API
 
-| Area | Base path |
-| --- | --- |
-| Authentication | `/api/auth` |
-| Crops | `/api/crops` |
-| Harvest | `/api/harvest` |
-| Plantation | `/api/plantation` |
-| Trace | `/api/trace` |
-| Media | `/api/media` |
-| Packing | `/api/packing` |
-| Monitoring | `/api/monitoring` |
-| Verification | `/api/verification` |
-| User roles | `/api/userRole` |
-| Patch | `/api/patch` |
-| Farm | `/api/farm` |
-| Sambalpuri Bandha | `/api/sambalpuri` |
-| Supplier trace | `/api/supplierTrace` |
-| Process image | `/api/processImage` |
-| Traceability aggregation | `/api/traceability` |
+The Express application exposes the following API groups:
 
-Authentication routes are also mounted at `/auth` for compatibility. The health endpoint is:
+| Module | Endpoint |
+|---|---|
+| 🔐 Authentication | `/api/auth` |
+| 🌱 Crops | `/api/crops` |
+| 🌾 Harvest | `/api/harvest` |
+| 🌱 Plantation | `/api/plantation` |
+| 🔗 Trace | `/api/trace` |
+| 🖼️ Media | `/api/media` |
+| 📦 Packing | `/api/packing` |
+| 📊 Monitoring | `/api/monitoring` |
+| ✅ Verification | `/api/verification` |
+| 👤 User Roles | `/api/userRole` |
+| 🔧 Patch | `/api/patch` |
+| 🚜 Farm | `/api/farm` |
+| 🧵 Sambalpuri Bandha | `/api/sambalpuri` |
+| 🚚 Supplier Trace | `/api/supplierTrace` |
+| 🖼️ Process Image | `/api/processImage` |
+| 🔗 Traceability | `/api/traceability` |
 
-```text
-GET http://localhost:3000/api/health
+:chatgpt-content-reference{index="16"}
+
+### Health Check
+
+```http
+GET /api/health
 ```
 
-Most CRUD modules expose the usual `GET`, `POST`, `PUT`, and `DELETE` operations. The exact request and response shapes are defined in the route controllers and SQL queries; `docs/API.md` contains older examples and should be treated as supplementary rather than authoritative when it differs from the current code.
+### Authentication
 
-JWT-protected requests use:
+Protected requests use:
 
 ```http
 Authorization: Bearer <token>
 ```
 
-## Video generator API
+:chatgpt-content-reference{index="17"}
 
-The FastAPI service keeps jobs in an in-memory store. Job records are cleaned up after approximately 15 minutes, so this service should run as a single instance unless job persistence is added.
+---
 
-### Health and browser UI
+# 🎬 VIDEO GENERATOR API
 
-```text
+The FastAPI service provides endpoints for video generation and job management.
+
+### Health
+
+```http
 GET /
 GET /health
 ```
 
-### Upload-based rendering
+### Render from uploads
 
-```text
+```http
 POST /render
 ```
 
-This endpoint accepts multipart form data with `template` (`A`, `B`, or `C`), `logo`, `intro_logo`, `farmer_img`, `farm_img`, one or more `process_images`, `certificate_img`, and `end_img`.
+### Render from URLs
 
-### URL-based rendering
-
-```text
+```http
 POST /render-from-urls
 Content-Type: application/json
 ```
 
-Example payload:
+Example:
 
 ```json
 {
@@ -358,7 +606,7 @@ Example payload:
 }
 ```
 
-Both render endpoints return a `job_id`. Poll and control the job with:
+### Job management
 
 ```text
 GET  /status/{job_id}
@@ -366,44 +614,129 @@ POST /cancel/{job_id}
 GET  /download/{job_id}
 ```
 
-When rendering finishes, `/status/{job_id}` returns a `download_url` and, when enabled, a Cloudinary URL.
+Render endpoints return a `job_id`, which can then be used to track and manage the rendering process.
 
-## Docker Compose
+:chatgpt-content-reference{index="18"}
 
-The Compose file defines:
+---
 
-- `db`: PostgreSQL 15 on port `5432`
-- `app`: backend container on port `3000`
-- `video-generator`: FastAPI container on port `8000`
+# 🐳 DOCKER
 
-Start the stack with:
+The Compose configuration defines:
+
+```text
+┌─────────────────────────────────────┐
+│          Docker Compose             │
+├─────────────────────────────────────┤
+│                                     │
+│  🗄️ PostgreSQL       :5432          │
+│                                     │
+│  ⚙️ Backend           :3000          │
+│                                     │
+│  🎬 Video Generator   :8000          │
+│                                     │
+└─────────────────────────────────────┘
+```
+
+Start the stack:
 
 ```bash
 docker compose up --build
 ```
 
-The current `docker-compose.yml` references a root-level `Dockerfile` for the `app` service, but this checkout does not contain that file. Therefore, the Compose stack is not ready to build unchanged. Either add the intended root backend Dockerfile or change the `app.build.dockerfile` setting to a valid Dockerfile before using the full-stack command.
+### ⚠️ Current Docker configuration
 
-The existing service Dockerfiles also need deployment review: `backend/Dockerfile` exposes `5000` although the backend defaults to `3000`, and `frontend/Dockerfile` builds a standalone Nginx image rather than being served by the Express fallback. These are container configuration details and do not affect the local development workflow above.
+The current Compose file references a root-level Dockerfile for the `app` service, but the provided checkout does not contain that file.
 
-## Production notes
+The repository also contains container configuration that should be reviewed before production deployment, including backend and frontend port/server differences.
 
-- Set a strong, unique JWT secret and never commit `.env` files.
-- Serve the frontend, API, and video generator over HTTPS in production.
-- Set `CORS_ORIGINS` to the exact trusted frontend origins.
-- Use `PG_SSL=true` or `NODE_ENV=production` when the PostgreSQL deployment requires TLS.
-- Use persistent storage or external job tracking if the video generator is scaled beyond one instance.
-- Configure Cloudinary only when remote media/video delivery is required.
-- Review upload size limits, authentication coverage, and database permissions before exposing the services publicly.
+Therefore, the full Compose stack **is not currently ready to build unchanged**.
 
-## Documentation
-
-- [Architecture notes](docs/Architecture.md)
-- [API notes](docs/API.md)
-- [Backend environment template](backend/.env.example)
-
-The source code and mounted routes are the authority for current behavior; some older documentation files still describe paths and structures from earlier versions.
+:chatgpt-content-reference{index="19"}
 
 ---
 
-Last updated: 2026-10-04
+# 🔒 PRODUCTION CHECKLIST
+
+Before exposing TraceConnect publicly:
+
+- [ ] Use a strong unique JWT secret
+- [ ] Never commit `.env` files
+- [ ] Serve services over HTTPS
+- [ ] Configure exact trusted CORS origins
+- [ ] Enable PostgreSQL TLS when required
+- [ ] Review upload limits
+- [ ] Review authentication coverage
+- [ ] Review database permissions
+- [ ] Use persistent job tracking if scaling the video service
+- [ ] Configure Cloudinary when remote media delivery is required
+
+:chatgpt-content-reference{index="20"}
+
+---
+
+# 📚 DOCUMENTATION
+
+Additional project documentation:
+
+- 📐 [Architecture Notes](docs/Architecture.md)
+- 🔌 [API Documentation](docs/API.md)
+- 🔐 [Backend Environment Template](backend/.env.example)
+
+The source code and mounted routes remain the authority for current behavior when older documentation differs from the implementation. :chatgpt-content-reference{index="21"}
+
+---
+
+# 🧠 ENGINEERING NOTE
+
+TraceConnect is structured as more than a simple frontend application.
+
+It brings together:
+
+```text
+React
+  ↓
+REST APIs
+  ↓
+Node.js / Express
+  ↓
+PostgreSQL
+  ↓
+Optional Python / FastAPI
+  ↓
+Video Processing
+  ↓
+Optional Cloudinary
+```
+
+This separation allows the individual components to evolve independently while working together as a larger traceability system.
+
+---
+
+<div align="center">
+
+### 🔗 TRACECONNECT
+
+**Trace the origin. Understand the journey. Build trust.**
+
+<br>
+
+[![GitHub](https://img.shields.io/badge/EXPLORE%20THE%20CODE-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/krishidev1/Traceability)
+
+<br>
+
+**Built with React • Node.js • PostgreSQL • Python**
+
+<br>
+
+⭐ If you find the project interesting, consider giving the repository a star.
+
+</div>
+
+---
+
+<div align="center">
+
+_Last updated: October 2026_
+
+</div>
