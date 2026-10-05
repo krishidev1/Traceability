@@ -1,41 +1,46 @@
-# TraceConnect
+# TraceNew - Agricultural Product Traceability System
 
-TraceConnect is an agricultural product traceability platform. It combines a React frontend, an Express API, PostgreSQL storage, and an optional FastAPI service for generating traceability videos.
+This is the consolidated project guide for the TraceNew platform. It brings together setup, architecture, frontend, backend, and video-generator instructions from the older project documents into a single source of truth.
 
-## Current stack
+## Overview
 
-- **Frontend:** React 19, Vite 8, Recharts, Lucide React, React Icons
-- **Backend:** Node.js, Express 5, PostgreSQL (`pg`), JWT authentication
-- **Video generator:** Python 3.12, FastAPI, MoviePy 1.x, Pillow, FFmpeg
-- **Optional media services:** Cloudinary for traceability media and generated videos
-- **Database:** PostgreSQL 15 is used by the provided Docker Compose configuration
+TraceNew is a traceability and agricultural product monitoring platform designed to track agricultural goods from farm to consumer. It includes:
 
-## Repository layout
+- A Node.js + Express backend for APIs, authentication, and business logic
+- A React + Vite frontend for supplier and dashboard workflows
+- A Python FastAPI video generator for rendering product traceability videos
+- PostgreSQL-compatible database support with schema and migration scripts
+
+## Project Structure
 
 ```text
 TraceNew/
-├── backend/
+├── backend/                     # Node.js Express backend
 │   ├── src/
-│   │   ├── app.js
-│   │   ├── config/                 # PostgreSQL configuration
-│   │   ├── middleware/             # CORS, auth, and error middleware
-│   │   ├── modules/                # Domain modules and routes
-│   │   └── routes/                 # Authentication routes
+│   │   ├── config/
+│   │   ├── middleware/
+│   │   ├── modules/
+│   │   ├── services/
+│   │   ├── utils/
+│   │   ├── routes/
+│   │   └── app.js
 │   ├── sql/
-│   │   ├── migrations/             # Base schema
-│   │   └── scripts/                # Incremental schema/data changes
-│   ├── .env.example
+│   │   ├── migrations/
+│   │   └── scripts/
 │   ├── server.js
 │   ├── package.json
 │   └── Dockerfile
-├── frontend/
+│
+├── frontend/                    # React + Vite UI
 │   ├── src/
 │   ├── public/
 │   ├── package.json
-│   └── vite.config.js
-├── video-generator/
-│   ├── api.py                      # FastAPI application
-│   ├── pipeline.py                 # MoviePy rendering pipeline
+│   ├── vite.config.js
+│   └── README.md (legacy; now consolidated here)
+│
+├── video-generator/             # Python FastAPI video service
+│   ├── api.py
+│   ├── pipeline.py
 │   ├── scenes.py
 │   ├── helpers.py
 │   ├── utils.py
@@ -43,367 +48,346 @@ TraceNew/
 │   ├── cloudinary_uploader.py
 │   ├── requirements.txt
 │   ├── assets/
-│   └── Dockerfile
+│   ├── output/
+│   └── README.md (legacy; now consolidated here)
+│
 ├── docs/
 │   ├── Architecture.md
-│   └── API.md
+│   ├── API.md
+│   └── other supporting docs
+│
 ├── docker-compose.yml
 ├── package.json
-└── README.md
+├── quick-start.ps1
+├── README.md                   # This consolidated guide
+├── .gitignore
+├── .venv/                      # local Python environment (do not commit)
+└── .vscode/
 ```
-
-The generated `frontend/dist/`, `backend/uploads/`, and `video-generator/output/` directories are ignored by Git. Local virtual environments and `.env` files are also ignored.
 
 ## Prerequisites
 
-Install the following before starting:
+Before starting, make sure you have:
 
-- Node.js and npm
-- Python 3.12 or newer
-- PostgreSQL, or Docker Desktop for the Compose database
-- FFmpeg for local video rendering. The video-generator Docker image installs FFmpeg automatically.
+- Node.js 16+
+- npm
+- Python 3.12+
+- PostgreSQL or another compatible SQL database
+- Git (optional but recommended)
 
-Check the tool versions:
+Verify the installation:
 
 ```bash
 node --version
 npm --version
 python --version
 pip --version
-psql --version
-ffmpeg -version
 ```
 
-## Environment configuration
+## Quick Start
 
-### Backend
-
-Copy the example file and fill in local values:
-
-```powershell
-Copy-Item backend/.env.example backend/.env
-```
-
-The current backend configuration uses PostgreSQL variables:
-
-```env
-PORT=3000
-NODE_ENV=development
-
-PG_USER=postgres
-PG_HOST=localhost
-PG_DATABASE=tracenew
-PG_PASSWORD=your_password
-PG_PORT=5432
-# Set to true when the database requires SSL.
-PG_SSL=false
-
-JWT_SECRET=replace_with_a_long_random_secret
-# JWT_SECRET_KEY is also accepted by the auth middleware.
-
-CORS_ORIGINS=http://localhost:5173,http://localhost:3000
-VIDEO_GENERATOR_URL=http://localhost:8000
-LOG_LEVEL=info
-```
-
-The backend also accepts `DATABASE_URL` when no `PG_*` database variables are present. Keep credentials, JWT secrets, SMTP credentials, API keys, and Cloudinary credentials out of source control.
-
-Optional variables in `backend/.env.example` include:
-
-- `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
-- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`
-- `OPENCAGE_API_KEY`
-
-### Frontend
-
-Create `frontend/.env` only when the defaults need to be changed:
-
-```env
-# Either variable name is supported by the API client.
-VITE_API_URL=http://localhost:3000
-# VITE_API_BASE_URL=http://localhost:3000/api
-
-VITE_VIDEO_GENERATOR_URL=http://localhost:8000
-```
-
-The frontend normalizes an API value ending in `/api`, so both `http://localhost:3000` and `http://localhost:3000/api` work. In production, use HTTPS URLs for both services when the frontend is served over HTTPS.
-
-### Video generator
-
-The video service loads a `.env` file from its working directory if one exists. Typical local settings are:
-
-```env
-BACKEND_URL=http://localhost:3000
-CORS_ORIGINS=http://localhost:5173,http://localhost:3000
-OUTPUT_ROOT=output
-MAX_PROCESS_IMAGES=12
-PROCESS_REVERSE=auto
-LOG_LEVEL=INFO
-```
-
-Cloudinary upload is disabled by default. To enable it, configure:
-
-```env
-CLOUDINARY_ENABLED=1
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
-# Alternatively use CLOUDINARY_URL.
-CLOUDINARY_FOLDER=maati_videos
-```
-
-## Local development
-
-### Install JavaScript dependencies
-
-From the repository root:
+### 1. Backend Setup
 
 ```bash
+cd backend
 npm install
 ```
 
-The root `postinstall` script installs dependencies in both `backend/` and `frontend/`. You can also install them separately:
+Create a `.env` file if needed and configure your database, secret key, and app settings. Typical values include:
 
-```bash
-cd backend && npm install
-cd ../frontend && npm install
+```env
+PORT=3000
+JWT_SECRET=your_secret_key
+DATABASE_URL=postgresql://user:password@localhost:5432/tracenew
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
 ```
 
-### Start PostgreSQL
-
-Start a local PostgreSQL instance and create a database named `tracenew`, or start the database from Compose:
-
-```bash
-docker compose up -d db
-```
-
-Apply the base schema from the repository root:
-
-```powershell
-psql "$env:DATABASE_URL" -v ON_ERROR_STOP=1 -f backend/sql/migrations/001_initial_schema.sql
-```
-
-If using the `PG_*` variables instead of `DATABASE_URL`, connect with your normal `psql` options, for example:
-
-```bash
-psql -h localhost -U postgres -d tracenew -v ON_ERROR_STOP=1 -f backend/sql/migrations/001_initial_schema.sql
-```
-
-Apply the scripts in `backend/sql/scripts/` only when the corresponding schema/data change is required. They are incremental scripts, not a guaranteed ordered migration runner.
-
-### Start the backend
+Run the backend:
 
 ```bash
 cd backend
 npm run dev
-```
-
-For a normal Node process:
-
-```bash
+# or
 npm start
 ```
 
-The backend listens on `http://localhost:3000` by default.
+The backend serves API routes on:
 
-### Start the frontend
+```text
+http://localhost:3000/api
+```
 
-In a second terminal:
+### 2. Frontend Setup
 
 ```bash
 cd frontend
 npm run dev
 ```
 
-Vite serves the frontend at `http://localhost:5173` by default.
+The frontend runs by default on:
 
 ### Start the video generator
 
-Create a Python virtual environment inside `video-generator`:
+### 3. Video Generator Setup
 
 ```powershell
 cd video-generator
+
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+
+# Windows
+.venv\Scripts\activate
+
+# macOS/Linux
+source .venv/bin/activate
+
 pip install -r requirements.txt
+
 python -m uvicorn api:app --host 127.0.0.1 --port 8000
 ```
 
-On macOS/Linux, activate it with:
+The video service is available at:
+
+```text
+http://127.0.0.1:8000
+```
+
+### Run All Services Together
+
+From the project root:
 
 ```bash
+npm run dev
+```
+
+This starts backend and frontend together. For the Python video service, run it in a separate terminal.
+
+## Backend Modules
+
+The backend is organized by domain modules. Common module types include:
+
+- Controller: handles incoming HTTP requests
+- Service: holds application logic
+- Model: data access / schema handling
+- Route: defines exposed endpoints
+
+Key module areas include:
+
+- `auth`
+- `crop`
+- `farm`
+- `harvest`
+- `monitoring`
+- `packing`
+- `plantation`
+- `processImage`
+- `sambalpuriBandha`
+- `supplierTrace`
+- `trace`
+- `trace`
+- `userRole`
+- `verification`
+
+Authentication service notes:
+
+- The auth routes are served through the backend API gateway
+- Auth endpoints are exposed under `/auth/*` and `/api/auth/*` depending on the gateway setup
+
+## Frontend Local Video Generator Setup
+
+This frontend can connect to the local FastAPI video generation service.
+
+```bash
+cd frontend
+python -m venv .venv
+# Windows
+.\.venv\Scripts\activate
+# Linux/macOS
 source .venv/bin/activate
+pip install -r src/requirements.txt
+npm install
 ```
 
-The video service is available at `http://localhost:8000`. The frontend can submit both uploaded images and image URLs. Relative image URLs are resolved against `BACKEND_URL`.
+Start the backend video service in one terminal and then the frontend in another:
 
-### Start frontend and backend together
-
-From the repository root:
+```bash
+cd video-generator
+python -m uvicorn api:app --host 127.0.0.1 --port 8000
+```
 
 ```bash
 npm run dev
 ```
 
-This runs the root `concurrently` script, which starts the backend and frontend. It does not start the Python video generator; run that service separately.
+The default frontend video service URL is:
 
-## Available scripts
-
-### Root scripts
-
-```bash
-npm install              # Install backend and frontend dependencies
-npm run dev              # Start backend and frontend together
-npm run build            # Build the frontend
-npm run build:frontend   # Build the frontend
-npm start                # Start the backend
+```text
+http://localhost:8000
 ```
 
-### Frontend scripts
+## Video Generator Service
+
+The Python service is used to generate traceability and production videos from uploaded image data.
+
+### Main endpoints
+
+- `POST /render-from-urls`
+- `GET /status/{job_id}`
+- `GET /download/{job_id}`
+- `POST /cancel/{job_id}`
+
+### Required environment variables
+
+Create a `.env` file inside `video-generator/`:
+
+```env
+CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+MAX_WORKERS=4
+BACKEND_URL=http://localhost:3000
+```
+
+### Deployment note for relative image URLs
+
+The video generator supports full URLs and also resolves relative image paths by prepending `BACKEND_URL` when needed. This prevents URL errors when frontend requests include paths like `/media/image.jpg`.
+
+## Database and Schema
+
+The project expects SQL schema and migration files under `backend/sql/`.
+
+Useful database-related files include:
+
+- `backend/sql/migrations/001_initial_schema.sql`
+- `backend/sql/scripts/*.sql`
+- `REQUIRED_DB_TABLES.txt` (legacy, now removed from project cleanup)
+
+To apply the base schema:
 
 ```bash
+cd backend
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/migrations/001_initial_schema.sql
+```
+
+## Environment Configuration
+
+### Backend `.env`
+
+```env
+NODE_ENV=development
+PORT=3000
+DATABASE_URL=postgresql://user:password@localhost:5432/tracenew
+JWT_SECRET=your_secret_key
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+```
+
+### Frontend `.env`
+
+```env
+# Local development:
+VITE_API_BASE_URL=http://localhost:3000/api
+VITE_VIDEO_GENERATOR_URL=http://localhost:8000
+
+# Production: replace api.traceconnect.in with the HTTPS API hostname
+# VITE_API_BASE_URL=https://api.traceconnect.in/api
+# VITE_VIDEO_GENERATOR_URL=https://video.traceconnect.in
+```
+
+The frontend accepts both `VITE_API_BASE_URL` and `VITE_API_URL`. Do not use
+an `http://` API URL in a production HTTPS deployment, because browsers block
+the request as mixed content. The API hostname must have a valid TLS
+certificate and the backend must allow the frontend origin through
+`CORS_ORIGINS`.
+
+### Video Generator `.env`
+
+```env
+CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+BACKEND_URL=http://localhost:3000
+```
+
+## Documentation References
+
+Additional project references:
+
+- [docs/Architecture.md](docs/Architecture.md)
+- [docs/API.md](docs/API.md)
+
+## Migration / Reorganization Notes
+
+The project went through a structural reorganization. Main points to remember:
+
+- Backend services now live under `backend/src/modules/...`
+- Shared services live under `backend/src/services/...`
+- Some earlier docs referenced older import paths; the current code layout should be followed instead
+- The project root README is now the single source of setup and troubleshooting guidance
+
+Example import pattern:
+
+```javascript
+const cropController = require('../../modules/crop/controllers/cropController');
+const traceService = require('../../modules/trace/services/traceService');
+```
+
+## Common Tasks
+
+### Start backend
+
+```bash
+cd backend
 npm run dev
+```
+
+### Start frontend
+
+```bash
+cd frontend
+npm run dev
+```
+
+### Start video generator
+
+```bash
+cd video-generator
+python -m uvicorn api:app --host 127.0.0.1 --port 8000
+```
+
+### Build frontend
+
+```bash
+cd frontend
 npm run build
-npm run lint
-npm run preview
 ```
 
-### Backend scripts
+### Install dependencies
 
 ```bash
-npm run dev              # nodemon server.js
-npm start                # node server.js
+cd backend && npm install
+cd frontend && npm install
+cd video-generator && pip install -r requirements.txt
 ```
 
-There is currently no implemented backend test suite; `npm test` is the placeholder script from `backend/package.json`.
+## Security Notes
 
-## Backend API
+- Keep JWT secrets out of source control
+- Use environment variables for credentials
+- Always validate and sanitize user input
+- Use HTTPS in production
+- Configure CORS properly for frontend/backend communication
 
-The Express application mounts these route groups under `/api`:
+## Notes on Cleanup
 
-| Area | Base path |
-| --- | --- |
-| Authentication | `/api/auth` |
-| Crops | `/api/crops` |
-| Harvest | `/api/harvest` |
-| Plantation | `/api/plantation` |
-| Trace | `/api/trace` |
-| Media | `/api/media` |
-| Packing | `/api/packing` |
-| Monitoring | `/api/monitoring` |
-| Verification | `/api/verification` |
-| User roles | `/api/userRole` |
-| Patch | `/api/patch` |
-| Farm | `/api/farm` |
-| Sambalpuri Bandha | `/api/sambalpuri` |
-| Supplier trace | `/api/supplierTrace` |
-| Process image | `/api/processImage` |
-| Traceability aggregation | `/api/traceability` |
+The repository has been simplified to keep only the useful project documentation. Duplicate README files and unnecessary `.txt` reference files were removed, and the project now relies on this root README as the main developer guide.
 
-Authentication routes are also mounted at `/auth` for compatibility. The health endpoint is:
+## Support
 
-```text
-GET http://localhost:3000/api/health
-```
-
-Most CRUD modules expose the usual `GET`, `POST`, `PUT`, and `DELETE` operations. The exact request and response shapes are defined in the route controllers and SQL queries; `docs/API.md` contains older examples and should be treated as supplementary rather than authoritative when it differs from the current code.
-
-JWT-protected requests use:
-
-```http
-Authorization: Bearer <token>
-```
-
-## Video generator API
-
-The FastAPI service keeps jobs in an in-memory store. Job records are cleaned up after approximately 15 minutes, so this service should run as a single instance unless job persistence is added.
-
-### Health and browser UI
-
-```text
-GET /
-GET /health
-```
-
-### Upload-based rendering
-
-```text
-POST /render
-```
-
-This endpoint accepts multipart form data with `template` (`A`, `B`, or `C`), `logo`, `intro_logo`, `farmer_img`, `farm_img`, one or more `process_images`, `certificate_img`, and `end_img`.
-
-### URL-based rendering
-
-```text
-POST /render-from-urls
-Content-Type: application/json
-```
-
-Example payload:
-
-```json
-{
-  "template": "A",
-  "logo_url": "https://example.com/logo.png",
-  "intro_logo_url": "https://example.com/intro.png",
-  "farmer_img_url": "https://example.com/farmer.jpg",
-  "farm_img_url": "https://example.com/farm.jpg",
-  "process_image_urls": [
-    "https://example.com/process-1.jpg",
-    "https://example.com/process-2.jpg"
-  ],
-  "certificate_img_url": "https://example.com/certificate.jpg",
-  "end_img_url": "https://example.com/end.jpg"
-}
-```
-
-Both render endpoints return a `job_id`. Poll and control the job with:
-
-```text
-GET  /status/{job_id}
-POST /cancel/{job_id}
-GET  /download/{job_id}
-```
-
-When rendering finishes, `/status/{job_id}` returns a `download_url` and, when enabled, a Cloudinary URL.
-
-## Docker Compose
-
-The Compose file defines:
-
-- `db`: PostgreSQL 15 on port `5432`
-- `app`: backend container on port `3000`
-- `video-generator`: FastAPI container on port `8000`
-
-Start the stack with:
-
-```bash
-docker compose up --build
-```
-
-The current `docker-compose.yml` references a root-level `Dockerfile` for the `app` service, but this checkout does not contain that file. Therefore, the Compose stack is not ready to build unchanged. Either add the intended root backend Dockerfile or change the `app.build.dockerfile` setting to a valid Dockerfile before using the full-stack command.
-
-The existing service Dockerfiles also need deployment review: `backend/Dockerfile` exposes `5000` although the backend defaults to `3000`, and `frontend/Dockerfile` builds a standalone Nginx image rather than being served by the Express fallback. These are container configuration details and do not affect the local development workflow above.
-
-## Production notes
-
-- Set a strong, unique JWT secret and never commit `.env` files.
-- Serve the frontend, API, and video generator over HTTPS in production.
-- Set `CORS_ORIGINS` to the exact trusted frontend origins.
-- Use `PG_SSL=true` or `NODE_ENV=production` when the PostgreSQL deployment requires TLS.
-- Use persistent storage or external job tracking if the video generator is scaled beyond one instance.
-- Configure Cloudinary only when remote media/video delivery is required.
-- Review upload size limits, authentication coverage, and database permissions before exposing the services publicly.
-
-## Documentation
-
-- [Architecture notes](docs/Architecture.md)
-- [API notes](docs/API.md)
-- [Backend environment template](backend/.env.example)
-
-The source code and mounted routes are the authority for current behavior; some older documentation files still describe paths and structures from earlier versions.
+For project issues, follow the local setup above and verify each service is running on the expected port before debugging deeper application logic.
 
 ---
 
-Last updated: 2026-10-04
+Last updated: 2026-09-17
