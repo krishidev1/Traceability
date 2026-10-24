@@ -12,7 +12,7 @@ import {
   FiTrash2, FiEdit2, FiPlus, FiArrowRight, FiArrowLeft, FiMapPin,
   FiCalendar, FiDroplet, FiVideo, FiCamera, FiCheck,
   FiX, FiMail, FiShield, FiStar, FiTrendingUp, FiGrid,
-  FiUpload, FiAward, FiExternalLink
+  FiUpload, FiAward, FiExternalLink, FiDownload
 } from "react-icons/fi";
 import "../styles/traceconnect.css";
 import { authApi, clearAuth, getApiUrl, getStoredAuth, storeAuth, traceabilityApi, setUnauthorizedCallback } from "../api/traceabilityApi";
@@ -49,7 +49,9 @@ export const TRACE_CONNECT_LOGO_TEXT_SRC = "/Traceconnect Logo Text.svg";
 const LOADING_GIF_SRC = "/loading.gif";
 const GI_LOGO_SRC = "/gi-logo.svg";
 const KOTPAD_GI_CERTIFICATE_PDF_SRC = "/kotpad-gi-certificate.pdf";
-const MAATI_AI_LOGO_SRC = "/Maati AI logo.png";
+//const MAATI_AI_LOGO_SRC = "/Maati AI logo.png";
+const MAATI_AI_LOGO_SRC =
+  new URL("/Maati AI logo.png", window.location.origin).href;
 const VIDEO_GENERATOR_BASE_URL = (
   import.meta.env?.VITE_VIDEO_GENERATOR_URL ||
   (import.meta.env.DEV ? "http://localhost:8000" : "https://maatiaivideogenerator.onrender.com")
