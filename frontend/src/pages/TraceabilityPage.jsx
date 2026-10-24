@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   Wheat,
@@ -33,12 +33,7 @@ export default function TraceabilityPage({
   onGoToDashboard,
   centerDashboardButton = false,
 }) {
-  const scrollToDemo = () => {
-    const videoSection = document.getElementById("ta-video-section");
-    if (videoSection) {
-      videoSection.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  };
+  const [showDemo, setShowDemo] = useState(false);
 
   useEffect(() => {
     if (embedded) return undefined;
@@ -102,7 +97,7 @@ export default function TraceabilityPage({
                 <button
                   className="ta-btn-outline ta-btn-lg"
                   type="button"
-                  onClick={scrollToDemo}
+                  onClick={() => setShowDemo(true)}
                 >
                   Show a Demo
                 </button>
@@ -187,8 +182,11 @@ export default function TraceabilityPage({
         </div>
       </section>
 
-      {/* Video Section */}
-      <section className="ta-video-section" id="ta-video-section">
+      {/* Demo video opens only after the user selects Show a Demo. */}
+      {showDemo && <section className="ta-video-section ta-video-modal" id="ta-video-section">
+        <button className="ta-video-modal-close" type="button" onClick={() => setShowDemo(false)} aria-label="Close demo video">
+          ×
+        </button>
         <div className="ta-container ta-video-inner">
           <h2 className="ta-section-title">See TraceAgri in Action</h2>
           <p className="ta-section-desc">
@@ -197,9 +195,8 @@ export default function TraceabilityPage({
           </p>
           <div className="ta-video-player">
             <iframe
-              src="https://go.screenpal.com/player/cOeQQmnZOLf"
+              src="https://go.screenpal.com/player/cOeQQmnZOLf?autoplay=1"
               title="TraceAgri demo video"
-              loading="lazy"
               allow="autoplay; fullscreen; picture-in-picture"
               allowFullScreen
             />
@@ -213,10 +210,10 @@ export default function TraceabilityPage({
             target="_blank"
             rel="noreferrer"
           >
-            Open video in new tab
+          Open video in new tab
           </a>
         </div>
-      </section>
+      </section>}
     </div>
   );
 }

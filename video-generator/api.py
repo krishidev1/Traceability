@@ -75,6 +75,7 @@ JOB_TTL_SECONDS = 15 * 60
 
 class RenderFromUrlsRequest(BaseModel):
     template: str = "A"
+    production_name: str = "TraceConnect"
     logo_url: Optional[str] = None
     intro_logo_url: Optional[str] = None
     farmer_img_url: str
@@ -907,7 +908,9 @@ def _preprocess_inputs(paths: dict, work_dir: str) -> dict:
     processed["farm_img"] = preprocess_cover(paths["farm_img"], _dst("farm_img"), WIDTH // 2, HEIGHT)
 
     cert_base = preprocess_cover(paths["certificate_img"], _dst("certificate_img"), WIDTH, HEIGHT)
-    processed["certificate_img"] = bake_logo_on_image(cert_base, logo_small, _dst("certificate_baked"))
+    # Keep the certificate clean in the video. The GI badge belongs on process
+    # evidence images, not over the official certificate itself.
+    processed["certificate_img"] = cert_base
 
     end_base = preprocess_cover(paths["end_img"], _dst("end_img"), WIDTH, HEIGHT)
     processed["end_img"] = bake_logo_on_image(end_base, logo_small, _dst("end_baked"))
@@ -947,6 +950,7 @@ def _run_job(job_id, work_dir, output_dir, template, paths):
             paths["process_images"],
             paths["certificate_img"],
             paths["end_img"],
+            production_name=paths.get("production_name", "TraceConnect"),
             template_name=template,
             output_root=output_dir,
             progress_cb=progress_cb,
@@ -1020,6 +1024,7 @@ def _prepare_and_run_url_job(job_id, work_dir, output_dir, template, payload: Re
             "farm_img": _save_image_source(payload.farm_img_url, work_dir, "farm_img"),
             "certificate_img": _save_image_source(payload.certificate_img_url or process_urls[-1], work_dir, "certificate_img"),
             "end_img": _save_image_source(payload.end_img_url or process_urls[-1], work_dir, "end_img"),
+            "production_name": payload.production_name,
             "process_images": [
                 _save_image_source(url, work_dir, f"process_{i:03d}")
                 for i, url in enumerate(process_urls)

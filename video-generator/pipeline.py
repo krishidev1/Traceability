@@ -23,13 +23,13 @@ from moviepy.editor import CompositeVideoClip, ColorClip, VideoFileClip  # type:
 
 from config import FPS, WATERMARK_TEXT
 
-VIDEO_WIDTH = 720
-VIDEO_HEIGHT = 480
+VIDEO_WIDTH = 1280
+VIDEO_HEIGHT = 720
 
 
-FFMPEG_PRESET = "veryfast"
-FFMPEG_CRF = 26
-FFMPEG_THREADS = 2
+FFMPEG_PRESET = "medium"
+FFMPEG_CRF = 18
+FFMPEG_THREADS = 4
 FFMPEG_FAST_PARAMS = [
     "-preset",
     FFMPEG_PRESET,
@@ -641,7 +641,7 @@ def _preprocess_image_worker(args):
                     centering=(0.5, 0.5),
                 )
             os.makedirs(os.path.dirname(dst_path), exist_ok=True)
-            im.save(dst_path, "JPEG", quality=quality, optimize=True)
+            im.save(dst_path, "JPEG", quality=max(quality, 95), subsampling=0, optimize=True)
         return (src_path, dst_path, None)
     except Exception as e:
         return (src_path, None, str(e))
@@ -758,6 +758,7 @@ def render_video(
     process_images,
     certificate_img,
     end_img,
+    production_name="TraceConnect",
     bgm_path=None,
     template_name="A",
     output_root=None,
@@ -1132,16 +1133,13 @@ def render_video(
             process_layers, size=(render_width, render_height)
         ).set_duration(process_total)
     else:
-        if template_name == "A":
-            process_transition_kinds = ["dissolve", "flow"]
-        elif template_name == "B":
-            process_transition_kinds = ["slide", "dissolve", "flow"]
-        else:
-            process_transition_kinds = ["flow", "slide", "dissolve"]
+        # Keep each process image as a distinct, sequential shot. Transitions that
+        # layer two process clips caused images to overlap and reduced readability.
+        process_transition_kinds = ["dissolve"]
         process_transitions = []
         for i in range(max(0, n_process - 1)):
             kind = process_transition_kinds[i % len(process_transition_kinds)]
-            process_transitions.append({"kind": kind, "duration": min(0.7, TRANSITION_DUR)})
+            process_transitions.append({"kind": kind, "duration": 0.0})
         probe.sample("process_mix")
         process_sequence = build_transition_sequence(process_layers, process_transitions, render_width, render_height)
 
@@ -1212,11 +1210,12 @@ def render_video(
     os.makedirs(template_dir, exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_filename = f"video_{template_name}_{timestamp}.mp4"
+    safe_production_name = "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in str(production_name or "TraceConnect")).strip("_-") or "TraceConnect"
+    output_filename = f"{safe_production_name}_traceability_{timestamp}.mp4"
     output_path = os.path.join(template_dir, output_filename)
     counter = 1
     while os.path.exists(output_path):
-        output_filename = f"video_{template_name}_{timestamp}_{counter}.mp4"
+        output_filename = f"{safe_production_name}_traceability_{timestamp}_{counter}.mp4"
         output_path = os.path.join(template_dir, output_filename)
         counter += 1
 

@@ -417,6 +417,26 @@ button, .btn, .tc-btn {
   font-family: var(--font-sans);
 }
 
+.toast-success {
+  background: #166534;
+  border-color: #22c55e;
+}
+
+.toast-error {
+  background: #991b1b;
+  border-color: #f87171;
+}
+
+.toast-warning {
+  background: #92400e;
+  border-color: #fbbf24;
+}
+
+.toast-info {
+  background: #075985;
+  border-color: #38bdf8;
+}
+
 .loading-inline {
   display: inline-flex;
   align-items: center;

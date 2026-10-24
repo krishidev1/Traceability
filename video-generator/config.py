@@ -1,6 +1,6 @@
-# 4:3 output for 4:3 image uploads
-WIDTH = 1024
-HEIGHT = 768
+# High-quality 16:9 output for video playback
+WIDTH = 1280
+HEIGHT = 720
 FPS = 24
 
 INTRO_DURATION = 3

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+<rect width="1600" height="900" fill="#fffdf8"/>
+<path d="M0 0 C180 70 220 210 80 360 M1600 900 C1420 830 1380 690 1520 540" fill="none" stroke="#d3a447" stroke-width="8"/>
+<g fill="#78916d" opacity=".65"><ellipse cx="90" cy="150" rx="42" ry="105" transform="rotate(-35 90 150)"/><ellipse cx="190" cy="90" rx="38" ry="92" transform="rotate(45 190 90)"/><ellipse cx="1510" cy="760" rx="42" ry="105" transform="rotate(-35 1510 760)"/><ellipse cx="1400" cy="820" rx="38" ry="92" transform="rotate(45 1400 820)"/></g>
+<text x="800" y="430" text-anchor="middle" fill="#234b2a" font-family="Georgia,serif" font-size="150" font-style="italic">Thank You</text>
+<path d="M575 500 H760 M840 500 H1025" stroke="#d3a447" stroke-width="5"/><path d="M800 480 C770 445 720 500 800 555 C880 500 830 445 800 480Z" fill="#d3a447"/>
+</svg>
