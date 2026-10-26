@@ -530,6 +530,7 @@ body.traceability-page-active .footer {
 }
 
 .ta-video-modal-close {
+  font-size: 0;
   position: absolute;
   top: 22px;
   right: 28px;
@@ -543,6 +544,12 @@ body.traceability-page-active .footer {
   font-size: 28px;
   line-height: 1;
   cursor: pointer;
+}
+
+.ta-video-modal-close svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2.4;
 }
 
 .ta-video-modal-close:hover {

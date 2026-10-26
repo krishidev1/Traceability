@@ -6,6 +6,7 @@ import {
   TrendingUp,
   Clock,
 } from "lucide-react";
+import { X as LucideX } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -185,6 +186,8 @@ export default function TraceabilityPage({
       {/* Demo video opens only after the user selects Show a Demo. */}
       {showDemo && <section className="ta-video-section ta-video-modal" id="ta-video-section">
         <button className="ta-video-modal-close" type="button" onClick={() => setShowDemo(false)} aria-label="Close demo video">
+          <span aria-hidden="true">&#10005;</span>
+          <LucideX aria-hidden="true" />
           ×
         </button>
         <div className="ta-container ta-video-inner">

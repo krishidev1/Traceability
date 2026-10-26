@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { FiX, FiChevronDown } from "react-icons/fi";
+import { FiChevronDown } from "react-icons/fi";
+import { X as LucideX } from "lucide-react";
 import {
   useAuth,
   useRouter,
@@ -310,7 +311,7 @@ export default function AuthEntryPage({ toast, modal = false, onClose, initialMo
       <div className="auth-modal">
         {modal && (
           <button className="auth-popup-close" onClick={onClose} type="button" aria-label="Close login popup">
-            <FiX />
+            <LucideX aria-hidden="true" />
           </button>
         )}
         <div className="auth-right-panel" ref={authPanelRef}>

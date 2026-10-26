@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useContext, createContext, useRef } from "react";
 import { createPortal } from "react-dom";
+import { ArrowLeft, ArrowRight, Trash2, X as LucideX } from "lucide-react";
 import {
   FiLock, FiCheckCircle, FiUser, FiLogOut,
   FiHome, FiList, FiBarChart2, FiPackage, FiAlertTriangle,
@@ -660,7 +661,7 @@ async function addUploadedImageMetadata(dataUrl, { processName, date, location, 
   ctx.fillText(String(processName || "Process Capture"), 24, outputHeight - barHeight + 24);
   ctx.font = `500 ${Math.max(13, Math.round(outputWidth * 0.014))}px Poppins, sans-serif`;
   ctx.fillStyle = "rgba(255,255,255,.88)";
-  ctx.fillText(`${date || TODAY}  •  ${location || "Location unavailable"}`, 24, outputHeight - 22);
+  ctx.fillText(`${date || TODAY}  |  ${location || "Location unavailable"}`, 24, outputHeight - 22);
   if (stampGi) await drawGiCertificateStamp(ctx, outputWidth, outputHeight - barHeight, giProductLabel);
   return canvas.toDataURL("image/jpeg", 0.92);
 }
@@ -1759,7 +1760,7 @@ function formatVarietyText(variety) {
     if (selectedDetails.length >= 2) break;
   }
   if (selectedDetails.length > 0) {
-    return [primary, ...selectedDetails].filter(Boolean).join(" • ");
+    return [primary, ...selectedDetails].filter(Boolean).join(" | ");
   }
   return primary || "Standard";
 }
@@ -1803,7 +1804,7 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
     <div className={`tc-root ${themeClass}`}>
       <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onCancel()}>
         <div className="confirm-box">
-          <button className="modal-close" onClick={onCancel} type="button"><FiX /></button>
+          <button className="modal-close" onClick={onCancel} type="button"><LucideX aria-hidden="true" /></button>
           <div className="confirm-icon"><FiAlertTriangle /></div>
           <h3>Confirm Delete</h3>
           <p className="muted">{message}</p>
@@ -1904,6 +1905,16 @@ function Header({ route, navigate }) {
             {l.icon} {l.label}
           </button>
         ))}
+        <button
+          className="verify-nav-button"
+          type="button"
+          title="Verification tools coming soon"
+            aria-label="Verify - coming soon"
+        >
+          <span className="verify-nav-icon"><FiShield /></span>
+          <span>Verify</span>
+          <span className="verify-nav-badge">Soon</span>
+        </button>
         <div className="profile-menu-wrap" ref={menuRef}>
           <button className={`profile-trigger ${menuOpen ? "open" : ""}`} onClick={() => setMenuOpen((x) => !x)}>
             <span className="profile-avatar">
@@ -2252,7 +2263,7 @@ function StageStatusModal({ stage, records, onClose }) {
   return createPortal(
     <div className="stage-status-overlay" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <section className="stage-status-modal" role="dialog" aria-modal="true" aria-labelledby="stage-status-title">
-        <button className="stage-status-close" type="button" onClick={onClose} aria-label="Close stage status"><FiX /></button>
+        <button className="stage-status-close" type="button" onClick={onClose} aria-label="Close stage status"><LucideX aria-hidden="true" /></button>
         <div className="stage-status-heading">
           <div className="stage-status-icon"><Icon /></div>
           <div>
@@ -2293,7 +2304,7 @@ function AllStagesStatusModal({ names, records, onClose }) {
   return createPortal(
     <div className="stage-status-overlay" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <section className="stage-status-modal all-stages-status-modal" role="dialog" aria-modal="true" aria-labelledby="all-stages-status-title">
-        <button className="stage-status-close" type="button" onClick={onClose} aria-label="Close all stages status"><FiX /></button>
+        <button className="stage-status-close" type="button" onClick={onClose} aria-label="Close all stages status"><LucideX aria-hidden="true" /></button>
         <div className="stage-status-heading">
           <div className="stage-status-icon"><FiClipboard /></div>
           <div>
@@ -2400,7 +2411,7 @@ function PlantationDetail({ plantationId, toast }) {
       </button>
       <div className="plantation-hero">
         <div className="plantation-hero-copy">
-            <div className="plantation-kicker"><ProductionTypeMark type={plantation.type} size={16} /> {L.label} · Plantation Lifecycle</div>
+            <div className="plantation-kicker"><ProductionTypeMark type={plantation.type} size={16} /> {L.label} - Plantation Lifecycle</div>
           <h1>{plantation.name}</h1>
           <div className="plantation-meta">
             <span className="plantation-meta-item"><FiMapPin /> {plantation.location}</span>
@@ -2838,7 +2849,7 @@ function ProcessEntries({ stage, plantationId, location = "", pImgs, addProcessI
                   </a>
                 )}
                 <button className="process-entry-delete" onClick={() => remove(it.id)} type="button">
-                  Delete
+                  <FiTrash2 /> Delete
                 </button>
               </div>
             </div>
@@ -3126,7 +3137,7 @@ function GeoCameraModal({
     <div className={`tc-root ${themeClass}`}>
       <div className="modal-overlay" role="dialog" aria-modal="true" onClick={(e) => e.target === e.currentTarget && !saving && onClose()}>
         <div className="modal-box camera-modal" style={{ maxWidth: "540px" }}>
-          <button className="modal-close" onClick={onClose} type="button" disabled={saving}><FiX /></button>
+          <button className="modal-close" onClick={onClose} type="button" disabled={saving}><LucideX aria-hidden="true" /></button>
           <h3>{title}</h3>
           {subtitle ? <div className="muted camera-subtitle">{subtitle}</div> : null}
 
@@ -3717,6 +3728,9 @@ function SupplierDashboard({ navigate, toast }) {
   const [desc, setDesc] = useState("");
   const [batchModal, setBatchModal] = useState(null);
   const [batchCreating, setBatchCreating] = useState(false);
+  const workbenchRef = useRef(null);
+  const [traceIndex, setTraceIndex] = useState(0);
+  const [expandedTraceId, setExpandedTraceId] = useState(null);
   const [growerLookupId, setGrowerLookupId] = useState("");
   const [growerLookupState, setGrowerLookupState] = useState({
     loading: false,
@@ -3753,6 +3767,35 @@ function SupplierDashboard({ navigate, toast }) {
         ? current.filter((item) => item !== id)
         : [...current, id],
     );
+
+  const selectTrace = (trace) => {
+    const isSelected = selected.includes(trace.packingId);
+    toggle(trace.packingId);
+    toast(isSelected ? "Trace removed from batch" : "Trace selected", "success");
+    if (!isSelected) {
+      window.requestAnimationFrame(() => {
+        workbenchRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  };
+
+  const removeTrace = async (trace) => {
+    const label = trace.plantationName || trace.cropName || "this trace";
+    const ok = await confirm(`Delete ${label}? This will remove the packing record.`);
+    if (!ok) return;
+
+    try {
+      await traceabilityApi.deletePacking(trace.packingId);
+      setSupplierTraceState((prev) => ({
+        ...prev,
+        traces: prev.traces.filter((item) => item.packingId !== trace.packingId),
+      }));
+      setSelected((current) => current.filter((id) => id !== trace.packingId));
+      toast("Trace deleted successfully", "success");
+    } catch (error) {
+      toast(getTraceabilityErrorMessage(error) || "Unable to delete this trace", "error");
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -3933,7 +3976,7 @@ function SupplierDashboard({ navigate, toast }) {
   };
 
   return (
-    <div className="page-container">
+    <div className="page-container supplier-dashboard-shell">
       {dialog}
       <div className="dashboard-hero supplier-hero">
         <div className="dashboard-hero-copy">
@@ -4077,7 +4120,7 @@ function SupplierDashboard({ navigate, toast }) {
                         <button
                           className={`btn ${isSelected ? "btn-outline" : "btn-primary"}`}
                           disabled={isUnavailable}
-                          onClick={() => toggle(trace.packingId)}
+                           onClick={() => selectTrace(trace)}
                           type="button"
                         >
                           {trace.assignedPatchId
@@ -4118,7 +4161,7 @@ function SupplierDashboard({ navigate, toast }) {
           )}
         </div>
 
-        <div className="card supplier-workbench">
+         <div className="card supplier-workbench" ref={workbenchRef}>
           <div className="card-title">
             <FiPackage /> Create Supplier Batch
           </div>
@@ -4157,12 +4200,12 @@ function SupplierDashboard({ navigate, toast }) {
                   <div>
                     <strong>{trace.plantationName}</strong>
                     <p>
-                      {trace.cropName} • {trace.netWeight} kg • {trace.packingDate || "Packing date pending"}
+                      {trace.cropName} &#8226; {trace.netWeight} kg &#8226; {trace.packingDate || "Packing date pending"}
                     </p>
                   </div>
                   <button
                     className="icon-btn"
-                    onClick={() => toggle(trace.packingId)}
+                     onClick={() => selectTrace(trace)}
                   >
                     <FiX />
                   </button>
@@ -4198,8 +4241,14 @@ function SupplierDashboard({ navigate, toast }) {
             </p>
           </div>
         ) : (
-          <div className="supplier-trace-grid">
-            {traces.map((trace) => {
+          <>
+          <div className="supplier-trace-carousel-controls">
+            <button type="button" className="supplier-carousel-arrow" onClick={() => { setTraceIndex((index) => Math.max(0, index - 1)); setExpandedTraceId(null); }} disabled={traceIndex === 0} aria-label="Show newer trace"><ArrowLeft aria-hidden="true" /></button>
+            <span>{traceIndex + 1} / {traces.length}</span>
+            <button type="button" className="supplier-carousel-arrow" onClick={() => { setTraceIndex((index) => Math.min(traces.length - 1, index + 1)); setExpandedTraceId(null); }} disabled={traceIndex >= traces.length - 1} aria-label="Show older trace"><ArrowRight aria-hidden="true" /></button>
+          </div>
+          <div className="supplier-trace-grid supplier-trace-carousel">
+             {traces.slice(traceIndex, traceIndex + 1).map((trace) => {
               const isSelected = selected.includes(trace.packingId);
               const myBatch = mine.find((batch) =>
                 batch.packingIds?.includes(trace.packingId),
@@ -4227,7 +4276,7 @@ function SupplierDashboard({ navigate, toast }) {
               return (
                 <div
                   key={trace.packingId}
-                  className={`supplier-trace-card ${isSelected ? "selected" : ""}`}
+                  className={`supplier-trace-card ${isSelected ? "selected" : ""} ${expandedTraceId === trace.packingId ? "expanded" : ""}`}
                 >
                   <div className="supplier-trace-top">
                     <div>
@@ -4236,7 +4285,8 @@ function SupplierDashboard({ navigate, toast }) {
                       </div>
                       <h3>{trace.plantationName}</h3>
                     </div>
-                    <span
+                     <div className="supplier-trace-top-actions">
+                     <span
                       className={`supplier-trace-status ${
                         myBatch
                           ? "mine"
@@ -4249,9 +4299,20 @@ function SupplierDashboard({ navigate, toast }) {
                     >
                       {statusLabel}
                     </span>
+                     <button
+                       className="supplier-trace-delete"
+                       type="button"
+                       title="Delete trace"
+                       aria-label={`Delete ${trace.plantationName || "trace"}`}
+                       onClick={() => removeTrace(trace)}
+                     >
+                       <Trash2 aria-hidden="true" />
+                     </button>
+                     </div>
                   </div>
 
-                  <div className="supplier-trace-meta">
+                   <div className="supplier-trace-scroll">
+                   <div className="supplier-trace-meta">
                     <div className="supplier-trace-meta-item">
                       <FiUser />
                       <div>
@@ -4314,8 +4375,16 @@ function SupplierDashboard({ navigate, toast }) {
                       </span>
                     )}
                   </div>
+                   </div>
 
                   <div className="supplier-trace-actions">
+                     <button
+                       className="btn btn-ghost supplier-more-info"
+                       type="button"
+                       onClick={() => setExpandedTraceId((id) => id === trace.packingId ? null : trace.packingId)}
+                     >
+                       {expandedTraceId === trace.packingId ? "Less info" : "More info"}
+                     </button>
                     {myBatch ? (
                       <button
                         className="btn btn-outline"
@@ -4334,7 +4403,7 @@ function SupplierDashboard({ navigate, toast }) {
                     ) : (
                       <button
                         className={`btn ${isSelected ? "btn-outline" : "btn-primary"}`}
-                        onClick={() => toggle(trace.packingId)}
+                        onClick={() => selectTrace(trace)}
                       >
                         {isSelected ? "Selected for Batch" : "Select Trace"}
                       </button>
@@ -4344,6 +4413,7 @@ function SupplierDashboard({ navigate, toast }) {
               );
             })}
           </div>
+          </>
         )}
       </div>
 
@@ -4405,7 +4475,7 @@ function BatchModal({ batch, onClose, navigate }) {
     <div className={`tc-root ${themeClass}`}>
       <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
         <div className="modal-box batch-modal">
-          <button className="modal-close" onClick={onClose}><FiX /></button>
+          <button className="modal-close" onClick={onClose}><LucideX aria-hidden="true" /></button>
           <div className="batch-modal-header">
             <div className="batch-modal-icon"><FiCheck /></div>
             <h3>Batch Created!</h3>
@@ -4908,7 +4978,7 @@ function ProfilePage({ toast }) {
           </div>
           <p className="muted" style={{ fontSize: 12, marginBottom: 16 }}>
             Lifecycle video generated from your stage photos. Saved to your account.
-            {user?.video_locked && <span style={{ marginLeft: 8, color: "#888", fontWeight: 600 }}>&#x1F512; Locked — add or update a stage photo to re-generate.</span>}
+            {user?.video_locked && <span style={{ marginLeft: 8, color: "#888", fontWeight: 600 }}>&#128274; Locked - add or update a stage photo to re-generate.</span>}
           </p>
           <div className="profile-video-player" style={{ position: "relative", borderRadius: 8, overflow: "hidden", backgroundColor: "#000", aspectRatio: "16/9", maxWidth: 640, margin: "0 auto" }}>
             <video src={user.video_url} controls style={{ width: "100%", height: "100%" }} />
@@ -5123,10 +5193,10 @@ function TracePage({ patchId }) {
             <p className="trace-product-subtitle">Farm to batch traceability record</p>
           </div>
           <div className="trace-info-bar">
-            <div className="trace-info-item"><span className="amber-dot">•</span><span>Variety</span><strong>{formatVarietyText(cropRecord?.variety)}</strong></div>
-            <div className="trace-info-item"><span className="amber-dot">•</span><span>Harvested</span><strong>{harvestRecord?.harvestDate || "-"}</strong></div>
-            <div className="trace-info-item"><span className="amber-dot">•</span><span>Origin</span><strong>{plantation?.location || "-"}</strong></div>
-            <div className="trace-info-item"><span className="amber-dot">•</span><span>Batch ID</span><strong className="mono">{batch.id}</strong></div>
+            <div className="trace-info-item"><span className="amber-dot">&#8226;</span><span>Variety</span><strong>{formatVarietyText(cropRecord?.variety)}</strong></div>
+            <div className="trace-info-item"><span className="amber-dot">&#8226;</span><span>Harvested</span><strong>{harvestRecord?.harvestDate || "-"}</strong></div>
+            <div className="trace-info-item"><span className="amber-dot">&#8226;</span><span>Origin</span><strong>{plantation?.location || "-"}</strong></div>
+            <div className="trace-info-item"><span className="amber-dot">&#8226;</span><span>Batch ID</span><strong className="mono">{batch.id}</strong></div>
           </div>
         </div>
       </div>
@@ -5183,7 +5253,7 @@ function TracePage({ patchId }) {
         <div className="xfactor-grid">
           {xfactor.map((x) => (
             <div key={x.label} className="xfactor-item">
-              <span className="star">â˜…â˜…â˜…â˜…â˜…</span>
+              <span className="star">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
               <div className="xfactor-label">{x.label}</div>
               <div className="xfactor-val">{x.val}</div>
             </div>
@@ -5207,7 +5277,7 @@ function TracePage({ patchId }) {
         <div className="supply-chain">
           {["Harvested", "Bulk Packed", "Supplier Packing", "Transported", "At Store"].map((s, i) => (
             <div key={s} className="chain-item">
-              <div className={`chain-dot ${i < 4 ? "chain-active" : "chain-inactive"}`}>{i < 4 ? "âœ“" : "â—‹"}</div>
+              <div className={`chain-dot ${i < 4 ? "chain-active" : "chain-inactive"}`}>{i < 4 ? <>&#10003;</> : <>&#9675;</>}</div>
               <div className={`chain-label ${i < 4 ? "" : "muted"}`}>{s}</div>
               {i < 4 && <div className="chain-line" />}
             </div>
@@ -5294,10 +5364,10 @@ function TracePage({ patchId }) {
       {/* Photo Stage-Wise Lifecycle Modal */}
       {activePhotoModal && (
         <div className="modal-overlay" onClick={() => setActivePhotoModal(false)}>
-          <div className="trace-modal-card" onClick={(e) => e.stopPropagation()}>
+          <div className="trace-modal-card trace-photo-modal" onClick={(e) => e.stopPropagation()}>
             <div className="trace-modal-header">
               <h3><FiCamera style={{ color: "var(--theme-primary)" }} /> Lifecycle Process Photos</h3>
-              <button className="trace-modal-close" onClick={() => setActivePhotoModal(false)}><FiX /></button>
+              <button className="trace-modal-close" onClick={() => setActivePhotoModal(false)}><LucideX aria-hidden="true" /></button>
             </div>
             <div className="trace-modal-body">
               {growerProcessImages.length === 0 ? (
@@ -5308,15 +5378,16 @@ function TracePage({ patchId }) {
               ) : (
                 <div>
                   {Object.entries(imagesByStage).map(([stageName, imgs]) => (
-                    <div key={stageName} className="trace-modal-stage-section">
+                    <section key={stageName} className="trace-modal-stage-section">
                       <div className="trace-modal-stage-title">
-                        {stageName.charAt(0).toUpperCase() + stageName.slice(1)} Stage
+                        <strong>{stageName.charAt(0).toUpperCase() + stageName.slice(1)} Stage</strong>
+                        <span>{imgs.length} {imgs.length === 1 ? "photo" : "photos"}</span>
                       </div>
                       <div className="trace-modal-photos-grid">
                         {imgs.map((img) => (
                           <div key={img.id} className="trace-modal-photo-card">
                             <div className="trace-modal-photo-img-wrap">
-                              <img src={img.imageUrl} alt={img.processName} />
+                              <img src={img.imageUrl} alt={img.processName || `${stageName} stage`} />
                             </div>
                             <div className="trace-modal-photo-info">
                               <strong>{img.processName || "Process entry"}</strong>
@@ -5325,7 +5396,7 @@ function TracePage({ patchId }) {
                           </div>
                         ))}
                       </div>
-                    </div>
+                    </section>
                   ))}
                 </div>
               )}
@@ -5340,7 +5411,7 @@ function TracePage({ patchId }) {
           <div className="trace-modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="trace-modal-header">
               <h3><FiVideo style={{ color: "var(--theme-primary)" }} /> Watch Farmer Story</h3>
-              <button className="trace-modal-close" onClick={() => setActiveVideoModal(false)}><FiX /></button>
+              <button className="trace-modal-close" onClick={() => setActiveVideoModal(false)}><LucideX aria-hidden="true" /></button>
             </div>
             <div className="trace-modal-body">
               {growerRecord?.video_url ? (
