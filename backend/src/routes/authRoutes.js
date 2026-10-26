@@ -401,6 +401,40 @@ router.post('/forgot-password', async (req, res) => {
   return res.json({ message: 'If the account exists, password reset instructions will be sent.' });
 });
 
+router.post('/reset-password', async (req, res, next) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    const password = String(req.body?.password || '');
+    const confirmPassword = String(req.body?.confirm_password || '');
+
+    if (!email || !email.includes('@')) {
+      return res.status(400).json({ detail: 'Valid email is required.' });
+    }
+    if (!password || !confirmPassword) {
+      return res.status(400).json({ detail: 'New password and confirm password are required.' });
+    }
+    if (password.length < 8) {
+      return res.status(400).json({ detail: 'Password must be at least 8 characters.' });
+    }
+    if (password !== confirmPassword) {
+      return res.status(400).json({ detail: 'Password and confirm password do not match.' });
+    }
+
+    await ensureAuthSchema();
+    const result = await db.query(
+      'UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE LOWER(email) = $2 RETURNING user_id',
+      [hashPassword(password), email],
+    );
+    if (!result.rowCount) {
+      return res.status(404).json({ detail: 'No account was found for this email.' });
+    }
+
+    return res.json({ message: 'Password reset successfully.' });
+  } catch (error) {
+    return next(error);
+  }
+});
+
 router.get('/google', (_req, res) => {
   return res.status(501).json({ detail: 'Google login is not configured for this local backend.' });
 });

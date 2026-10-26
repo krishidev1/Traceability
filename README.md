@@ -42,6 +42,8 @@ TraceNew/
 │   ├── api.py
 │   ├── pipeline.py
 │   ├── scenes.py
+│   ├── helpers.py
+│   ├── utils.py
 │   ├── config.py
 │   ├── cloudinary_uploader.py
 │   ├── requirements.txt
@@ -55,7 +57,6 @@ TraceNew/
 │   └── other supporting docs
 │
 ├── docker-compose.yml
-├── Dockerfile
 ├── package.json
 ├── quick-start.ps1
 ├── README.md                   # This consolidated guide
@@ -122,20 +123,18 @@ http://localhost:3000/api
 
 ```bash
 cd frontend
-npm install
 npm run dev
 ```
 
 The frontend runs by default on:
 
-```text
-http://localhost:5173
-```
+### Start the video generator
 
 ### 3. Video Generator Setup
 
-```bash
+```powershell
 cd video-generator
+
 python -m venv .venv
 
 # Windows
@@ -145,6 +144,7 @@ python -m venv .venv
 source .venv/bin/activate
 
 pip install -r requirements.txt
+
 python -m uvicorn api:app --host 127.0.0.1 --port 8000
 ```
 
@@ -218,7 +218,6 @@ python -m uvicorn api:app --host 127.0.0.1 --port 8000
 ```
 
 ```bash
-cd frontend
 npm run dev
 ```
 

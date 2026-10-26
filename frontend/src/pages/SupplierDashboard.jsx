@@ -32,7 +32,7 @@ const formatNumber = (value) => {
   return parsed.toLocaleString("en-IN");
 };
 
-const SupplierDashboard = () => {
+const SupplierDashboard = ({ toast }) => {
   const [dashboardState, setDashboardState] = useState({
     loading: true,
     error: "",
@@ -69,6 +69,7 @@ const SupplierDashboard = () => {
           traces: [],
           operatingAreas: [],
         });
+        toast?.(error.message || "Unable to load supplier dashboard data right now.", "error");
       }
     };
 
@@ -344,5 +345,4 @@ const SupplierDashboard = () => {
 };
 
 export default SupplierDashboard;
-
 

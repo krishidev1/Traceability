@@ -123,6 +123,10 @@ export const authApi = {
     method: "POST",
     body: JSON.stringify({ identifier }),
   }),
+  resetPassword: ({ email, password, confirm_password }) => apiRequest("/api/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ email, password, confirm_password }),
+  }),
   logout: () => apiRequest("/api/auth/logout", { method: "POST" }),
   updateProfile: (payload) => apiRequest("/api/auth/profile", {
     method: "PUT",

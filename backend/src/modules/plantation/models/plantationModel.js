@@ -2,12 +2,10 @@ const db = require('../../../config/db');
 const { buildWhere, buildUpdate } = require('../../../services/sqlBuilder');
 
 const PRODUCTION_TYPES = new Set([
-  'shrimp',
-  'bee',
   'kotpad_handloom',
   'sambalpuri_bandha',
 ]);
-const DEFAULT_PRODUCTION_TYPE = 'shrimp';
+const DEFAULT_PRODUCTION_TYPE = 'kotpad_handloom';
 
 function normalizeProductionType(value) {
   const type = String(value || DEFAULT_PRODUCTION_TYPE).trim();

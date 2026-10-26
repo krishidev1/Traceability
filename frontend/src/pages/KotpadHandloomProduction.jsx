@@ -69,7 +69,7 @@ export const KOTPAD_PRODUCTION_CONFIG = {
   crop: "Fabric Batch",
   crops: "Kotpad Fabric",
   variety: "Design / Fabric Details",
-  varietyPlaceholder: "e.g. tribal motif, maroon-black cotton",
+  varietyPlaceholder: "e.g. Traditional Kotpad cotton saree with maroon-and-black colour combination",
   startDateLabel: "Production Date *",
   expectedDateLabel: "Expected Completion Date",
   startVerb: "Produced",
@@ -312,26 +312,26 @@ export default function KotpadHandloomProductionFields({ form, setForm }) {
       <SelectInput label="Organization Type" field="organizationType" form={form} setForm={setForm} options={ORGANIZATION_OPTIONS} />
       <FixedInput label="Aadhaar / ID Proof" value={form.idProofUpload} />
       <FixedInput label="Contact Number" value={form.contactNumber} />
-      <TextInput label="Email ID" field="emailId" form={form} setForm={setForm} type="email" />
-      <TextArea label="Address" field="address" form={form} setForm={setForm} />
-      <TextInput label="Experience in Weaving" field="weavingExperience" form={form} setForm={setForm} type="number" placeholder="Years" />
-      <TextInput label="Family Members Involved" field="familyMembersInvolved" form={form} setForm={setForm} type="number" />
+      <TextInput label="Email ID" field="emailId" form={form} setForm={setForm} type="email" placeholder="e.g. sita.example@example.com" />
+      <TextArea label="Address" field="address" form={form} setForm={setForm} placeholder="e.g. Kotpad, Koraput district, Odisha" />
+      <TextInput label="Experience in Weaving" field="weavingExperience" form={form} setForm={setForm} type="number" placeholder="e.g. 18 years" />
+      <TextInput label="Family Members Involved" field="familyMembersInvolved" form={form} setForm={setForm} type="number" placeholder="e.g. 3" />
       <FixedInput label="GPS Location" value={form.gpsLocation} />
 
       <div className="form-section-label kotpad-section-label">Raw Material Details</div>
       <FixedInput label="Fabric Type" value={form.fabricType} />
-      <TextInput label="Yarn Source" field="yarnSource" form={form} setForm={setForm} />
+      <TextInput label="Yarn Source" field="yarnSource" form={form} setForm={setForm} placeholder="e.g. Local yarn supplier, Kotpad" />
       <FixedInput label="Natural Dye Used" value={form.naturalDyeUsed} />
-      <TextArea label="Dye Preparation Method" field="dyePreparationMethod" form={form} setForm={setForm} />
-      <TextInput label="Water Source" field="waterSource" form={form} setForm={setForm} />
+      <TextArea label="Dye Preparation Method" field="dyePreparationMethod" form={form} setForm={setForm} placeholder="e.g. Traditional Aal dye extraction and preparation" />
+      <TextInput label="Water Source" field="waterSource" form={form} setForm={setForm} placeholder="e.g. Community water supply" />
       <SelectInput label="Chemical-Free Status" field="chemicalFreeStatus" form={form} setForm={setForm} options={YES_NO_OPTIONS} />
       <FixedInput label="Eco-Friendly Certification" value={form.ecoFriendlyCertification} />
 
       <div className="form-section-label kotpad-section-label">Weaving & Production Info</div>
       <FixedInput label="Loom Type" value={form.loomType} />
       <FixedInput label="Weaving Technique" value={form.weavingTechnique} />
-      <TextInput label="Time Taken Per Fabric" field="timeTakenPerFabric" form={form} setForm={setForm} placeholder="Hours or days" />
-      <TextInput label="Daily Production Capacity" field="dailyProductionCapacity" form={form} setForm={setForm} type="number" placeholder="Meters or pieces" />
+      <TextInput label="Time Taken Per Fabric" field="timeTakenPerFabric" form={form} setForm={setForm} placeholder="e.g. 7 days" />
+      <TextInput label="Daily Production Capacity" field="dailyProductionCapacity" form={form} setForm={setForm} type="number" placeholder="e.g. 1 saree every 7 days" />
       <SelectInput label="Design Pattern" field="designPattern" form={form} setForm={setForm} options={DESIGN_PATTERN_OPTIONS} />
       <SelectInput label="Color Combination" field="colorCombination" form={form} setForm={setForm} options={COLOR_OPTIONS} />
       <FixedInput label="Handmade Verification" value={form.handmadeVerification} />
@@ -347,22 +347,22 @@ export default function KotpadHandloomProductionFields({ form, setForm }) {
       <SelectInput label="Quality Grade" field="qualityGrade" form={form} setForm={setForm} options={QUALITY_OPTIONS} />
       <div className="form-section-label kotpad-section-label">Marketplace Fields</div>
       <FixedInput label="Product Images" value={form.productImages} />
-      <TextInput label="Selling Price" field="sellingPrice" form={form} setForm={setForm} type="number" placeholder="INR" />
-      <TextInput label="Wholesale Price" field="wholesalePrice" form={form} setForm={setForm} type="number" placeholder="INR" />
-      <TextInput label="Available Stock" field="availableStock" form={form} setForm={setForm} type="number" />
-      <TextInput label="Minimum Order Quantity" field="minimumOrderQuantity" form={form} setForm={setForm} type="number" />
+      <TextInput label="Selling Price" field="sellingPrice" form={form} setForm={setForm} type="number" placeholder="e.g. ₹4,500 per saree" />
+      <TextInput label="Wholesale Price" field="wholesalePrice" form={form} setForm={setForm} type="number" placeholder="e.g. ₹3,800 per saree" />
+      <TextInput label="Available Stock" field="availableStock" form={form} setForm={setForm} type="number" placeholder="e.g. 5 pieces" />
+      <TextInput label="Minimum Order Quantity" field="minimumOrderQuantity" form={form} setForm={setForm} type="number" placeholder="e.g. 1 piece" />
       <SelectInput label="Export Availability" field="exportAvailability" form={form} setForm={setForm} options={YES_NO_OPTIONS} />
       <SelectInput label="Packaging Type" field="packagingType" form={form} setForm={setForm} options={PACKAGING_OPTIONS} />
-      <TextInput label="Shipping Time" field="shippingTime" form={form} setForm={setForm} placeholder="e.g. 5-7 days" />
+      <TextInput label="Shipping Time" field="shippingTime" form={form} setForm={setForm} placeholder="e.g. 5–7 working days after order confirmation" />
       <SelectInput label="Marketplace Visibility" field="marketplaceVisibility" form={form} setForm={setForm} options={MARKETPLACE_OPTIONS} />
       <div className="form-section-label kotpad-section-label">Sustainability & Preservation</div>
       <FixedInput label="Natural Dye Usage" value={form.naturalDyeUsage} />
       <SelectInput label="Tribal Women Involved" field="tribalWomenInvolved" form={form} setForm={setForm} options={YES_NO_OPTIONS} />
       <SelectInput label="Carbon-Friendly Production" field="carbonFriendlyProduction" form={form} setForm={setForm} options={YES_NO_OPTIONS} />
       <SelectInput label="Water Recycling Used" field="waterRecyclingUsed" form={form} setForm={setForm} options={YES_NO_OPTIONS} />
-      <TextArea label="Traditional Knowledge Preservation" field="traditionalKnowledgePreservation" form={form} setForm={setForm} />
-      <TextArea label="Cultural Story" field="culturalStory" form={form} setForm={setForm} />
-      <TextInput label="Government Recognition" field="governmentRecognition" form={form} setForm={setForm} />
+      <TextArea label="Traditional Knowledge Preservation" field="traditionalKnowledgePreservation" form={form} setForm={setForm} placeholder="e.g. Traditional Kotpad dyeing and weaving knowledge documented" />
+      <TextArea label="Cultural Story" field="culturalStory" form={form} setForm={setForm} placeholder="e.g. Record the artisan's own account of learning and practising Kotpad weaving" />
+      <TextInput label="Government Recognition" field="governmentRecognition" form={form} setForm={setForm} placeholder="e.g. Kotpad Handloom Fabric GI registration" />
       <div className="form-section-label kotpad-section-label">Smart Tracking</div>
       <FixedInput label="QR Scan History" value={form.qrScanHistory} />
     </div>

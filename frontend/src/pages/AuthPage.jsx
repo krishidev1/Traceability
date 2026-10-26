@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { FiX, FiShield, FiChevronDown } from "react-icons/fi";
+import { useEffect, useRef, useState } from "react";
+import { FiX, FiChevronDown } from "react-icons/fi";
 import {
   useAuth,
   useRouter,
@@ -12,10 +12,10 @@ import {
 } from "./traceconnect";
 import "../styles/auth.css";
 
-export default function AuthEntryPage({ toast, modal = false, onClose }) {
-  const { login, signup, forgotPassword, setRememberAuth } = useAuth();
+export default function AuthEntryPage({ toast, modal = false, onClose, initialMode = "login" }) {
+  const { login, signup, resetPassword, setRememberAuth } = useAuth();
   const { navigate } = useRouter();
-  const [mode, setMode] = useState("login");
+  const [mode, setMode] = useState(initialMode);
   const [signupStep, setSignupStep] = useState(1);
   const [accountType, setAccountType] = useState("grower");
   const [fullName, setFullName] = useState("");
@@ -29,7 +29,6 @@ export default function AuthEntryPage({ toast, modal = false, onClose }) {
   const [district, setDistrict] = useState("");
   const [stateName, setStateName] = useState("");
   const [country, setCountry] = useState("India");
-  const [pincode, setPincode] = useState("");
   const [gpsCoordinates, setGpsCoordinates] = useState("");
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
@@ -44,6 +43,12 @@ export default function AuthEntryPage({ toast, modal = false, onClose }) {
   const [addressFocused, setAddressFocused] = useState(false);
   const [addressSuggestions, setAddressSuggestions] = useState([]);
   const [addressLoading, setAddressLoading] = useState(false);
+  const authPanelRef = useRef(null);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetPasswordValue, setResetPasswordValue] = useState("");
+  const [resetConfirmPassword, setResetConfirmPassword] = useState("");
+  const [resetBusy, setResetBusy] = useState(false);
 
   const isSignup = mode === "signup";
   const stateOptions = Object.keys(INDIA_STATE_DISTRICTS);
@@ -89,6 +94,7 @@ export default function AuthEntryPage({ toast, modal = false, onClose }) {
     setSignupStep(1);
     setError("");
     setStepLoading(false);
+    window.setTimeout(() => authPanelRef.current?.scrollTo({ top: 0, behavior: "smooth" }), 0);
   };
 
   const handleStateChange = (value) => {
@@ -128,6 +134,7 @@ export default function AuthEntryPage({ toast, modal = false, onClose }) {
     window.setTimeout(() => {
       setSignupStep(nextStep);
       setStepLoading(false);
+      authPanelRef.current?.scrollTo({ top: 0, behavior: "smooth" });
     }, 280);
   };
 
@@ -145,7 +152,9 @@ export default function AuthEntryPage({ toast, modal = false, onClose }) {
     };
     reader.onerror = () => {
       setPhotoLoading(false);
-      setError("Unable to read profile photo.");
+      const message = "Unable to read profile photo.";
+      setError(message);
+      toast(message, "error");
     };
     reader.readAsDataURL(file);
   };
@@ -164,7 +173,9 @@ export default function AuthEntryPage({ toast, modal = false, onClose }) {
     };
     reader.onerror = () => {
       setPhotoLoading(false);
-      setError("Unable to read company logo.");
+      const message = "Unable to read company logo.";
+      setError(message);
+      toast(message, "error");
     };
     reader.readAsDataURL(file);
   };
@@ -172,7 +183,9 @@ export default function AuthEntryPage({ toast, modal = false, onClose }) {
   const captureLocation = () => {
     setError("");
     if (!navigator.geolocation) {
-      setError("Live location is not supported by this browser.");
+      const message = "Live location is not supported by this browser.";
+      setError(message);
+      toast(message, "error");
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -184,7 +197,11 @@ export default function AuthEntryPage({ toast, modal = false, onClose }) {
         setGpsCoordinates(`${lat}, ${lon}`);
         toast("Live location captured");
       },
-      () => setError("Unable to capture live location."),
+      () => {
+        const message = "Unable to capture live location.";
+        setError(message);
+        toast(message, "error");
+      },
       { enableHighAccuracy: true, timeout: 10000 },
     );
   };
@@ -202,7 +219,9 @@ export default function AuthEntryPage({ toast, modal = false, onClose }) {
       toast("Logged in successfully");
       window.location.hash = authedUser?.role === "supplier" ? "/supplier" : "/grower";
     } catch (err) {
-      setError(err?.message || "Authentication failed");
+      const message = err?.message || "Authentication failed";
+      setError(message);
+      toast(message, "error");
     } finally {
       setBusy(false);
     }
@@ -227,7 +246,6 @@ export default function AuthEntryPage({ toast, modal = false, onClose }) {
           district,
           state: stateName,
           country,
-          pincode,
           gps_coordinates: gpsCoordinates,
           latitude,
           longitude,
@@ -237,27 +255,49 @@ export default function AuthEntryPage({ toast, modal = false, onClose }) {
       toast("Signed up successfully");
       window.location.hash = authedUser?.role === "supplier" ? "/supplier" : "/grower";
     } catch (err) {
-      setError(err?.message || "Signup failed");
+      const message = err?.message || "Signup failed";
+      setError(message);
+      toast(message, "error");
     } finally {
       setBusy(false);
     }
   };
 
   const handleForgotPassword = async () => {
-    setBusy(true);
+    setResetEmail(loginIdentifier.includes("@") ? loginIdentifier : "");
+    setResetPasswordValue("");
+    setResetConfirmPassword("");
+    setForgotOpen(true);
     setError("");
+  };
+
+  const submitPasswordReset = async (event) => {
+    event.preventDefault();
+    if (resetPasswordValue !== resetConfirmPassword) {
+      const message = "Password and confirm password do not match.";
+      toast(message, "error");
+      return;
+    }
+    setResetBusy(true);
     try {
-      await forgotPassword(loginIdentifier);
-      toast("Password reset request received");
+      await resetPassword({ email: resetEmail, password: resetPasswordValue, confirm_password: resetConfirmPassword });
+      toast("Password reset successfully", "success");
+      setForgotOpen(false);
+      setLoginIdentifier(resetEmail);
+      setLoginPassword("");
     } catch (err) {
-      setError(err?.message || "Unable to request password reset");
+      toast(err?.message || "Unable to reset password", "error");
     } finally {
-      setBusy(false);
+      setResetBusy(false);
     }
   };
 
   const submitSignupStep = (event) => {
     event.preventDefault();
+    if (signupStep === 3 && (!stateName || !district || !villageArea.trim())) {
+      setError("Please complete your state, district, and address details.");
+      return;
+    }
     if (signupStep < 3) {
       goToSignupStep(signupStep + 1);
       return;
@@ -273,24 +313,35 @@ export default function AuthEntryPage({ toast, modal = false, onClose }) {
             <FiX />
           </button>
         )}
-        <div className="auth-left-panel">
-          <div className="auth-left-brand" onClick={() => navigate("/")} style={{ cursor: "pointer" }}>
-            <span className="auth-left-logo">
-              <img src={TRACE_CONNECT_LOGO_SRC} alt="TraceConnect Logo" />
-            </span>
-            <span className="auth-left-brand-text">TRACECONNECT</span>
+        <div className="auth-right-panel" ref={authPanelRef}>
+          <div className="auth-form-brand" onClick={() => navigate("/")} role="button" tabIndex={0}>
+            <img src={TRACE_CONNECT_LOGO_SRC} alt="TraceConnect Logo" />
+            <span>TRACECONNECT</span>
           </div>
-          <div className="auth-illustration">
-            <FiShield />
-          </div>
-          <div className="auth-left-copy">
-            <h3>Trace every harvest with confidence.</h3>
-            <p>Secure records, verified farm activity, batch history, and supply-chain trails stay connected to your account.</p>
-          </div>
-          <div className="auth-left-tagline">Secure access for farm records, batches, and verification trails.</div>
-        </div>
-
-        <div className="auth-right-panel">
+          {forgotOpen && (
+            <div className="auth-reset-panel">
+              <div className="auth-reset-header">
+                <h3>Reset password</h3>
+              </div>
+              <p className="auth-reset-help">Enter your registered email and choose a new password.</p>
+              <form onSubmit={submitPasswordReset}>
+                <label className="auth-input-wrap">
+                  <span className="auth-field-label">Email address</span>
+                  <input className="input" type="email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} placeholder="Enter email address" required />
+                </label>
+                <label className="auth-input-wrap">
+                  <span className="auth-field-label">New password</span>
+                  <input className="input" type="password" value={resetPasswordValue} onChange={(e) => setResetPasswordValue(e.target.value)} placeholder="Enter new password" minLength={8} required />
+                </label>
+                <label className="auth-input-wrap">
+                  <span className="auth-field-label">Confirm password</span>
+                  <input className="input" type="password" value={resetConfirmPassword} onChange={(e) => setResetConfirmPassword(e.target.value)} placeholder="Retype new password" minLength={8} required />
+                </label>
+                <button className="auth-submit-btn" disabled={resetBusy} type="submit">{resetBusy ? "Updating..." : "Set password"}</button>
+              </form>
+            </div>
+          )}
+          {!forgotOpen && <>
           <h2>{isSignup ? "Create account" : "Welcome back"}</h2>
           <div className="auth-modal-tabs" role="tablist" aria-label="Authentication mode">
             <button className={`auth-modal-tab ${!isSignup ? "active" : ""}`} onClick={() => switchMode("login")} type="button">
@@ -488,10 +539,6 @@ export default function AuthEntryPage({ toast, modal = false, onClose }) {
                     <span className="auth-field-label">Country</span>
                     <input className="input" value={country} onChange={(e) => setCountry(e.target.value)} placeholder="Enter country" disabled={isWorking} required />
                   </label>
-                  <label className="auth-input-wrap">
-                    <span className="auth-field-label">Pincode</span>
-                    <input className="input" value={pincode} onChange={(e) => setPincode(e.target.value)} placeholder="Enter pincode (optional)" disabled={isWorking} />
-                  </label>
                   {showGpsLocationControls && (
                     <>
                       <label className="auth-input-wrap">
@@ -533,6 +580,7 @@ export default function AuthEntryPage({ toast, modal = false, onClose }) {
               {isSignup ? "Login" : "Create an account"}
             </button>
           </div>
+          </>}
         </div>
       </div>
     </div>
