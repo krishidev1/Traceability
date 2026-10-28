@@ -48,6 +48,13 @@ const VIDEO_GENERATOR_BASE_URL = (
   (import.meta.env.DEV ? "http://localhost:8000" : "https://maatiaivideogenerator.onrender.com")
 ).replace(/\/+$/, "");
 
+// A production build must never silently target the browser's localhost.
+// This commonly causes failed video renders after deployment because the
+// video-generator is running in Docker/EC2, not on the visitor's machine.
+if (!import.meta.env.DEV && /localhost|127\.0\.0\.1/.test(VIDEO_GENERATOR_BASE_URL)) {
+  throw new Error("Invalid production video-generator URL: configure VITE_VIDEO_GENERATOR_URL with a public HTTPS URL.");
+}
+
 export function delay(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
