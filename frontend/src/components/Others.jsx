@@ -10,37 +10,37 @@ import {
   FiUpload, FiAward, FiExternalLink, FiDownload, FiSun, FiAperture, FiLayers,
   FiClipboard, FiInfo
 } from "react-icons/fi";
-import "../styles/traceconnect.css";
-import Navbar, { PublicNavbar } from "../components/Navbar";
+import "../styles/Others.css";
+import Navbar, { PublicNavbar } from "./Navbar";
 import { authApi, clearAuth, getApiUrl, getStoredAuth, storeAuth, traceabilityApi, setUnauthorizedCallback } from "../api/traceabilityApi";
-import Home from "./Home";
-import AuthEntryPage from "./AuthPage";
-import AdminDashboard from "./AdminDashboard";
-import Footer from "../components/Footer";
-import ReportsAnalyticsPage from "./ReportsPage";
+import Home from "../pages/Home";
+import { AuthContext, useAuth, useRouter } from "../shared/AuthContext";
+import AuthEntryPage from "../pages/AuthPage";
+import AdminDashboard from "../pages/AdminDashboard";
+import Footer from "./Footer";
+import ReportsAnalyticsPage from "../pages/ReportsPage";
 import KotpadHandloomProductionFields, {
   KOTPAD_PRODUCTION_CONFIG,
   buildKotpadDetails,
   createKotpadInitialFields,
-} from "./KotpadHandloomProduction";
+} from "../pages/KotpadHandloomProduction";
 import SambalpuriBandhaProductionFields, {
   SAMBALPURI_PRODUCTION_CONFIG,
   buildSambalpuriDetails,
   buildSambalpuriProductPayload,
   createSambalpuriInitialFields,
-} from "./SambalpuriBandhaProduction";
+} from "../pages/SambalpuriBandhaProduction";
 import BeeProductionFields, {
   BEE_PRODUCTION_CONFIG,
   buildBeeDetails,
   createBeeInitialFields,
-} from "./BeeProduction";
+} from "../pages/BeeProduction";
 import ShrimpProductionFields, {
   SHRIMP_PRODUCTION_CONFIG,
   buildShrimpDetails,
   createShrimpInitialFields,
-} from "./ShrimpProduction";
+} from "../pages/ShrimpProduction";
 
-export const AuthContext = createContext(null);
 const DataContext = createContext(null);
 const TODAY = new Date().toISOString().split("T")[0];
 export const API_URL = getApiUrl();
@@ -1653,30 +1653,8 @@ function AuthProvider({ children }) {
   );
 }
 
-export function useAuth() {
-  return useContext(AuthContext);
-}
-
 function useData() {
   return useContext(DataContext);
-}
-
-export function useRouter() {
-  const [route, setRoute] = useState(window.location.hash.slice(1) || "/");
-  useEffect(() => {
-    const fn = () => setRoute(window.location.hash.slice(1) || "/");
-    window.addEventListener("hashchange", fn);
-    return () => window.removeEventListener("hashchange", fn);
-  }, []);
-  const navigate = (path) => {
-    const nextRoute = path.startsWith("#") ? path : `#${path}`;
-    if (window.location.hash === nextRoute) {
-      setRoute(path.replace(/^#/, "") || "/");
-      return;
-    }
-    window.location.hash = nextRoute;
-  };
-  return { route, navigate };
 }
 
 function useToast() {

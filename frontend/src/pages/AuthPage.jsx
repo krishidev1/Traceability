@@ -3,15 +3,14 @@ import { FiChevronDown } from "react-icons/fi";
 import { FaGoogle } from "react-icons/fa";
 import { X as LucideX } from "lucide-react";
 import { authApi } from "../api/traceabilityApi";
+import { useAuth, useRouter } from "../shared/AuthContext";
 import {
-  useAuth,
-  useRouter,
   delay,
   LoadingIndicator,
   API_URL,
   TRACE_CONNECT_LOGO_SRC,
   ACCOUNT_TYPE_OPTIONS
-} from "./traceconnect";
+} from "../components/Others";
 import "../styles/AuthPage.css";
 
 export default function AuthEntryPage({ toast, modal = false, onClose, initialMode = "login" }) {
