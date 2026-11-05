@@ -1,15 +1,9 @@
-
-/* eslint-disable react-refresh/only-export-components */
-/* eslint-disable react-hooks/set-state-in-effect */
-/* eslint-disable react-hooks/purity */
-/* eslint-disable no-useless-assignment */
-
 import { useState, useEffect, useContext, createContext, useRef } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, ArrowRight, Trash2, X as LucideX } from "lucide-react";
+import { ArrowLeft, ArrowRight, Trash2, X as LucideX, LoaderCircle } from "lucide-react";
 import {
   FiLock, FiCheckCircle, FiUser, FiLogOut,
-  FiHome, FiList, FiBarChart2, FiPackage, FiAlertTriangle,
+  FiHome, FiBarChart2, FiPackage, FiAlertTriangle,
   FiTrash2, FiEdit2, FiPlus, FiArrowRight, FiArrowLeft, FiMapPin,
   FiCalendar, FiDroplet, FiVideo, FiCamera, FiCheck,
   FiX, FiMail, FiShield, FiStar, FiTrendingUp, FiGrid,
@@ -17,9 +11,13 @@ import {
   FiClipboard, FiInfo
 } from "react-icons/fi";
 import "../styles/traceconnect.css";
+import Navbar, { PublicNavbar } from "../components/Navbar";
 import { authApi, clearAuth, getApiUrl, getStoredAuth, storeAuth, traceabilityApi, setUnauthorizedCallback } from "../api/traceabilityApi";
-import TraceabilityPage from "./TraceabilityPage";
+import Home from "./Home";
 import AuthEntryPage from "./AuthPage";
+import AdminDashboard from "./AdminDashboard";
+import Footer from "../components/Footer";
+import ReportsAnalyticsPage from "./ReportsPage";
 import KotpadHandloomProductionFields, {
   KOTPAD_PRODUCTION_CONFIG,
   buildKotpadDetails,
@@ -31,6 +29,16 @@ import SambalpuriBandhaProductionFields, {
   buildSambalpuriProductPayload,
   createSambalpuriInitialFields,
 } from "./SambalpuriBandhaProduction";
+import BeeProductionFields, {
+  BEE_PRODUCTION_CONFIG,
+  buildBeeDetails,
+  createBeeInitialFields,
+} from "./BeeProduction";
+import ShrimpProductionFields, {
+  SHRIMP_PRODUCTION_CONFIG,
+  buildShrimpDetails,
+  createShrimpInitialFields,
+} from "./ShrimpProduction";
 
 export const AuthContext = createContext(null);
 const DataContext = createContext(null);
@@ -38,7 +46,6 @@ const TODAY = new Date().toISOString().split("T")[0];
 export const API_URL = getApiUrl();
 export const TRACE_CONNECT_LOGO_SRC = "/Traceconnect Logo.svg";
 export const TRACE_CONNECT_LOGO_TEXT_SRC = "/Traceconnect Logo Text.svg";
-const LOADING_GIF_SRC = "/loading.gif";
 const GI_LOGO_SRC = "/gi-logo.svg";
 const KOTPAD_GI_CERTIFICATE_PDF_SRC = "/kotpad-gi-certificate.pdf";
 const TRACE_CONNECT_VIDEO_LOGO_SRC = "/Traceconnect Logo - Whitebg.svg";
@@ -62,7 +69,7 @@ export function delay(ms) {
 export function LoadingIndicator({ label = "Loading..." }) {
   return (
     <span className="loading-inline">
-      <img src={LOADING_GIF_SRC} alt="" />
+      <LoaderCircle className="loading-spinner" size={24} aria-hidden="true" />
       <span>{label}</span>
     </span>
   );
@@ -262,6 +269,7 @@ function stabilizeTraceabilityViewport(update) {
 function fromDbPlantation(row) {
   return {
     id: Number(row.id),
+    farmId: Number(row.farm_id),
     userId: Number(row.user_id),
     name: row.name || "",
     location: row.location_description || "",
@@ -684,6 +692,30 @@ function toVideoGeneratorUrl(path = "") {
   return `${VIDEO_GENERATOR_BASE_URL}${value.startsWith("/") ? value : `/${value}`}`;
 }
 
+async function waitForVideoGenerator(onProgress) {
+  const maxAttempts = 12;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    let response;
+    try {
+      response = await fetch(toVideoGeneratorUrl("/health"), { cache: "no-store" });
+    } catch {
+      // The service may be waking from sleep or temporarily unreachable.
+    }
+    if (response?.ok) return;
+    if (response && response.status < 500) {
+      throw new Error(`Video service health check failed (${response.status}).`);
+    }
+
+    if (attempt < maxAttempts - 1) {
+      onProgress?.({ progress: 1, stage: "Waking video service..." });
+      await delay(5000);
+    }
+  }
+
+  throw new Error("Video service is not responding. It may be starting up or temporarily unavailable. Please try again shortly.");
+}
+
 function getOrderedVideoImages(images = [], stages = []) {
   const stageIndex = new Map((stages || []).map((stage, index) => [stage, index]));
   return [...(images || [])]
@@ -769,11 +801,17 @@ async function renderTraceVideoFromImages({ user, images, stages, template = "A"
   sourceKeys.forEach((key, index) => { payload[key] = inlinedSources[index]; });
   payload.process_image_urls = await Promise.all(payload.process_image_urls.map(inlineVideoImageSource));
   onProgress?.({ progress: 1, stage: "starting" });
-  const renderResponse = await fetch(toVideoGeneratorUrl("/render-from-urls"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  await waitForVideoGenerator(onProgress);
+  let renderResponse;
+  try {
+    renderResponse = await fetch(toVideoGeneratorUrl("/render-from-urls"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    throw new Error("Video service could not be reached. Confirm that the service is running and its CORS_ORIGINS includes this site's address.");
+  }
 
   const renderData = await renderResponse.json().catch(async () => ({ error: await renderResponse.text().catch(() => "") }));
   if (!renderResponse.ok) {
@@ -1206,6 +1244,23 @@ function DataProvider({ children }) {
     }, "Failed to delete crop");
   };
 
+  const updateCrop = (cid, c) => {
+    return run(async () => {
+      const updated = await traceabilityApi.updateCrop(cid, {
+        plantation_id: Number(c.plantationId),
+        crop_name: c.name,
+        crop_variety: c.variety || null,
+        sowing_date: c.sowingDate || null,
+        expected_harvest_date: c.expectedHarvest || null,
+      });
+      const cropRow = updated?.crop || updated;
+      stabilizeTraceabilityViewport(() => {
+        setCrops((prev) => prev.map((item) => item.id === cid ? fromDbCrop(cropRow) : item));
+      });
+      return updated;
+    }, "Failed to update crop");
+  };
+
   const addMonitoring = (m) => {
     return run(async () => {
       if (!user?.id) throw new Error("Not logged in");
@@ -1431,6 +1486,7 @@ function DataProvider({ children }) {
         addPlantation,
         delPlantation,
         addCrop,
+        updateCrop,
         delCrop,
         addMonitoring,
         delMonitoring,
@@ -1612,7 +1668,14 @@ export function useRouter() {
     window.addEventListener("hashchange", fn);
     return () => window.removeEventListener("hashchange", fn);
   }, []);
-  const navigate = (path) => { window.location.hash = path; };
+  const navigate = (path) => {
+    const nextRoute = path.startsWith("#") ? path : `#${path}`;
+    if (window.location.hash === nextRoute) {
+      setRoute(path.replace(/^#/, "") || "/");
+      return;
+    }
+    window.location.hash = nextRoute;
+  };
   return { route, navigate };
 }
 
@@ -1662,10 +1725,20 @@ const SHARED_TRACE_STAGES = ["Monitoring", "Verification", "Harvest", "Packing"]
 const PRODUCTION_TYPE_CONFIG = {
   kotpad_handloom: KOTPAD_PRODUCTION_CONFIG,
   sambalpuri_bandha: SAMBALPURI_PRODUCTION_CONFIG,
+  bee: BEE_PRODUCTION_CONFIG,
+  shrimp: SHRIMP_PRODUCTION_CONFIG,
+  fish: { ...SHRIMP_PRODUCTION_CONFIG, value: "fish", label: "Fish Farming", badge: "Aquaculture", nameLabel: "Fish Farm Name", namePlaceholder: "e.g. Freshwater Fish Farm", locationLabel: "Farm Location", locationPlaceholder: "e.g. Chilika, Odisha" },
+  vermicompost: { ...BEE_PRODUCTION_CONFIG, value: "vermicompost", label: "Vermicompost Cups", badge: "Organic Manures", nameLabel: "Vermicompost Unit Name", namePlaceholder: "e.g. Green Soil Unit", locationLabel: "Unit Location", locationPlaceholder: "e.g. Bhubaneswar, Odisha" },
+  pesticides: { ...BEE_PRODUCTION_CONFIG, value: "pesticides", label: "Pesticides", badge: "Agriculture Inputs", nameLabel: "Input Unit Name", namePlaceholder: "e.g. Bio-inputs Unit", locationLabel: "Unit Location", locationPlaceholder: "e.g. Cuttack, Odisha" },
 };
 const PRODUCTION_TYPE_ICONS = {
   kotpad_handloom: FiSun,
   sambalpuri_bandha: FiAperture,
+  bee: FiSun,
+  shrimp: FiDroplet,
+  fish: FiDroplet,
+  vermicompost: FiLayers,
+  pesticides: FiLayers,
 };
 
 function ProductionTypeMark({ type, size = 18 }) {
@@ -1678,17 +1751,39 @@ function ProductionTypeMark({ type, size = 18 }) {
 }
 
 const PRODUCTION_TYPES = Object.values(PRODUCTION_TYPE_CONFIG);
+const PRODUCTION_CATEGORY_GROUPS = [
+  { label: "Handlooms", options: ["sambalpuri_bandha", "kotpad_handloom"] },
+  { label: "Aquaculture", options: ["shrimp", "fish"] },
+  { label: "Organic Manures", options: ["vermicompost"] },
+  { label: "Apiculture", options: ["bee"] },
+  { label: "Agriculture Inputs", options: ["pesticides"] },
+];
 const PRODUCTION_FIELD_COMPONENTS = {
   kotpad_handloom: KotpadHandloomProductionFields,
   sambalpuri_bandha: SambalpuriBandhaProductionFields,
+  bee: BeeProductionFields,
+  shrimp: ShrimpProductionFields,
+  fish: ShrimpProductionFields,
+  vermicompost: BeeProductionFields,
+  pesticides: BeeProductionFields,
 };
 const PRODUCTION_INITIAL_FIELDS = {
   kotpad_handloom: createKotpadInitialFields,
   sambalpuri_bandha: createSambalpuriInitialFields,
+  bee: createBeeInitialFields,
+  shrimp: createShrimpInitialFields,
+  fish: createShrimpInitialFields,
+  vermicompost: createBeeInitialFields,
+  pesticides: createBeeInitialFields,
 };
 const PRODUCTION_DETAIL_BUILDERS = {
   kotpad_handloom: buildKotpadDetails,
   sambalpuri_bandha: buildSambalpuriDetails,
+  bee: buildBeeDetails,
+  shrimp: buildShrimpDetails,
+  fish: buildShrimpDetails,
+  vermicompost: buildBeeDetails,
+  pesticides: buildBeeDetails,
 };
 const PRODUCTION_RECORD_BUILDERS = {
   sambalpuri_bandha: buildSambalpuriProductPayload,
@@ -1714,6 +1809,18 @@ function normalizeProductionType(value) {
 
 function getProductionTypeConfig(value) {
   return PRODUCTION_TYPE_CONFIG[normalizeProductionType(value)];
+}
+
+function isProductionLocationValid(type, location) {
+  const words = String(location || "").toLowerCase().split(/[^a-z]+/).filter(Boolean);
+  if (type === "kotpad_handloom") {
+    return words.includes("koraput") && words.includes("odisha");
+  }
+  if (type === "sambalpuri_bandha") {
+    const districts = new Set(["bargarh", "boudh", "sonepur", "subarnapur", "bolangir", "balangir", "nuapada", "sambalpur"]);
+    return words.includes("odisha") && words.some((word) => districts.has(word));
+  }
+  return true;
 }
 
 function mergeDetails(base, details) {
@@ -1883,8 +1990,30 @@ export const INDIA_STATE_DISTRICTS = {
   "West Bengal": ["Alipurduar", "Bankura", "Birbhum", "Cooch Behar", "Dakshin Dinajpur", "Darjeeling", "Hooghly", "Howrah", "Jalpaiguri", "Jhargram", "Kalimpong", "Kolkata", "Malda", "Murshidabad", "Nadia", "North 24 Parganas", "Paschim Bardhaman", "Paschim Medinipur", "Purba Bardhaman", "Purba Medinipur", "Purulia", "South 24 Parganas", "Uttar Dinajpur"],
 };
 
-function Header({ route, navigate }) {
+function Header({ route, navigate, toast }) {
   const { user, signOut } = useAuth();
+  const { plantations, processImages } = useData();
+  const plantationIds = new Set(
+    plantations
+      .filter((plantation) => Number(plantation.userId) === Number(user?.user_id || user?.id))
+      .map((plantation) => Number(plantation.id))
+  );
+  const hasProcessImages = user?.role === "grower" && processImages.some(
+    (image) => plantationIds.has(Number(image.plantationId)) && image.imageUrl && !isPdfUrl(image.imageUrl)
+  );
+  return (
+    <Navbar
+      user={user}
+      route={route}
+      navigate={navigate}
+      signOut={signOut}
+      logoSrc={TRACE_CONNECT_LOGO_SRC}
+      hasProcessImages={hasProcessImages}
+      hasTraceCapture={Boolean(user?.video_url)}
+      toast={toast}
+    />
+  );
+  /* Legacy implementation retained below for a safe, incremental extraction. */
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -1897,8 +2026,10 @@ function Header({ route, navigate }) {
   }, []);
 
   if (!user) return null;
-  const links = user.role === "grower"
-    ? [{ label: "Dashboard", path: "/grower", icon: <FiHome /> }, { label: "Plantations", path: "/plantations", icon: <FiList /> }, { label: "Reports", path: "/reports", icon: <FiBarChart2 /> }]
+  const links = user.role === "admin"
+    ? [{ label: "Admin review", path: "/admin", icon: <FiShield /> }]
+    : user.role === "grower"
+    ? [{ label: "Dashboard", path: "/grower", icon: <FiHome /> }, { label: "Reports", path: "/reports", icon: <FiBarChart2 /> }]
     : [{ label: "Dashboard", path: "/supplier", icon: <FiHome /> }, { label: "Reports", path: "/reports", icon: <FiBarChart2 /> }];
   return (
     <header className="app-header">
@@ -1907,11 +2038,13 @@ function Header({ route, navigate }) {
         <span className="brand-text">TRACECONNECT</span>
       </button>
       <nav className="header-nav">
-        {links.map((l) => (
-          <button key={l.path} className={`nav-pill ${route === l.path ? "active" : ""}`} onClick={() => navigate(l.path)}>
-            {l.icon} {l.label}
-          </button>
-        ))}
+        <span className="header-links">
+          {links.map((l) => (
+            <button key={l.path} className={`nav-pill ${route === l.path ? "active" : ""}`} onClick={() => navigate(l.path)}>
+              {l.icon} {l.label}
+            </button>
+          ))}
+        </span>
         <button
           className="verify-nav-button"
           type="button"
@@ -1955,13 +2088,15 @@ function Header({ route, navigate }) {
 }
 
 function PublicHeader({ onLogin, onSignup }) {
+  return <PublicNavbar onLogin={onLogin} onSignup={onSignup} logoSrc={TRACE_CONNECT_LOGO_SRC} />;
+  /* Legacy implementation retained below for a safe, incremental extraction. */
   return (
     <header className="app-header public-app-header">
       <button className="brand" type="button" onClick={() => { window.location.hash = "/"; }}>
         <span className="brand-icon"><img src={TRACE_CONNECT_LOGO_SRC} alt="TraceConnect Logo" /></span>
         <span className="brand-text">TRACECONNECT</span>
       </button>
-      <nav className="header-nav" aria-label="Authentication">
+      <nav className="header-nav auth-nav" aria-label="Authentication">
         <button className="nav-pill" type="button" onClick={onLogin}>Login</button>
         <button className="nav-pill active" type="button" onClick={onSignup}>Signup</button>
       </nav>
@@ -1969,22 +2104,7 @@ function PublicHeader({ onLogin, onSignup }) {
   );
 }
 
-function SiteFooter() {
-  const { navigate } = useRouter();
-  return (
-    <footer className="site-footer">
-      <div className="site-footer-brand" onClick={() => navigate("/")} style={{ cursor: "pointer" }}>
-        <img src={TRACE_CONNECT_LOGO_SRC} alt="TraceConnect Logo" />
-        <span className="brand-text">TRACECONNECT</span>
-      </div>
-      <div className="site-footer-links">
-        <span><FiShield /> Secure traceability</span>
-        <span><FiMapPin /> Farm to batch records</span>
-        <span><FiMail /> support@traceconnect.local</span>
-      </div>
-    </footer>
-  );
-}
+function SiteFooter() { const { navigate } = useRouter(); const { user } = useAuth(); return <Footer navigate={navigate} user={user} logoSrc={TRACE_CONNECT_LOGO_SRC} />; }
 
 function StatCard({ icon, label, value, color }) {
   return (
@@ -2000,29 +2120,46 @@ function StatCard({ icon, label, value, color }) {
 
 function GrowerDashboard({ navigate, toast }) {
   const { user } = useAuth();
-  const { plantations, crops, harvests, packings, addPlantation, delPlantation, farms, selectedFarmId, loading, backendError } = useData();
+  const { plantations, crops, harvests, packings, addPlantation, delPlantation, selectedFarmId, loading, backendError } = useData();
   const { confirm, dialog } = useConfirm();
   const [form, setForm] = useState({ type: "kotpad_handloom", name: "", location: "" });
   const [creating, setCreating] = useState(false);
+  const [registrationOpen, setRegistrationOpen] = useState(false);
+  const [registrationStep, setRegistrationStep] = useState(1);
   const mine = plantations;
-  const mineIds = mine.map((p) => p.id);
-  const totalHarvested = harvests.filter((h) => mineIds.includes(h.plantationId)).reduce((s, h) => s + (h.accepted || 0), 0);
-  const activeFarmName =
-    (farms.find((farm) => Number(farm?.farm_id) === Number(selectedFarmId))?.farm_name) ||
-    farms[0]?.farm_name ||
-    "Farm";
+  const mineIds = new Set(mine.map((p) => Number(p.id)));
+  const mineCrops = crops.filter((crop) => mineIds.has(Number(crop.plantationId)));
+  const mineHarvests = harvests.filter((harvest) => mineIds.has(Number(harvest.plantationId)));
+  const minePackings = packings.filter((packing) => mineIds.has(Number(packing.plantationId)));
+  const harvestCropIds = new Map(mineHarvests.map((harvest) => [Number(harvest.id), Number(harvest.cropId)]));
+  const completedCropIds = new Set(
+    minePackings
+      .map((packing) => harvestCropIds.get(Number(packing.harvestId)))
+      .filter((cropId) => cropId && Number.isFinite(cropId)),
+  );
+  const unlinkedCompletedProducts = minePackings.filter((packing) => {
+    const harvestId = Number(packing.harvestId);
+    return !harvestCropIds.has(harvestId) || !harvestCropIds.get(harvestId);
+  }).length;
+  const packageCount = minePackings.reduce((total, packing) => total + (Number(packing.numPackages) || 0), 0);
+  const activeUnits = mine.filter((plantation) => String(plantation.status || "Active").toLowerCase() === "active").length;
+  const activeProductionUnit = mine.find(
+    (plantation) => Number(plantation.farmId) === Number(selectedFarmId),
+  )?.name;
   const selectedProduction = getProductionTypeConfig(form.type);
-  const growerId = user?.user_id || user?.id || "";
-  const signupLocation = getUserSignupLocation(user);
-
-  useEffect(() => {
-    if (!signupLocation) return;
-    setForm((current) => (current.location ? current : { ...current, location: signupLocation }));
-  }, [signupLocation]);
+  const isKotpadRegistration = form.type === "kotpad_handloom";
+  const producerId = user?.user_id || user?.id || "";
 
   const create = async () => {
     if (!form.name || !form.location) {
       toast(`Please fill in ${selectedProduction.nameLabel.toLowerCase()} and ${selectedProduction.locationLabel.toLowerCase()}`, "error");
+      return;
+    }
+    if (!isProductionLocationValid(form.type, form.location)) {
+      const locationHint = form.type === "kotpad_handloom"
+        ? "Kotpad production locations must be in Koraput, Odisha."
+        : "Sambalpuri production locations must be in an associated Odisha district.";
+      toast(locationHint, "error");
       return;
     }
     if (creating) return;
@@ -2030,60 +2167,62 @@ function GrowerDashboard({ navigate, toast }) {
     try {
       await addPlantation({ ...form, status: "Active" });
       stabilizeTraceabilityViewport(() => {
-        setForm({ type: "kotpad_handloom", name: "", location: signupLocation });
-        toast("Plantation created successfully!", "success");
+        setForm({ type: "kotpad_handloom", name: "", location: "" });
+        setRegistrationOpen(false);
+        setRegistrationStep(1);
+        toast("Production unit created successfully!", "success");
       });
     } catch (e) {
-      toast(getTraceabilityErrorMessage(e) || "Failed to create plantation", "error");
+      toast(getTraceabilityErrorMessage(e) || "Failed to create production unit", "error");
     } finally {
       setCreating(false);
     }
   };
 
   const remove = async (id) => {
-    const ok = await confirm("Delete this plantation and all its associated data?");
+    const ok = await confirm("Delete this production unit and all its associated data?");
     if (!ok) return;
     try {
       await delPlantation(id);
-      toast("Plantation deleted", "success");
+      toast("Production unit deleted", "success");
     } catch (e) {
       toast(getTraceabilityErrorMessage(e) || "Failed to delete plantation", "error");
     }
   };
 
   return (
-      <div className={`page-container ${selectedProduction.themeClass || ""}`}>
-        {dialog}
+    <div className="page-container theme-grower production-dashboard-page">
+      {dialog}
       <DataStatusBanner loading={loading && mine.length > 0} error={backendError} />
       <div className="dashboard-hero">
         <div className="dashboard-hero-copy">
-          <div className="dashboard-kicker">Grower Workspace</div>
-          <h1>Grower Dashboard</h1>
+          <div className="dashboard-kicker">TraceConnect Workspace</div>
+          <h1>Production Dashboard</h1>
           <p className="dashboard-subtitle">
-            Welcome back, {user?.name}. Keep track of plantations, production flow,
-            harvest numbers, and packing readiness from one clean view.
+            Welcome back, {user?.name || "Producer"}. Manage production units, traceable products,
+            and packages across your complete supply chain.
           </p>
           <div className="dashboard-pill-row">
-            <span><FiCheckCircle /> Live workspace</span>
-            <span><FiCamera /> Stage photos</span>
-            <span><FiPackage /> Packing ready</span>
+            <span><FiCheckCircle /> {activeUnits} active units</span>
+            <span><FiLayers /> {mineCrops.length} traceable products</span>
+            <span><FiPackage /> {packageCount} packages</span>
           </div>
         </div>
         <div className="dashboard-hero-side">
           <div className="dashboard-active-farm grower-id-panel">
-            <div className="dashboard-active-label">Grower ID</div>
+            <div className="dashboard-active-label">Producer ID</div>
             <div className="dashboard-active-name">
               <FiUser />
-              <code>{growerId || "Not available"}</code>
+              <code>{producerId || "Not available"}</code>
             </div>
-            <p>Share this ID with suppliers so they can fetch your plantations and batch-ready packings.</p>
+            <p>Share this ID with suppliers to connect production records and traceable packages.</p>
           </div>
-          {farms.length > 0 && (
+          {activeProductionUnit && (
             <div className="dashboard-active-farm">
-              <div className="dashboard-active-label">Active Farm</div>
+              <div className="dashboard-active-label">Active Production Unit</div>
               <div className="dashboard-active-name">
                 <FiMapPin />
-                <span>#{selectedFarmId} ({activeFarmName})</span>
+                <span>#{selectedFarmId} ({activeProductionUnit})</span>
               </div>
             </div>
           )}
@@ -2091,128 +2230,172 @@ function GrowerDashboard({ navigate, toast }) {
       </div>
 
       <div className="stats-row">
-        <StatCard icon={<FiGrid />} label="Plantations" value={mine.length} color="green" />
-        <StatCard icon={<FiStar />} label="Trace Items" value={crops.filter((c) => mineIds.includes(c.plantationId)).length} color="amber" />
-        <StatCard icon={<FiTrendingUp />} label="Harvested (kg)" value={totalHarvested} color="blue" />
-        <StatCard icon={<FiPackage />} label="Packings" value={packings.filter((p) => mineIds.includes(p.plantationId)).length} color="purple" />
+        <StatCard icon={<FiGrid />} label="Production Units" value={mine.length} color="green" />
+        <StatCard icon={<FiStar />} label="Trace Items" value={mineCrops.length} color="amber" />
+        <StatCard icon={<FiCheckCircle />} label="Completed Products" value={completedCropIds.size + unlinkedCompletedProducts} color="blue" />
+        <StatCard icon={<FiPackage />} label="Packages" value={packageCount} color="purple" />
       </div>
 
-      <div className="card">
-        <div className="card-title"><FiPlus /> Add New Plantation</div>
-        <div className="form-grid plantation-create-grid">
-          <div className="field-wrap">
-            <label className="field-label production-type-label"><ProductionTypeMark type={form.type} /> Production Type *</label>
-            <select className="input" value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}>
-              {PRODUCTION_TYPES.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </div>
-          <div className="field-wrap">
-            <label className="field-label">{selectedProduction.nameLabel} *</label>
-            <input className="input" placeholder={selectedProduction.namePlaceholder} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
-          </div>
-          <div className="field-wrap">
-            <label className="field-label">{selectedProduction.locationLabel} *</label>
-            <input
-              className="input"
-              placeholder={selectedProduction.locationPlaceholder}
-              value={form.location}
-              onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
-            />
-          </div>
-          <div className="field-wrap field-btn-wrap">
-            <button className="btn btn-primary" onClick={create} disabled={creating}>
-              {creating ? <LoadingIndicator label="Creating..." /> : <><FiPlus /> Create</>}
-            </button>
-          </div>
-        </div>
-      </div>
-
+      <div className="grower-workspace-sections">
       {loading && mine.length === 0 ? (
         <PageSkeleton title="Loading dashboard..." rows={1} cards={4} />
       ) : mine.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon"><FiGrid /></div>
-          <p>No plantations yet. Create your first one above.</p>
+          <p>No production units yet. Register your first unit to get started.</p>
         </div>
       ) : (
-        <div className="card-grid plantation-card-grid">
-          {mine.map((p) => (
-            <div key={p.id} className="plantation-card">
-              <div className="plantation-card-top">
-                <span className={`type-badge ${getProductionTypeConfig(p.type).badgeClass}`}>
-                  <ProductionTypeMark type={p.type} size={15} />
-                  {getProductionTypeConfig(p.type).badge}
-                </span>
-                <button className="icon-btn danger" onClick={(e) => { e.stopPropagation(); remove(p.id); }} title="Delete"><FiTrash2 /></button>
-              </div>
-              <h4>{p.name}</h4>
-              <p className="plantation-location"><FiMapPin /> {p.location}</p>
-              <p className="plantation-date"><FiCalendar /> Created {p.createdAt}</p>
-              <button className="btn btn-outline full-width mt" onClick={() => navigate(`/plantation/${p.id}`)}>
-                Open Plantation <FiArrowRight />
-              </button>
+        <section className="production-units-section">
+          <div className="production-section-heading">
+            <div>
+              <span className="dashboard-kicker">Your Operations</span>
+              <h2>Your Production Units</h2>
             </div>
-          ))}
-        </div>
+            <span className="production-unit-count">{mine.length} Registered</span>
+          </div>
+          <div className="card-grid plantation-card-grid">
+            {mine.map((p) => {
+              const unitCrops = mineCrops.filter((crop) => Number(crop.plantationId) === Number(p.id));
+              const unitPackings = minePackings.filter((packing) => Number(packing.plantationId) === Number(p.id));
+              const locationValid = isProductionLocationValid(p.type, p.location);
+              return (
+                <div key={p.id} className={`plantation-card production-unit-card production-unit-${normalizeProductionType(p.type)}`}>
+                  <div className="plantation-card-top">
+                    <span className={`type-badge ${getProductionTypeConfig(p.type).badgeClass}`}>
+                      <ProductionTypeMark type={p.type} size={15} />
+                      {getProductionTypeConfig(p.type).badge}
+                    </span>
+                    <span className={`production-status ${String(p.status || "Active").toLowerCase() === "active" ? "is-active" : ""}`}>
+                      {p.status || "Active"}
+                    </span>
+                    <button className="icon-btn danger" onClick={(e) => { e.stopPropagation(); remove(p.id); }} title="Delete"><FiTrash2 /></button>
+                  </div>
+                  <h3>{p.name}</h3>
+                  <p className="plantation-location"><FiMapPin /> {p.location || "Location not added"}</p>
+                  {!locationValid && (
+                    <p className="production-location-warning" role="status">
+                      <FiAlertTriangle /> Location does not match the selected category's registered region.
+                    </p>
+                  )}
+                  <div className="production-unit-metrics">
+                    <span><FiLayers /> <strong>{unitCrops.length}</strong> traceable products</span>
+                    <span><FiPackage /> <strong>{unitPackings.reduce((total, packing) => total + (Number(packing.numPackages) || 0), 0)}</strong> packages</span>
+                  </div>
+                  <button className="btn btn-outline full-width mt" onClick={() => navigate(`/plantation/${p.id}`)}>
+                    Open Unit <FiArrowRight />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </section>
       )}
-    </div>
-  );
-}
 
-function PlantationsPage({ navigate, toast }) {
-  const { plantations, delPlantation, loading, backendError } = useData();
-  const { confirm, dialog } = useConfirm();
-  const mine = plantations;
-
-  if (loading && mine.length === 0) {
-    return <PageSkeleton title="Loading plantations..." rows={2} cards={3} />;
-  }
-
-  const remove = async (id) => {
-    const ok = await confirm("Delete this plantation?");
-    if (!ok) return;
-    try {
-      await delPlantation(id);
-      toast("Deleted", "success");
-    } catch (e) {
-      toast(getTraceabilityErrorMessage(e), "error");
-    }
-  };
-
-  return (
-    <div className="page-container">
-      {dialog}
-      <DataStatusBanner loading={loading} error={backendError} />
-      <button className="btn-back-minimal" onClick={() => navigate("/grower")}>
-        <FiArrowLeft /> Back to Dashboard
-      </button>
-      <div className="page-header">
-        <div><h1>All Plantations</h1><p className="page-subtitle">Manage all your registered plantations</p></div>
-        <button className="btn btn-primary" onClick={() => navigate("/grower")}><FiPlus /> New Plantation</button>
+      <section className={`production-registration ${registrationOpen ? "is-open" : ""}`}>
+        <div className="production-registration-heading">
+          <div>
+            <span className="dashboard-kicker">Get Started</span>
+            <h2>Register New Production Unit</h2>
+            <p>Choose your production category and add the unit's basic details.</p>
+          </div>
+          <button
+            type="button"
+            className="btn btn-primary production-registration-toggle"
+            aria-expanded={registrationOpen}
+            onClick={() => {
+              if (!registrationOpen) setRegistrationStep(1);
+              setRegistrationOpen(!registrationOpen);
+            }}
+          >
+            {registrationOpen ? "Close" : <><FiPlus /> Register Unit</>}
+          </button>
+        </div>
+        {registrationOpen && (
+          <div className="production-registration-form">
+            <div className="production-registration-step">
+              STEP {registrationStep} OF 2 <span>·</span> {registrationStep === 1 ? "PRODUCTION CATEGORY" : "UNIT DETAILS"}
+            </div>
+            {registrationStep === 1 ? (
+              <div className="form-grid plantation-create-grid">
+                <div className="field-wrap plantation-type-picker-wrap">
+                  <label className="field-label production-type-label"><ProductionTypeMark type={form.type} /> Production Category *</label>
+                  <div className="plantation-type-picker production-category-groups" role="radiogroup" aria-label="Production category">
+                    {PRODUCTION_CATEGORY_GROUPS.map((group) => (
+                      <div className="production-category-group" key={group.label}>
+                        <h3>{group.label}</h3>
+                        <div className="production-category-options">
+                          {group.options.map((value) => {
+                            const option = PRODUCTION_TYPE_CONFIG[value];
+                            const selected = form.type === option.value;
+                            return (
+                              <button
+                                key={option.value}
+                                className={`plantation-type-option ${selected ? "selected" : ""} ${form.type && !selected ? "dimmed" : ""}`}
+                                type="button"
+                                role="radio"
+                                aria-checked={selected}
+                                onClick={() => setForm((current) => current.type === option.value
+                                  ? current
+                                  : { type: option.value, name: "", location: "" })}
+                              >
+                                <ProductionTypeMark type={option.value} size={20} />
+                                <span>{option.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="production-registration-actions">
+                  <button className="btn btn-primary" type="button" onClick={() => setRegistrationStep(2)}>
+                    Continue <FiArrowRight />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="form-grid plantation-create-grid production-unit-details-form">
+                <div className="production-selected-category">
+                  <ProductionTypeMark type={form.type} />
+                  <span>{selectedProduction.label}</span>
+                  <button type="button" className="production-change-category" onClick={() => setRegistrationStep(1)}>Change</button>
+                </div>
+                <div className="field-wrap">
+                   <label className="field-label">{isKotpadRegistration ? "Product Name" : selectedProduction.nameLabel} *</label>
+                  <input className="input" placeholder={selectedProduction.namePlaceholder} value={form.name} onChange={(e) => setForm((current) => ({ ...current, name: e.target.value }))} />
+                </div>
+                <div className="field-wrap">
+                   <label className="field-label">{isKotpadRegistration ? "Cluster / Weaver Location" : selectedProduction.locationLabel} *</label>
+                  <input
+                    className="input"
+                    placeholder={selectedProduction.locationPlaceholder}
+                    value={form.location}
+                    onChange={(e) => setForm((current) => ({ ...current, location: e.target.value }))}
+                  />
+                  {form.type === "kotpad_handloom" && <span className="production-location-hint">Enter Koraput, Odisha. The unit location is not copied from your profile.</span>}
+                  {form.type === "sambalpuri_bandha" && <span className="production-location-hint">Use an associated Odisha district such as Bargarh or Sambalpur.</span>}
+                </div>
+                {isKotpadRegistration && (
+                  <div className="field-wrap">
+                    <label className="field-label">Production Unit ID *</label>
+                    <input className="input" value="Auto-generated after registration" readOnly aria-readonly="true" />
+                    <span className="production-location-hint">The ID is generated automatically when this unit is created.</span>
+                  </div>
+                )}
+                <div className="production-registration-actions">
+                  <button className="btn btn-outline" type="button" onClick={() => setRegistrationStep(1)}>Back</button>
+                  <button className="btn btn-primary" onClick={create} disabled={creating}>
+                    {creating ? <LoadingIndicator label="Creating..." /> : <><FiPlus /> Create Production Unit</>}
+                  </button>
+                </div>
+              </div>
+            )}
+            {registrationStep === 2 && <p className="production-registration-note">After registration, add products and category-specific production details inside the unit.</p>}
+          </div>
+        )}
+      </section>
       </div>
-      {mine.length === 0 ? (
-        <div className="empty-state"><div className="empty-icon"><FiGrid /></div><p>No plantations yet.</p></div>
-      ) : (
-        <div className="card-grid plantation-card-grid">
-          {mine.map((p) => (
-            <div key={p.id} className="plantation-card">
-              <div className="plantation-card-top">
-                <span className={`type-badge ${getProductionTypeConfig(p.type).badgeClass}`}>
-                  <ProductionTypeMark type={p.type} size={15} />
-                  {getProductionTypeConfig(p.type).badge}
-                </span>
-                <button className="icon-btn danger" onClick={() => remove(p.id)} title="Delete"><FiTrash2 /></button>
-              </div>
-              <h4>{p.name}</h4>
-              <p className="plantation-location"><FiMapPin /> {p.location}</p>
-              <p className="plantation-date"><FiCalendar /> {p.createdAt}</p>
-              <button className="btn btn-outline full-width mt" onClick={() => navigate(`/plantation/${p.id}`)}>Open <FiArrowRight /></button>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -2224,6 +2407,48 @@ function WorkflowSection({ title, children }) {
       {children}
     </div>
   );
+}
+
+function useProductionStageDraft(plantationId, stage, initialForm, draftActionRef, toast) {
+  const key = `traceconnect:production-draft:${plantationId}:${stage}`;
+  const [form, setForm] = useState(() => {
+    try {
+      const saved = window.localStorage.getItem(key);
+      if (!saved) return initialForm;
+      const parsed = JSON.parse(saved);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? { ...initialForm, ...parsed }
+        : initialForm;
+    } catch (error) {
+      console.error("Unable to load production stage draft", error);
+      return initialForm;
+    }
+  });
+
+  useEffect(() => {
+    const saveDraft = () => {
+      try {
+        window.localStorage.setItem(key, JSON.stringify(form));
+        toast("Draft saved on this device", "success");
+      } catch {
+        toast("Unable to save this draft on this device", "error");
+      }
+    };
+    draftActionRef.current = saveDraft;
+    return () => {
+      if (draftActionRef.current === saveDraft) draftActionRef.current = null;
+    };
+  }, [draftActionRef, form, key, toast]);
+
+  const clearDraft = () => {
+    try {
+      window.localStorage.removeItem(key);
+    } catch {
+      toast("The saved draft could not be cleared from this device", "error");
+    }
+  };
+
+  return [form, setForm, clearDraft];
 }
 
 const STAGE_STATUS_ICONS = [FiLayers, FiTrendingUp, FiCheckCircle, FiAward, FiPackage];
@@ -2360,9 +2585,11 @@ function AllStagesStatusModal({ names, records, onClose }) {
 function PlantationDetail({ plantationId, toast }) {
   const { navigate } = useRouter();
   const { user, videoBusy, videoProgress, generateVideo, videoUnlockedOnce } = useAuth();
-  const { plantations, crops, monitoring, verification, harvests, packings, processImages, addCrop, delCrop, addMonitoring, delMonitoring, addVerification, delVerification, addHarvest, delHarvest, addPacking, delPacking, addProcessImage, delProcessImage, loading, backendError } = useData();
+  const { plantations, crops, monitoring, verification, harvests, packings, processImages, addCrop, updateCrop, delCrop, addMonitoring, delMonitoring, addVerification, delVerification, addHarvest, delHarvest, addPacking, delPacking, addProcessImage, delProcessImage, loading, backendError } = useData();
   const { confirm, dialog } = useConfirm();
   const [step, setStep] = useState(0);
+  const [kotpadSection, setKotpadSection] = useState(0);
+  const draftActionRef = useRef(null);
   const [statusStageIndex, setStatusStageIndex] = useState(null);
   const [allStatusOpen, setAllStatusOpen] = useState(false);
   const plantationIdNum = Number(plantationId);
@@ -2376,13 +2603,15 @@ function PlantationDetail({ plantationId, toast }) {
   if (!plantation && loading) return <PageSkeleton title="Loading plantation..." rows={4} cards={3} />;
   if (!plantation) return <div className="page-container"><div className="empty-state">Plantation not found.</div></div>;
   const L = getProductionTypeConfig(plantation.type);
+  const isKotpad = L.mode === "kotpad_handloom";
+  const isTextile = ["kotpad_handloom", "sambalpuri_bandha"].includes(L.mode);
   const unlocked = [true, pCrops.length > 0, pMon.length > 0, pVer.length > 0, pHar.length > 0];
   const done = [pCrops.length > 0, pMon.length > 0, pVer.length > 0, pHar.length > 0, pPack.length > 0];
-  const names = [L.crops, "Monitoring", "Verification", "Harvest", "Packing"];
+  const names = [L.crops, "Monitoring", "Verification", isTextile ? "Production Completion" : "Harvest", "Packing"];
   const completedStages = done.filter(Boolean).length;
   const totalStages = names.length;
-  const progressPercent = Math.round((completedStages / totalStages) * 100);
   const allStagesComplete = completedStages === totalStages;
+  const progressPercent = allStagesComplete ? 100 : Math.round(((completedStages + 1) / totalStages) * 100);
   const stageRecords = [pCrops, pMon, pVer, pHar, pPack];
   const openStep = (i) => {
     if (!unlocked[i]) {
@@ -2396,7 +2625,8 @@ function PlantationDetail({ plantationId, toast }) {
     if (videoBusy) return;
     try {
       toast("Preparing saved images for video...", "success");
-      await generateVideo(pImgs, names, "A", L.label);
+      const videoStages = isTextile ? [...names.slice(0, 3), "Harvest", names[4]] : names;
+      await generateVideo(pImgs, videoStages, "A", L.label);
       toast("Video generated and saved to profile successfully.", "success");
     } catch (error) {
       toast(error?.message || "Video service unavailable right now.", "error");
@@ -2404,7 +2634,7 @@ function PlantationDetail({ plantationId, toast }) {
   };
 
   return (
-    <div className={`page-container ${L.themeClass || ""}`}>
+    <div className={`page-container production-workspace ${L.themeClass || ""}`}>
       {dialog}
       <StageStatusModal
         stage={statusStageIndex === null ? null : { name: names[statusStageIndex], index: statusStageIndex }}
@@ -2418,7 +2648,7 @@ function PlantationDetail({ plantationId, toast }) {
       </button>
       <div className="plantation-hero">
         <div className="plantation-hero-copy">
-            <div className="plantation-kicker"><ProductionTypeMark type={plantation.type} size={16} /> {L.label} - Plantation Lifecycle</div>
+            <div className="plantation-kicker"><ProductionTypeMark type={plantation.type} size={16} /> {L.label} - Production Workspace</div>
           <h1>{plantation.name}</h1>
           <div className="plantation-meta">
             <span className="plantation-meta-item"><FiMapPin /> {plantation.location}</span>
@@ -2427,7 +2657,26 @@ function PlantationDetail({ plantationId, toast }) {
         </div>
       </div>
 
-      <div className={`stage-progress-card ${allStagesComplete ? "complete" : ""}`}>
+      <div className="production-product-summary">
+        <div className="production-summary-primary">
+          <span>Production unit</span>
+          <strong>{plantation.name}</strong>
+        </div>
+        <div>
+          <span>Location</span>
+          <strong>{plantation.location || "Not provided"}</strong>
+        </div>
+        <div>
+          <span>{L.crop} records</span>
+          <strong>{pCrops.length} registered</strong>
+        </div>
+        <div>
+          <span>{isKotpad ? "Section progress" : "Active stage"}</span>
+          <strong>{isKotpad ? "Kotpad sections" : `${String(step + 1).padStart(2, "0")} · ${names[step]}`}</strong>
+        </div>
+      </div>
+
+      {!isKotpad && <div className={`stage-progress-card ${allStagesComplete ? "complete" : ""}`}>
         <div className="stage-progress-head">
           <div>
             <div className="stage-progress-kicker">Workflow Progress</div>
@@ -2449,24 +2698,60 @@ function PlantationDetail({ plantationId, toast }) {
             ? "Great work. This plantation has completed every stage successfully."
             : `Complete ${names[Math.min(completedStages, totalStages - 1)]} to move forward.`}
         </div>
-      </div>
-      <div className="step-bar">
-        {names.map((n, i) => (
-          <button key={n} className={`step-btn ${step === i ? "active" : ""} ${done[i] ? "done" : ""} ${!unlocked[i] ? "locked" : ""}`} onClick={() => openStep(i)}>
-              <span className="step-indicator">
-                {done[i] ? <FiCheckCircle /> : !unlocked[i] ? <FiLock /> : <span className="step-num">{i + 1}</span>}
-              </span>
-              <span>{n}</span>
+      </div>}
+      {!isKotpad && <div className="step-bar">
+        {names.map((n, i) => {
+          const rejected = i === 2 && pVer.length > 0 && !pVer[pVer.length - 1].approved;
+          return (
+          <button
+            key={n}
+            className={`step-btn ${step === i ? "active" : ""} ${done[i] ? "done" : ""} ${rejected ? "rejected" : ""} ${!unlocked[i] ? "locked" : ""}`}
+            onClick={() => openStep(i)}
+            aria-current={step === i ? "step" : undefined}
+            aria-disabled={!unlocked[i]}
+          >
+            <span className="step-indicator">
+              {step === i
+                ? <span className="step-num">{String(i + 1).padStart(2, "0")}</span>
+                : rejected
+                  ? <FiX />
+                  : done[i]
+                    ? <FiCheckCircle />
+                    : !unlocked[i]
+                      ? <FiLock />
+                      : <span className="step-num">{String(i + 1).padStart(2, "0")}</span>}
+            </span>
+            <span className="step-label">{n}</span>
+            <span className="step-state">{step === i ? "Active" : rejected ? "Rejected" : done[i] ? "Completed" : unlocked[i] ? "Ready" : "Locked"}</span>
           </button>
-        ))}
-      </div>
+          );
+        })}
+      </div>}
 
+      {!isKotpad && <div className="stage-active-heading">
+        <div>
+          <span className="stage-active-index">STAGE {String(step + 1).padStart(2, "0")}</span>
+          <h2>{names[step]}</h2>
+        </div>
+        <span className={`stage-active-status ${step === 2 && pVer.length > 0 && !pVer[pVer.length - 1].approved ? "is-rejected" : done[step] ? "is-complete" : ""}`}>
+          {step === 2 && pVer.length > 0 && !pVer[pVer.length - 1].approved
+            ? "Rejected"
+            : done[step] ? "Completed" : stageRecords[step].length ? "In Progress" : "Not Started"}
+        </span>
+      </div>}
+
+      <div className="stage-workspace-layout">
       {step === 0 && (
         <CropsStep
           L={L}
+          activeSection={kotpadSection}
+          setActiveSection={setKotpadSection}
+          plantationName={plantation.name}
           plantationLocation={plantation.location}
+          plantationUnitId={plantation.id}
           pCrops={pCrops}
           addCrop={addCrop}
+          updateCrop={updateCrop}
           delCrop={delCrop}
           confirm={confirm}
           plantationId={plantationIdNum}
@@ -2474,6 +2759,7 @@ function PlantationDetail({ plantationId, toast }) {
           addProcessImage={addProcessImage}
           delProcessImage={delProcessImage}
           toast={toast}
+          draftActionRef={draftActionRef}
         />
       )}
       {step === 1 && (
@@ -2490,6 +2776,7 @@ function PlantationDetail({ plantationId, toast }) {
           addProcessImage={addProcessImage}
           delProcessImage={delProcessImage}
           toast={toast}
+          draftActionRef={draftActionRef}
         />
       )}
       {step === 2 && (
@@ -2506,6 +2793,7 @@ function PlantationDetail({ plantationId, toast }) {
           delProcessImage={delProcessImage}
           toast={toast}
           L={L}
+          draftActionRef={draftActionRef}
         />
       )}
       {step === 3 && (
@@ -2522,6 +2810,7 @@ function PlantationDetail({ plantationId, toast }) {
           delProcessImage={delProcessImage}
           toast={toast}
           L={L}
+          draftActionRef={draftActionRef}
         />
       )}
       {step === 4 && (
@@ -2538,34 +2827,80 @@ function PlantationDetail({ plantationId, toast }) {
           delProcessImage={delProcessImage}
           toast={toast}
           L={L}
+          draftActionRef={draftActionRef}
         />
       )}
 
-      {step < 4 && done[step] && (
-        <div className="next-btn-wrap">
-          <button className="btn btn-primary" onClick={() => openStep(step + 1)}>Next: {names[step + 1]} <FiArrowRight /></button>
-        </div>
-      )}
+      </div>
+
+      <div className="stage-workspace-actions">
+        <button
+          className="btn btn-outline"
+          type="button"
+          onClick={() => {
+            if (isKotpad && step === 0 && kotpadSection > 0) {
+              setKotpadSection((current) => current - 1);
+              return;
+            }
+            setStep((current) => Math.max(0, current - 1));
+          }}
+          disabled={step === 0 && (!isKotpad || kotpadSection === 0)}
+        >
+          <FiArrowLeft /> Previous
+        </button>
+        <button
+          className="btn btn-outline stage-save-draft"
+          type="button"
+          onClick={() => draftActionRef.current?.()}
+        >
+          Save Draft
+        </button>
+        {step < 4 && (
+          <button
+            className="btn btn-primary stage-continue"
+            type="button"
+            onClick={() => {
+              if (isKotpad && step === 0 && kotpadSection < 5) {
+                setKotpadSection((current) => current + 1);
+                return;
+              }
+              openStep(step + 1);
+            }}
+            disabled={isKotpad && step === 0 ? kotpadSection === 5 && !done[step] : !done[step]}
+            title={isKotpad && step === 0
+              ? kotpadSection === 5 && !done[step] ? `Save ${names[step].toLowerCase()} to continue` : `Continue to ${["Producer / Weaver Details", "Raw Material Details", "Weaving & Production Details", "Batch Identity & Verification", "Product & Marketplace Details"][kotpadSection]}`
+              : !done[step] ? `Save a ${names[step].toLowerCase()} record to continue` : undefined}
+          >
+            Continue <FiArrowRight />
+          </button>
+        )}
+      </div>
 
       {step === 4 && allStagesComplete && (
-        <div className="card video-card">
+        <section className="card video-card production-video-card">
           <div className="video-card-left">
             <div className="video-icon"><FiVideo /></div>
-            <div>
-              <div className="card-title" style={{ margin: 0 }}>Generate Traceability Video</div>
-              <p className="muted">Create a lifecycle video for this farm to share with customers.</p>
+            <div className="production-video-copy">
+              <span className="production-video-kicker">YOUR JOURNEY, READY TO SHARE</span>
+              <h3>Generate Traceability Video</h3>
+              <p>Create a video from this unit's saved evidence and view it in Trace Captures.</p>
             </div>
           </div>
           {user?.video_url && user?.video_locked ? (
-            <button className="btn" disabled style={{ backgroundColor: "#eaeaea", color: "#888", border: "1px solid #ddd", cursor: "not-allowed", display: "flex", alignItems: "center", gap: 8, padding: "10px 20px" }} type="button">
-              <FiCheckCircle /> Video Already Generated
+            <button className="btn btn-outline production-video-done" type="button" onClick={() => navigate("/trace-captures")}>
+              <FiCheckCircle /> View Generated Video <FiArrowRight />
             </button>
           ) : (
-            <button className="btn btn-primary" onClick={generatePlantationVideo} disabled={videoBusy} type="button">
-              {videoBusy ? <LoadingIndicator label={videoProgress || "Generating..."} /> : <><FiVideo /> Generate</>}
+            <button className="btn btn-primary production-video-generate" onClick={generatePlantationVideo} disabled={videoBusy} type="button">
+              {videoBusy ? <LoadingIndicator label={videoProgress || "Generating..."} /> : <><FiVideo /> Generate Video</>}
             </button>
           )}
-        </div>
+          {user?.video_url && (
+            <div className="production-video-preview">
+              <video src={user.video_url} controls preload="metadata" aria-label={`${plantation.name} traceability video`} />
+            </div>
+          )}
+        </section>
       )}
       <div className="all-stages-status-action">
         <button className="btn btn-outline" type="button" onClick={() => setAllStatusOpen(true)}>
@@ -2576,9 +2911,10 @@ function PlantationDetail({ plantationId, toast }) {
   );
 }
 
-function ProcessEntries({ stage, plantationId, location = "", pImgs, addProcessImage, delProcessImage, confirm, toast, enabled = true, variant = "process", stampGiLogo = false, giProductLabel = "GI TAGGED" }) {
+function ProcessEntries({ stage, displayStage = stage, plantationId, location = "", pImgs, addProcessImage, delProcessImage, confirm, toast, enabled = true, variant = "process", giProductLabel = "GI TAGGED" }) {
   const [cameraOpen, setCameraOpen] = useState(false);
   const [processCaptureMode, setProcessCaptureMode] = useState(false);
+  const [previewEntry, setPreviewEntry] = useState(null);
   const [pendingName, setPendingName] = useState("");
   const [name, setName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -2586,7 +2922,7 @@ function ProcessEntries({ stage, plantationId, location = "", pImgs, addProcessI
   const processFileInputRef = useRef(null);
   const list = pImgs.filter((x) => x.stage === stage);
   const isGiCertificate = variant === "gi-certificate";
-  const shouldStampGiLogo = isGiCertificate || stampGiLogo;
+  const shouldStampGiLogo = isGiCertificate && !processCaptureMode;
   const defaultEntryName = isGiCertificate ? "Kotpad GI Tag Certificate" : "";
 
   const uploadAndSave = async (imageUrl, entryName, successMessage) => {
@@ -2725,7 +3061,32 @@ function ProcessEntries({ stage, plantationId, location = "", pImgs, addProcessI
     }
   };
   return (
-    <div className={`card process-card ${isGiCertificate ? "gi-certificate-card" : ""} ${!enabled ? "process-card-disabled" : ""}`}>
+    <section className={`card process-card process-evidence-section ${isGiCertificate ? "gi-certificate-card" : ""} ${!enabled ? "process-card-disabled" : ""}`}>
+      {previewEntry && (
+        <div
+          className="process-evidence-preview-backdrop"
+          role="presentation"
+          onClick={() => setPreviewEntry(null)}
+        >
+          <div
+            className="process-evidence-preview"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${previewEntry.name} evidence preview`}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button className="modal-close" type="button" onClick={() => setPreviewEntry(null)} aria-label="Close preview">
+              <LucideX aria-hidden="true" />
+            </button>
+            <img src={previewEntry.imageUrl} alt={previewEntry.name} />
+            <div className="process-evidence-preview-caption">
+              <strong>{previewEntry.name}</strong>
+              <span>{previewEntry.date || "Date not recorded"} · {displayStage}</span>
+              <small>Location information is embedded in the evidence image when available.</small>
+            </div>
+          </div>
+        </div>
+      )}
       <GeoCameraModal
         open={cameraOpen}
         name={pendingName}
@@ -2769,8 +3130,15 @@ function ProcessEntries({ stage, plantationId, location = "", pImgs, addProcessI
         }}
         toast={toast}
       />
-      <h4>Process Entries - {stage}</h4>
-      {!enabled && <p className="process-disabled-message">Complete and save the required {stage.toLowerCase()} fields above to enable process entries.</p>}
+      <div className="process-evidence-heading">
+        <div>
+          <span className="process-evidence-kicker">{displayStage.toUpperCase()} EVIDENCE</span>
+          <h3>Process Evidence</h3>
+          <p>Capture a photograph or upload an existing image for this stage.</p>
+        </div>
+        <span className="process-evidence-count">{list.length} {list.length === 1 ? "record" : "records"}</span>
+      </div>
+      {!enabled && <p className="process-disabled-message">Complete and save the required {stage.toLowerCase()} details above to add evidence.</p>}
       {isGiCertificate ? (
         <>
           <p className="muted gi-certificate-help">
@@ -2782,7 +3150,7 @@ function ProcessEntries({ stage, plantationId, location = "", pImgs, addProcessI
               <a href={KOTPAD_GI_CERTIFICATE_PDF_SRC} target="_blank" rel="noreferrer">
                 <strong>GI Kotpad Fabric Tag Certificate</strong>
               </a>
-              <span><FiCheckCircle /> Verified checked</span>
+              <span><FiInfo /> Reference certificate</span>
             </div>
           </div>
           <div className="form-row gi-certificate-actions">
@@ -2812,10 +3180,10 @@ function ProcessEntries({ stage, plantationId, location = "", pImgs, addProcessI
           </div>
         </>
       ) : (
-        <div className="form-row" style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-           <input className="input" placeholder="Enter process / field name" value={name} onChange={(e) => setName(e.target.value)} disabled={!enabled || isSaving} />
-           <button className="btn btn-outline" type="button" onClick={add} disabled={!enabled || isSaving}>
-            <FiCamera /> Capture
+        <div className="process-evidence-add">
+          <input className="input" placeholder="Enter process name" value={name} onChange={(e) => setName(e.target.value)} disabled={!enabled || isSaving} />
+          <button className="btn btn-outline" type="button" onClick={add} disabled={!enabled || isSaving}>
+            <FiCamera /> Capture Image
           </button>
           <input
             ref={processFileInputRef}
@@ -2824,36 +3192,41 @@ function ProcessEntries({ stage, plantationId, location = "", pImgs, addProcessI
             onChange={uploadProcessImage}
             style={{ display: "none" }}
           />
-           <button className="btn btn-outline" type="button" onClick={() => processFileInputRef.current?.click()} disabled={!enabled || isSaving}>
+          <button className="btn btn-outline" type="button" onClick={() => processFileInputRef.current?.click()} disabled={!enabled || isSaving}>
             {isSaving ? <LoadingIndicator label="Uploading..." /> : <><FiUpload /> Upload Image</>}
           </button>
         </div>
       )}
       {list.length > 0 && (
-        <div className="record-list mt process-entry-list">
+        <div className="process-evidence-gallery">
           {list.map((it) => (
             <div key={it.id} className="process-entry-card">
               <div className="process-entry-main">
                 {it.imageUrl && (
                   isPdfUrl(it.imageUrl)
                     ? <div className="tc-thumb process-entry-thumb process-entry-doc-thumb"><FiAward /></div>
-                    : <img className="tc-thumb process-entry-thumb" src={it.imageUrl} alt={`${it.name} capture`} />
+                    : (
+                      <button
+                        type="button"
+                        className="process-evidence-thumbnail"
+                        onClick={() => setPreviewEntry(it)}
+                        aria-label={`Preview ${it.name}`}
+                      >
+                        <img className="tc-thumb process-entry-thumb" src={it.imageUrl} alt="" />
+                      </button>
+                    )
                 )}
                 <div className="process-entry-copy">
                   <div className="process-entry-title">{it.name}</div>
-                  <div className="process-entry-date">{it.date}</div>
-                  {shouldStampGiLogo && (
-                    <span className="gi-certified-badge">
-                      <FiAward /> GI Certified
-                    </span>
-                  )}
+                  <div className="process-entry-date">{it.date || "Date not recorded"}</div>
+                  <span className="process-evidence-location"><FiMapPin /> Location information in image when available</span>
                 </div>
               </div>
               <div className="process-entry-actions">
                 {it.imageUrl && (
-                  <a className="process-entry-link" href={it.imageUrl} target="_blank" rel="noreferrer">
+                  <button className="process-entry-link" type="button" onClick={() => isPdfUrl(it.imageUrl) ? window.open(it.imageUrl, "_blank", "noopener,noreferrer") : setPreviewEntry(it)}>
                     View
-                  </a>
+                  </button>
                 )}
                 <button className="process-entry-delete" onClick={() => remove(it.id)} type="button">
                   <FiTrash2 /> Delete
@@ -2863,7 +3236,14 @@ function ProcessEntries({ stage, plantationId, location = "", pImgs, addProcessI
           ))}
         </div>
       )}
-    </div>
+      {list.length === 0 && (
+        <div className="process-evidence-empty">
+          <FiCamera />
+          <strong>No evidence added yet</strong>
+          <span>Captured and uploaded images for this stage will appear here.</span>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -3180,7 +3560,7 @@ function GeoCameraModal({
   );
 }
 
-function CropsStep({ L, plantationLocation, pCrops, addCrop, delCrop, confirm, plantationId, pImgs, addProcessImage, delProcessImage, toast }) {
+function CropsStep({ L, activeSection, setActiveSection, plantationName, plantationLocation, plantationUnitId, pCrops, addCrop, updateCrop, delCrop, confirm, plantationId, pImgs, addProcessImage, delProcessImage, toast, draftActionRef }) {
   const mode = L.mode || "kotpad_handloom";
   const ProductionFields = PRODUCTION_FIELD_COMPONENTS[mode] || KotpadHandloomProductionFields;
   const createTypeFields = PRODUCTION_INITIAL_FIELDS[mode] || createKotpadInitialFields;
@@ -3194,12 +3574,64 @@ function CropsStep({ L, plantationLocation, pCrops, addCrop, delCrop, confirm, p
     expectedHarvest: "",
     ...createTypeFields(),
   });
-  const [f, setF] = useState(emptyForm);
-  const add = async () => {
-    const name = f.name === "Other" ? f.customName : f.name;
-    const variety = mergeDetails(f.variety, buildTypeDetails(f));
-    if (!name || !f.variety || !f.sowingDate) return;
-    void addCrop({
+  const [f, setF, clearDraft] = useProductionStageDraft(plantationId, "production", emptyForm(), draftActionRef, toast);
+  const isKotpad = mode === "kotpad_handloom";
+  const kotpadSections = [
+    "Production Unit Registration",
+    "Producer / Weaver Details",
+    "Raw Material Details",
+    "Weaving & Production Details",
+    "Batch Identity & Verification",
+    "Product & Marketplace Details",
+  ];
+  const [savedSections, setSavedSections] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(`kotpad-sections-${plantationId}`) || "[]"); } catch { return []; }
+  });
+  const saveSection = async () => {
+    const selectedProductType = f.name === "Other" ? f.customName : f.name;
+    const name = selectedProductType || (isKotpad ? "Kotpad Fabric Batch" : "");
+    if (isKotpad) {
+      const requiredBySection = {
+        1: ["weaverName", "weaverId", "organizationType", "contactNumber", "address", "gpsLocation"],
+        2: ["fabricType", "yarnSource", "naturalDyeUsed"],
+        3: ["name", ...(f.name === "Other" ? ["customName"] : []), "loomType", "weavingTechnique", "designPattern", "colorCombination", "sowingDate", "expectedHarvest"],
+        4: ["batchNumber", "qrVerificationCode", "productionUnitId", "weaverId", "inspectionStatus"],
+        5: ["availableStock", "marketplaceVisibility"],
+      };
+      const missing = (requiredBySection[activeSection] || []).find((field) => !String(
+        field === "productionUnitId" ? plantationUnitId : f[field] || ""
+      ).trim());
+      if (missing) {
+        toast(`Complete the required ${missing.replace(/[A-Z]/g, (letter) => ` ${letter.toLowerCase()}`)} field`, "error");
+        return;
+      }
+      if (activeSection === 3 && !pImgs.some((image) => image.stage === "Kotpad Production")) {
+        toast("Upload a production image before saving this section", "error");
+        return;
+      }
+      if (activeSection === 5 && !pImgs.some((image) => image.stage === "Kotpad Product")) {
+        toast("Upload a product image before saving this section", "error");
+        return;
+      }
+    }
+    const typeDetails = isKotpad
+      ? buildTypeDetails({
+          ...f,
+          productType: selectedProductType,
+          productName: plantationName,
+          regionCluster: plantationLocation,
+          productionUnitId: plantationUnitId,
+          productionDate: f.sowingDate,
+          expectedCompletionDate: f.expectedHarvest,
+        })
+      : buildTypeDetails(f);
+    const variety = mergeDetails(f.variety || (isKotpad ? selectedProductType : ""), typeDetails);
+    if (isKotpad && f.expectedHarvest && f.sowingDate && f.expectedHarvest < f.sowingDate) {
+      toast("Production completion date cannot be before the start date", "error");
+      return;
+    }
+    if (!name || (!isKotpad && (!f.variety || !f.sowingDate))) return;
+    const payload = {
       plantationId,
       name,
       variety,
@@ -3207,12 +3639,18 @@ function CropsStep({ L, plantationLocation, pCrops, addCrop, delCrop, confirm, p
       expectedHarvest: f.expectedHarvest,
       productionType: mode,
       sambalpuri: buildTypeRecord ? buildTypeRecord(f, { name, variety }) : undefined,
-    })
+    };
+    const request = isKotpad && pCrops[0]?.id ? updateCrop(pCrops[0].id, payload) : addCrop(payload);
+    void request
       .then(() => {
-        stabilizeTraceabilityViewport(() => {
-          setF(emptyForm());
-          toast("Saved", "success");
-        });
+        if (isKotpad) {
+          const next = Array.from(new Set([...savedSections, activeSection]));
+          setSavedSections(next);
+          localStorage.setItem(`kotpad-sections-${plantationId}`, JSON.stringify(next));
+          toast(`${kotpadSections[activeSection]} saved`, "success");
+        } else {
+          stabilizeTraceabilityViewport(() => { clearDraft(); setF(emptyForm()); toast("Saved", "success"); });
+        }
       })
       .catch((e) => toast(getTraceabilityErrorMessage(e), "error"));
   };
@@ -3228,37 +3666,60 @@ function CropsStep({ L, plantationLocation, pCrops, addCrop, delCrop, confirm, p
   };
   return (
     <>
-      <WorkflowSection title={`Add ${L.crop}`}>
+      <WorkflowSection title={isKotpad ? `Section ${activeSection + 1} — ${kotpadSections[activeSection]}` : `Register ${L.crop}`}>
+        {isKotpad && (
+          <div className="kotpad-section-progress" aria-label="Kotpad section progress">
+            {kotpadSections.map((section, index) => (
+              <button
+                key={section}
+                type="button"
+                className={`kotpad-section-tab ${activeSection === index ? "active" : ""} ${savedSections.includes(index) ? "saved" : ""}`}
+                onClick={() => setActiveSection(index)}
+              >
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <strong>{section}</strong>
+                <small>{index === 0 ? "Registered" : savedSections.includes(index) ? "Saved" : activeSection === index ? "Active" : "Not saved"}</small>
+              </button>
+            ))}
+          </div>
+        )}
         <div className={`form-grid ${mode === "kotpad_handloom" ? "kotpad-form-grid" : ""} ${mode === "sambalpuri_bandha" ? "sambalpuri-form-grid" : ""}`}>
-          <div className="field-wrap">
+          {!isKotpad && <div className="field-wrap">
             <label className="field-label">{L.itemTypeLabel || `${L.crop} Type`} *</label>
             <select className="input" value={f.name} onChange={(e) => setF((x) => ({ ...x, name: e.target.value }))}>
               <option value="">Select {L.crop}...</option>
               {L.options.map((o) => <option key={o}>{o}</option>)}
             </select>
-          </div>
-          {f.name === "Other" && (
+          </div>}
+          {!isKotpad && f.name === "Other" && (
             <div className="field-wrap">
               <label className="field-label">Custom Name *</label>
               <input className="input" placeholder={`Enter custom ${L.crop.toLowerCase()} name`} value={f.customName} onChange={(e) => setF((x) => ({ ...x, customName: e.target.value }))} />
             </div>
           )}
-          <div className="field-wrap">
+          {!isKotpad && <div className="field-wrap">
             <label className="field-label">{L.variety} *</label>
             <input className="input" placeholder={L.varietyPlaceholder || "Enter details"} value={f.variety} onChange={(e) => setF((x) => ({ ...x, variety: e.target.value }))} />
-          </div>
-          <ProductionFields form={f} setForm={setF} />
-          <div className="field-wrap">
+          </div>}
+          <ProductionFields
+            form={f}
+            setForm={setF}
+            activeSection={activeSection}
+            productName={plantationName}
+            location={plantationLocation}
+            productionUnitId={plantationUnitId}
+          />
+          {!isKotpad && <div className="field-wrap">
             <label className="field-label">{L.startDateLabel || "Start Date *"}</label>
             <input className="input" type="date" value={f.sowingDate} onChange={(e) => setF((x) => ({ ...x, sowingDate: e.target.value }))} />
-          </div>
-          <div className="field-wrap">
+          </div>}
+          {!isKotpad && <div className="field-wrap">
             <label className="field-label">{L.expectedDateLabel || "Expected Date"}</label>
             <input className="input" type="date" value={f.expectedHarvest} onChange={(e) => setF((x) => ({ ...x, expectedHarvest: e.target.value }))} />
-          </div>
-          <div className="field-wrap field-btn-wrap">
-            <button className="btn btn-primary" onClick={add}><FiPlus /> Add {L.crop}</button>
-          </div>
+          </div>}
+          {(isKotpad ? activeSection > 0 : true) && <div className="field-wrap field-btn-wrap">
+            <button className="btn btn-primary" type="button" onClick={saveSection}><FiPlus /> {isKotpad ? `Save ${kotpadSections[activeSection]}` : `Add ${L.crop}`}</button>
+          </div>}
         </div>
         {pCrops.length > 0 && (
           <div className="record-list mt">
@@ -3284,31 +3745,35 @@ function CropsStep({ L, plantationLocation, pCrops, addCrop, delCrop, confirm, p
           </div>
         )}
       </WorkflowSection>
-      <ProcessEntries
-        stage={L.crops}
-        location={plantationLocation}
-        enabled={pCrops.length > 0}
-        plantationId={plantationId}
-        pImgs={pImgs}
-        addProcessImage={addProcessImage}
-        delProcessImage={delProcessImage}
-        confirm={confirm}
-        toast={toast}
-        stampGiLogo={isGiLogoProduction(L.mode)}
-        giProductLabel={L.badge || "GI TAGGED"}
-      />
+      {(
+        <ProcessEntries
+          stage={isKotpad ? `Kotpad ${kotpadSections[activeSection]} Evidence` : L.crops}
+          displayStage={isKotpad ? `${kotpadSections[activeSection]} Evidence` : L.crops}
+          location={plantationLocation}
+          enabled={isKotpad || pCrops.length > 0}
+          plantationId={plantationId}
+          pImgs={pImgs}
+          addProcessImage={addProcessImage}
+          delProcessImage={delProcessImage}
+          confirm={confirm}
+          toast={toast}
+          giProductLabel={L.badge || "GI TAGGED"}
+        />
+      )}
     </>
   );
 }
 
-function MonitoringStep({ L, plantationLocation, pMon, addMonitoring, delMonitoring, pCrops, confirm, plantationId, pImgs, addProcessImage, delProcessImage, toast }) {
-  const [f, setF] = useState({ date: TODAY, inputType: "", customType: "", cropId: "", remarks: "" });
+function MonitoringStep({ L, plantationLocation, pMon, addMonitoring, delMonitoring, pCrops, confirm, plantationId, pImgs, addProcessImage, delProcessImage, toast, draftActionRef }) {
+  const initialForm = { date: TODAY, inputType: "", customType: "", cropId: "", remarks: "" };
+  const [f, setF, clearDraft] = useProductionStageDraft(plantationId, "monitoring", initialForm, draftActionRef, toast);
   const add = async () => {
     const inputType = f.inputType === "Other" ? f.customType : f.inputType;
     if (!inputType || !f.cropId) return;
     void addMonitoring({ plantationId, date: f.date, inputType, cropId: f.cropId, remarks: f.remarks })
       .then(() => {
         stabilizeTraceabilityViewport(() => {
+          clearDraft();
           setF({ date: TODAY, inputType: "", customType: "", cropId: "", remarks: "" });
           toast("Saved", "success");
         });
@@ -3382,20 +3847,21 @@ function MonitoringStep({ L, plantationLocation, pMon, addMonitoring, delMonitor
         delProcessImage={delProcessImage}
         confirm={confirm}
         toast={toast}
-        stampGiLogo={isGiLogoProduction(L.mode)}
         giProductLabel={L.badge || "GI TAGGED"}
       />
     </>
   );
 }
 
-function VerificationStep({ pVer, addVerification, delVerification, pCrops, confirm, plantationId, plantationLocation, pImgs, addProcessImage, delProcessImage, toast, L }) {
-  const [f, setF] = useState({ inspectionDate: TODAY, cropId: "", health: "Good", approved: true });
+function VerificationStep({ pVer, addVerification, delVerification, pCrops, confirm, plantationId, plantationLocation, pImgs, addProcessImage, delProcessImage, toast, L, draftActionRef }) {
+  const initialForm = { inspectionDate: TODAY, cropId: "", health: "Good", approved: true };
+  const [f, setF, clearDraft] = useProductionStageDraft(plantationId, "verification", initialForm, draftActionRef, toast);
   const add = () => {
     if (!f.cropId) return;
     void addVerification({ plantationId, ...f })
       .then(() => {
         stabilizeTraceabilityViewport(() => {
+          clearDraft();
           setF({ inspectionDate: TODAY, cropId: "", health: "Good", approved: true });
           toast("Saved", "success");
         });
@@ -3434,9 +3900,9 @@ function VerificationStep({ pVer, addVerification, delVerification, pCrops, conf
             </select>
           </div>
           <div className="field-wrap">
-            <label className="field-label">Harvest Approval *</label>
+            <label className="field-label">{["kotpad_handloom", "sambalpuri_bandha"].includes(L.mode) ? "Production Completion Approval *" : "Harvest Approval *"}</label>
             <select className="input" value={f.approved ? "yes" : "no"} onChange={(e) => setF((x) => ({ ...x, approved: e.target.value === "yes" }))}>
-              <option value="yes">Approved for Harvest</option>
+              <option value="yes">Approved for {["kotpad_handloom", "sambalpuri_bandha"].includes(L.mode) ? "Production Completion" : "Harvest"}</option>
               <option value="no">Not Approved</option>
             </select>
           </div>
@@ -3469,43 +3935,46 @@ function VerificationStep({ pVer, addVerification, delVerification, pCrops, conf
         confirm={confirm}
         toast={toast}
         variant={L.mode === "kotpad_handloom" ? "gi-certificate" : "process"}
-        stampGiLogo={isGiLogoProduction(L.mode)}
         giProductLabel={L.badge || "GI TAGGED"}
       />
     </>
   );
 }
 
-function HarvestStep({ pHar, addHarvest, delHarvest, pCrops, confirm, plantationId, plantationLocation, pImgs, addProcessImage, delProcessImage, toast, L }) {
-  const [f, setF] = useState({ harvestDate: TODAY, cropId: "", total: "", unit: "kg", rejected: "" });
+function HarvestStep({ pHar, addHarvest, delHarvest, pCrops, confirm, plantationId, plantationLocation, pImgs, addProcessImage, delProcessImage, toast, L, draftActionRef }) {
+  const isTextile = ["kotpad_handloom", "sambalpuri_bandha"].includes(L.mode);
+  const stageLabel = isTextile ? "Production Completion" : "Harvest";
+  const initialForm = { harvestDate: TODAY, cropId: "", total: "", unit: isTextile ? "piece" : "kg", rejected: "" };
+  const [f, setF, clearDraft] = useProductionStageDraft(plantationId, "completion", initialForm, draftActionRef, toast);
   const accepted = Math.max(0, (Number(f.total) || 0) - (Number(f.rejected) || 0));
   const add = () => {
     if (!f.cropId || !f.total) return;
     void addHarvest({ plantationId, ...f, total: Number(f.total), rejected: Number(f.rejected) || 0, accepted })
       .then(() => {
         stabilizeTraceabilityViewport(() => {
-          setF({ harvestDate: TODAY, cropId: "", total: "", unit: "kg", rejected: "" });
+          clearDraft();
+          setF(initialForm);
           toast("Saved", "success");
         });
       })
       .catch((e) => toast(getTraceabilityErrorMessage(e), "error"));
   };
   const remove = async (id) => {
-    const ok = await confirm("Delete harvest?");
+    const ok = await confirm(`Delete ${stageLabel.toLowerCase()} record?`);
     if (!ok) return;
     try {
       await delHarvest(id);
-      toast("Harvest deleted", "success");
+      toast(`${stageLabel} record deleted`, "success");
     } catch (e) {
       toast(getTraceabilityErrorMessage(e), "error");
     }
   };
   return (
     <>
-      <WorkflowSection title="Record Harvest">
+      <WorkflowSection title={`Record ${stageLabel}`}>
         <div className="form-grid">
           <div className="field-wrap">
-            <label className="field-label">Harvest Date *</label>
+            <label className="field-label">{isTextile ? "Production Completion Date *" : "Harvest Date *"}</label>
             <input className="input" type="date" value={f.harvestDate} onChange={(e) => setF((x) => ({ ...x, harvestDate: e.target.value }))} />
           </div>
           <div className="field-wrap">
@@ -3516,25 +3985,25 @@ function HarvestStep({ pHar, addHarvest, delHarvest, pCrops, confirm, plantation
             </select>
           </div>
           <div className="field-wrap">
-            <label className="field-label">Total Quantity *</label>
-            <input className="input" type="number" placeholder="e.g. 500" value={f.total} onChange={(e) => setF((x) => ({ ...x, total: e.target.value }))} />
+            <label className="field-label">{isTextile ? "Total Pieces Produced *" : "Total Quantity *"}</label>
+            <input className="input" type="number" placeholder={isTextile ? "e.g. 50" : "e.g. 500"} value={f.total} onChange={(e) => setF((x) => ({ ...x, total: e.target.value }))} />
           </div>
           <div className="field-wrap">
             <label className="field-label">Unit *</label>
             <select className="input" value={f.unit} onChange={(e) => setF((x) => ({ ...x, unit: e.target.value }))}>
-              {UNIT_OPTIONS.map((u) => <option key={u}>{u}</option>)}
+              {(isTextile ? ["piece"] : UNIT_OPTIONS).map((u) => <option key={u}>{u}</option>)}
             </select>
           </div>
           <div className="field-wrap">
-            <label className="field-label">Rejected Quantity</label>
-            <input className="input" type="number" placeholder="e.g. 20 (damaged / substandard)" value={f.rejected} onChange={(e) => setF((x) => ({ ...x, rejected: e.target.value }))} />
+            <label className="field-label">{isTextile ? "Rejected Pieces" : "Rejected Quantity"}</label>
+            <input className="input" type="number" placeholder={isTextile ? "e.g. 2 (damaged / substandard)" : "e.g. 20 (damaged / substandard)"} value={f.rejected} onChange={(e) => setF((x) => ({ ...x, rejected: e.target.value }))} />
           </div>
           <div className="field-wrap">
             <label className="field-label">Accepted (auto-calculated)</label>
             <div className="accepted-box">{accepted} {f.unit} accepted</div>
           </div>
           <div className="field-wrap field-btn-wrap">
-            <button className="btn btn-primary" onClick={add}><FiPlus /> Record Harvest</button>
+            <button className="btn btn-primary" onClick={add}><FiPlus /> Record {stageLabel}</button>
           </div>
         </div>
         {pHar.length > 0 && (
@@ -3554,6 +4023,7 @@ function HarvestStep({ pHar, addHarvest, delHarvest, pCrops, confirm, plantation
       </WorkflowSection>
       <ProcessEntries
         stage="Harvest"
+        displayStage={stageLabel}
         location={plantationLocation}
         enabled={pHar.length > 0}
         plantationId={plantationId}
@@ -3562,15 +4032,14 @@ function HarvestStep({ pHar, addHarvest, delHarvest, pCrops, confirm, plantation
         delProcessImage={delProcessImage}
         confirm={confirm}
         toast={toast}
-        stampGiLogo={isGiLogoProduction(L.mode)}
         giProductLabel={L.badge || "GI TAGGED"}
       />
     </>
   );
 }
 
-function PackingStep({ pPack, pHar, addPacking, delPacking, confirm, plantationId, plantationLocation, pImgs, addProcessImage, delProcessImage, toast, L }) {
-  const [f, setF] = useState({
+function PackingStep({ pPack, pHar, addPacking, delPacking, confirm, plantationId, plantationLocation, pImgs, addProcessImage, delProcessImage, toast, L, draftActionRef }) {
+  const initialForm = {
     packingDate: TODAY,
     harvestId: "",
     packingSize: "",
@@ -3586,7 +4055,8 @@ function PackingStep({ pPack, pHar, addPacking, delPacking, confirm, plantationI
     state: "",
     pincode: "",
     country: "India",
-  });
+  };
+  const [f, setF, clearDraft] = useProductionStageDraft(plantationId, "packing", initialForm, draftActionRef, toast);
   const add = () => {
     if (!f.harvestId || !f.packingSize || !f.netWeight) return;
     const packingSize = mergeDetails(f.packingSize, {
@@ -3600,7 +4070,8 @@ function PackingStep({ pPack, pHar, addPacking, delPacking, confirm, plantationI
     void addPacking({ plantationId, ...f, packingSize, warehouse, numPackages: Number(f.numPackages) || 0, netWeight: Number(f.netWeight) })
       .then(() => {
         stabilizeTraceabilityViewport(() => {
-          setF({ packingDate: TODAY, harvestId: "", packingSize: "", numPackages: "", netWeight: "", warehouse: "", batchNumber: "", coldStorage: "", transportMethod: "", packagingMethod: "", street: "", city: "", state: "", pincode: "", country: "India" });
+          clearDraft();
+          setF(initialForm);
           toast("Saved", "success");
         });
       })
@@ -3625,9 +4096,9 @@ function PackingStep({ pPack, pHar, addPacking, delPacking, confirm, plantationI
             <input className="input" type="date" value={f.packingDate} onChange={(e) => setF((x) => ({ ...x, packingDate: e.target.value }))} />
           </div>
           <div className="field-wrap">
-            <label className="field-label">Link to Harvest *</label>
+            <label className="field-label">{["kotpad_handloom", "sambalpuri_bandha"].includes(L.mode) ? "Link to Production Completion *" : "Link to Harvest *"}</label>
             <select className="input" value={f.harvestId} onChange={(e) => setF((x) => ({ ...x, harvestId: e.target.value }))}>
-              <option value="">Select harvest batch...</option>
+              <option value="">Select {["kotpad_handloom", "sambalpuri_bandha"].includes(L.mode) ? "production batch" : "harvest batch"}...</option>
               {pHar.map((h) => <option key={h.id} value={h.id}>{h.harvestDate} - {h.accepted} {h.unit} accepted</option>)}
             </select>
           </div>
@@ -3720,7 +4191,6 @@ function PackingStep({ pPack, pHar, addPacking, delPacking, confirm, plantationI
         delProcessImage={delProcessImage}
         confirm={confirm}
         toast={toast}
-        stampGiLogo={isGiLogoProduction(L?.mode)}
         giProductLabel={L?.badge || "GI TAGGED"}
       />
     </>
@@ -4043,14 +4513,14 @@ function SupplierDashboard({ navigate, toast }) {
       <div className="supplier-actions-grid">
         <div className="card supplier-lookup-card">
           <div className="card-title">
-            <FiUser /> Find Grower Records
+            <FiUser /> Find Producer Records
           </div>
           <form className="supplier-lookup-form" onSubmit={fetchGrowerRecords}>
             <input
               className="input"
               value={growerLookupId}
               onChange={(event) => setGrowerLookupId(event.target.value)}
-              placeholder="Enter Grower ID shown on grower dashboard"
+              placeholder="Enter Producer ID shown on the production dashboard"
               inputMode="numeric"
             />
             <button
@@ -4069,14 +4539,14 @@ function SupplierDashboard({ navigate, toast }) {
           {lookupData && (
             <div className="supplier-lookup-result">
               <div className="supplier-lookup-grower">
-                <span>Grower</span>
+                <span>Producer</span>
                 <strong>{lookupData.grower?.growerName || "Grower"}</strong>
                 <code>ID: {lookupData.grower?.growerUserId || growerLookupId}</code>
               </div>
 
               <div className="supplier-lookup-counts">
                 <div>
-                  <span>Plantations</span>
+                  <span>Production Units</span>
                   <strong>{lookupPlantations.length}</strong>
                 </div>
                 <div>
@@ -4091,7 +4561,7 @@ function SupplierDashboard({ navigate, toast }) {
 
               {lookupPlantations.length > 0 && (
                 <div className="supplier-lookup-section">
-                  <span className="supplier-lookup-label">Plantations</span>
+                  <span className="supplier-lookup-label">Production Units</span>
                   {lookupPlantations.slice(0, 3).map((plantation) => (
                     <div key={plantation.plantationId} className="supplier-lookup-item">
                       <div>
@@ -4573,116 +5043,55 @@ function QRCode({ value, size = 160 }) {
 function ReportsPage() {
   const { navigate } = useRouter();
   const { user } = useAuth();
-  const { plantations, crops, harvests, loading, backendError } = useData();
-  const dashboardRoute = user?.role === "supplier" ? "/supplier" : "/grower";
-  const plantationById = new Map(plantations.map((p) => [Number(p.id), p]));
-
-  if (loading && plantations.length === 0 && crops.length === 0 && harvests.length === 0) {
-    return <PageSkeleton title="Loading reports..." rows={5} cards={3} />;
-  }
-
+  const { plantations, crops, harvests, verification, loading, backendError } = useData();
   return (
-    <div className="page-container reports-page">
-      <DataStatusBanner loading={loading} error={backendError} />
-      <button className="btn-back-minimal" onClick={() => navigate(dashboardRoute)}>
-        <FiArrowLeft /> Back to Dashboard
-      </button>
-      <div className="page-header">
-        <div><h1>Reports</h1><p className="page-subtitle">Overview of all plantations, crops, and harvest data</p></div>
-      </div>
-      <div className="card">
-        <div className="card-title"><FiGrid /> Plantations</div>
-        <div className="table-wrap">
-          <table className="data-table">
-            <thead><tr><th>Name</th><th>Location</th><th>Status</th><th>Created</th></tr></thead>
-            <tbody>
-              {plantations.length === 0 ? <tr><td colSpan={4} className="table-empty">No data</td></tr>
-                : plantations.map((p) => <tr key={p.id}><td><strong>{p.name}</strong></td><td>{p.location}</td><td><span className="status-chip active"><FiCheckCircle /> {p.status}</span></td><td>{p.createdAt}</td></tr>)}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <div className="card">
-        <div className="card-title"><FiStar /> Crops</div>
-        <div className="table-wrap">
-          <table className="data-table">
-            <thead><tr><th>Crop</th><th>Variety</th><th>Sowing Date</th><th>Expected Harvest</th></tr></thead>
-            <tbody>
-              {crops.length === 0 ? <tr><td colSpan={4} className="table-empty">No data</td></tr>
-                : crops.map((c) => {
-                    const productionMode = plantationById.get(Number(c.plantationId))?.type;
-                    const summary = getCompactCropSummary(productionMode, c.variety);
-                    return (
-                      <tr key={c.id}>
-                        <td><strong>{c.name}</strong></td>
-                        <td>
-                          <div className="report-variety-cell">
-                            <span>{summary.primary || c.variety || "-"}</span>
-                            {summary.tags.map((tag) => (
-                              <span className="record-summary-chip" key={tag.label}>
-                                {tag.label.replace(" Verification", "")}: {tag.value}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                        <td>{c.sowingDate || "-"}</td>
-                        <td>{c.expectedHarvest || "-"}</td>
-                      </tr>
-                    );
-                  })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <div className="card">
-        <div className="card-title"><FiTrendingUp /> Harvests</div>
-        <div className="table-wrap">
-          <table className="data-table">
-            <thead><tr><th>Date</th><th>Total</th><th>Rejected</th><th>Accepted</th><th>Unit</th></tr></thead>
-            <tbody>
-              {harvests.length === 0 ? <tr><td colSpan={5} className="table-empty">No data</td></tr>
-                : harvests.map((h) => <tr key={h.id}><td>{h.harvestDate}</td><td>{h.total}</td><td><span style={{ color: "#c0392b" }}>{h.rejected || 0}</span></td><td><span style={{ color: "#1f8a43" }}><strong>{h.accepted}</strong></span></td><td>{h.unit}</td></tr>)}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+    <ReportsAnalyticsPage
+      navigate={navigate}
+      userRole={user?.role}
+      plantations={plantations}
+      crops={crops}
+      harvests={harvests}
+      verification={verification}
+      loading={loading}
+      backendError={backendError}
+      productionTypes={PRODUCTION_TYPES}
+      getProductionTypeConfig={getProductionTypeConfig}
+      normalizeProductionType={normalizeProductionType}
+      getCompactCropSummary={getCompactCropSummary}
+    />
   );
 }
 
-function ProfilePage({ toast }) {
-  const { navigate } = useRouter();
-  const { user, signOut, updateUser, videoBusy, videoProgress, generateVideo, videoUnlockedOnce } = useAuth();
-  const { plantations, crops, harvests, packings, batches, processImages, updateProcessImage, delProcessImage } = useData();
+function ProcessGalleryPage({ toast }) {
+  const { user, videoBusy, videoProgress, generateVideo } = useAuth();
+  const { plantations, processImages, updateProcessImage, delProcessImage } = useData();
   const { confirm, dialog } = useConfirm();
-  const [editing, setEditing] = useState(false);
-  const [logo, setLogo] = useState(user?.company_logo || "");
-  const [name, setName] = useState(user?.name || "");
   const [activeGalleryStage, setActiveGalleryStage] = useState(TRACE_STAGES[0]);
   const [recapturingImage, setRecapturingImage] = useState(null);
   const [recaptureSaving, setRecaptureSaving] = useState(false);
   const [reuploadingImage, setReuploadingImage] = useState(null);
   const reuploadFileInputRef = useRef(null);
   const currentUserId = Number(user?.user_id || user?.id);
-  const mine = plantations.filter((p) => Number(p.userId) === currentUserId);
-  const mineIdSet = new Set(mine.map((p) => Number(p.id)));
-  const mineCrops = crops.filter((c) => mineIdSet.has(Number(c.plantationId)));
-  const mineHarvests = harvests.filter((h) => mineIdSet.has(Number(h.plantationId)));
-  const minePackings = packings.filter((p) => mineIdSet.has(Number(p.plantationId)));
-  const mineBatches = batches.filter((b) => Number(b.supplierId) === currentUserId);
-  const mineImages = processImages.filter((i) => mineIdSet.has(Number(i.plantationId)));
+  const mine = plantations.filter((plantation) => Number(plantation.userId) === currentUserId);
+  const mineIdSet = new Set(mine.map((plantation) => Number(plantation.id)));
+  const mineImages = processImages.filter((image) => mineIdSet.has(Number(image.plantationId)));
   const stages = getTraceStagesForPlantations(mine);
   const visibleGalleryStage = stages.includes(activeGalleryStage) ? activeGalleryStage : stages[0];
-  const activeStageImages = mineImages.filter((img) => img.stage === visibleGalleryStage);
-  const plantationById = new Map(mine.map((p) => [Number(p.id), p]));
+  const activeStageImages = mineImages.filter((image) => image.stage === visibleGalleryStage);
+  const plantationById = new Map(mine.map((plantation) => [Number(plantation.id), plantation]));
   const allStagePhotosCaptured = stages.length > 0 && stages.every((stage) => (
-    mineImages.some((img) => img.stage === stage && img.imageUrl && !isPdfUrl(img.imageUrl))
+    mineImages.some((image) => image.stage === stage && image.imageUrl && !isPdfUrl(image.imageUrl))
   ));
-  const recapturePlantation = recapturingImage ? plantationById.get(Number(recapturingImage.plantationId)) : null;
+  const recapturePlantation = recapturingImage
+    ? plantationById.get(Number(recapturingImage.plantationId))
+    : null;
   const recaptureConfig = getProductionTypeConfig(recapturePlantation?.type || "kotpad_handloom");
   const recaptureStampGi = isGiLogoProduction(recaptureConfig.mode);
 
-  const removeImage = async (id) => { const ok = await confirm("Delete this entry?"); if (!ok) return; delProcessImage(id); };
+  const removeImage = async (id) => {
+    const ok = await confirm("Delete this entry?");
+    if (ok) delProcessImage(id);
+  };
 
   const recaptureImage = async (imageUrl) => {
     if (!recapturingImage || recaptureSaving || !imageUrl) return;
@@ -4693,18 +5102,17 @@ function ProfilePage({ toast }) {
         plantation_id: recapturingImage.plantationId,
         stage: recapturingImage.stage,
       });
-      const url = uploaded?.url;
-      if (!url) throw new Error("Upload failed");
+      if (!uploaded?.url) throw new Error("Upload failed");
       await updateProcessImage(recapturingImage.id, {
         plantationId: recapturingImage.plantationId,
         stage: recapturingImage.stage,
         name: recapturingImage.name || "Process Capture",
-        imageUrl: url,
+        imageUrl: uploaded.url,
       });
       setRecapturingImage(null);
       toast("Photo recaptured", "success");
-    } catch (e) {
-      toast(getTraceabilityErrorMessage(e), "error");
+    } catch (error) {
+      toast(getTraceabilityErrorMessage(error), "error");
     } finally {
       setRecaptureSaving(false);
     }
@@ -4713,8 +5121,7 @@ function ProfilePage({ toast }) {
   const handleReuploadImage = async (event) => {
     const file = event.target.files?.[0];
     if (!file || !reuploadingImage) return;
-    const isImage = file.type.startsWith("image/");
-    if (!isImage) {
+    if (!file.type.startsWith("image/")) {
       toast("Please choose an image file.", "error");
       event.target.value = "";
       return;
@@ -4723,29 +5130,26 @@ function ProfilePage({ toast }) {
     setRecaptureSaving(true);
     try {
       const dataUrl = await readFileAsDataUrl(file);
-      let finalImageUrl = dataUrl;
       const targetPlantation = plantationById.get(Number(reuploadingImage.plantationId));
       const targetConfig = getProductionTypeConfig(targetPlantation?.type || "kotpad_handloom");
-      const targetStampGi = isGiLogoProduction(targetConfig.mode);
-      if (targetStampGi) {
-        finalImageUrl = await addGiCertificateStampToImage(dataUrl, targetConfig.badge || "GI TAGGED");
-      }
+      const finalImageUrl = isGiLogoProduction(targetConfig.mode)
+        ? await addGiCertificateStampToImage(dataUrl, targetConfig.badge || "GI TAGGED")
+        : dataUrl;
       const uploaded = await traceabilityApi.uploadTraceabilityImage({
         data_url: finalImageUrl,
         plantation_id: reuploadingImage.plantationId,
         stage: reuploadingImage.stage,
       });
-      const url = uploaded?.url;
-      if (!url) throw new Error("Upload failed");
+      if (!uploaded?.url) throw new Error("Upload failed");
       await updateProcessImage(reuploadingImage.id, {
         plantationId: reuploadingImage.plantationId,
         stage: reuploadingImage.stage,
         name: reuploadingImage.name || "Process Capture",
-        imageUrl: url,
+        imageUrl: uploaded.url,
       });
       toast("Photo re-uploaded", "success");
-    } catch (e) {
-      toast(getTraceabilityErrorMessage(e), "error");
+    } catch (error) {
+      toast(getTraceabilityErrorMessage(error), "error");
     } finally {
       setRecaptureSaving(false);
       setReuploadingImage(null);
@@ -4753,29 +5157,7 @@ function ProfilePage({ toast }) {
     }
   };
 
-  const handleCompanyLogoEdit = (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setLogo(String(reader.result || ""));
-      toast("Company logo uploaded", "success");
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const saveProfile = async () => {
-    try {
-      const updated = await authApi.updateProfile({ name, company_logo: logo });
-      updateUser(updated);
-      setEditing(false);
-      toast("Profile updated successfully", "success");
-    } catch {
-      toast("Failed to update profile", "error");
-    }
-  };
-
-  const generateProfileVideo = async () => {
+  const generateGalleryVideo = async () => {
     if (!allStagePhotosCaptured || videoBusy) return;
     try {
       toast("Preparing saved images for video...", "success");
@@ -4789,104 +5171,36 @@ function ProfilePage({ toast }) {
     }
   };
 
-  const handleSignOut = () => {
-    signOut();
-    window.location.hash = "/";
-  };
-
   return (
-    <div className="page-container">
+    <div className="page-container process-gallery-page">
       {dialog}
       <GeoCameraModal
         open={Boolean(recapturingImage)}
         name={recapturingImage?.name || "Process Capture"}
         title="Recapture Process Photo"
-        subtitle="The new photo will replace this saved profile image."
+        subtitle="The new photo will replace this saved process image."
         captureLabel="Recapture"
         useLabel="Update Photo"
         stampGi={recaptureStampGi}
         giProductLabel={recaptureConfig.badge || "GI TAGGED"}
         stage={recapturingImage?.stage}
         onClose={() => {
-          if (recaptureSaving) return;
-          setRecapturingImage(null);
+          if (!recaptureSaving) setRecapturingImage(null);
         }}
         saving={recaptureSaving}
         onUse={recaptureImage}
         toast={toast}
       />
-      <button className="btn-back-minimal" onClick={() => navigate(user?.role === "supplier" ? "/supplier" : "/grower")}>
-        <FiArrowLeft /> Back to Dashboard
-      </button>
-      <div className="profile-banner">
-        <div className="profile-avatar-lg">
-          {user?.profile_image ? (
-            <img src={user.profile_image} alt="Profile" />
-          ) : (
-            <FiUser />
-          )}
-        </div>
-        <div className="profile-banner-info">
-          <h1>{name}</h1>
-          <span className="badge-chip capitalize">{user?.role}</span>
-        </div>
-        {!editing ? (
-          <>
-            <button className="btn btn-ghost profile-edit-btn" onClick={() => setEditing(true)}><FiEdit2 /> Edit Profile</button>
-            <button className="btn btn-danger profile-edit-btn" onClick={handleSignOut}><FiLogOut /> Logout</button>
-          </>
-        ) : (
-          <div className="profile-edit-row" style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "flex-start" }}>
-            <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your full name" />
-            <label style={{ display: "flex", flexDirection: "column", gap: 4, width: "100%" }}>
-              <span className="muted" style={{ fontSize: 12 }}>Update Company Logo:</span>
-              <input className="input" type="file" accept="image/*" onChange={handleCompanyLogoEdit} />
-            </label>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button className="btn btn-primary" onClick={saveProfile}><FiCheck /> Save</button>
-              <button className="btn btn-ghost" onClick={() => { setName(user?.name || ""); setLogo(user?.company_logo || ""); setEditing(false); }}><FiX /></button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="info-grid">
-        <div className="info-item"><FiMail className="info-icon" /><span>Email</span><strong>{user?.email}</strong></div>
-        <div className="info-item"><FiShield className="info-icon" /><span>Role</span><strong className="capitalize">{user?.role}</strong></div>
-        <div className="info-item"><FiCalendar className="info-icon" /><span>Platform</span><strong>TRACECONNECT</strong></div>
-        <div className="info-item"><FiCheck className="info-icon" /><span>Status</span><strong style={{ color: "#1f8a43" }}>Active</strong></div>
-        <div className="info-item">
-          <FiAward className="info-icon" />
-          <span>Company Logo</span>
-          {user?.company_logo ? (
-            <img src={user.company_logo} alt="Logo" style={{ height: 24, width: "auto", objectFit: "contain" }} />
-          ) : (
-            <strong className="muted" style={{ fontSize: 12 }}>Default (Maati AI)</strong>
-          )}
+      <div className="page-header process-gallery-heading">
+        <div>
+          <h1><FiCamera /> Process Image Gallery</h1>
+          <p className="page-subtitle">Captured process photos, organized by production stage.</p>
         </div>
       </div>
-
-      <div className="stats-row">
-        {user?.role === "grower" ? (
-          <>
-            <StatCard icon={<FiGrid />} label="Plantations" value={mine.length} color="green" />
-            <StatCard icon={<FiStar />} label="Crops" value={mineCrops.length} color="amber" />
-            <StatCard icon={<FiTrendingUp />} label="Harvests" value={mineHarvests.length} color="blue" />
-            <StatCard icon={<FiPackage />} label="Packings" value={minePackings.length} color="purple" />
-          </>
-        ) : (
-          <>
-            <StatCard icon={<FiGrid />} label="Batches Created" value={mineBatches.length} color="blue" />
-            <StatCard icon={<FiPackage />} label="Packings Managed" value={minePackings.length} color="green" />
-          </>
-        )}
-      </div>
-
       <div className="card stage-gallery-card">
-        <div className="card-title"><FiCamera /> Process Image Gallery</div>
         <div className="stage-gallery-tabs">
           {stages.map((stage) => {
-            const count = mineImages.filter((img) => img.stage === stage).length;
+            const count = mineImages.filter((image) => image.stage === stage).length;
             return (
               <button
                 key={stage}
@@ -4911,19 +5225,19 @@ function ProfilePage({ toast }) {
           />
           {activeStageImages.length > 0 ? (
             <div className="record-list process-entry-list">
-              {activeStageImages.map((img) => {
-                const plantation = plantationById.get(Number(img.plantationId));
+              {activeStageImages.map((image) => {
+                const plantation = plantationById.get(Number(image.plantationId));
                 return (
-                  <div key={img.id} className="process-entry-card">
+                  <div key={image.id} className="process-entry-card">
                     <div className="process-entry-main">
-                      {img.imageUrl && (
-                        isPdfUrl(img.imageUrl)
+                      {image.imageUrl && (
+                        isPdfUrl(image.imageUrl)
                           ? <div className="tc-thumb process-entry-thumb process-entry-doc-thumb"><FiAward /></div>
-                          : <img className="tc-thumb process-entry-thumb" src={img.imageUrl} alt={`${visibleGalleryStage} ${img.name}`} />
+                          : <img className="tc-thumb process-entry-thumb" src={image.imageUrl} alt={`${visibleGalleryStage} ${image.name}`} />
                       )}
                       <div className="process-entry-copy">
-                        <div className="process-entry-title">{img.name}</div>
-                        <div className="process-entry-date">{img.date}</div>
+                        <div className="process-entry-title">{image.name}</div>
+                        <div className="process-entry-date">{image.date}</div>
                         {plantation && (
                           <div className="process-entry-plantation">
                             <FiMapPin /> {plantation.name}
@@ -4932,22 +5246,29 @@ function ProfilePage({ toast }) {
                       </div>
                     </div>
                     <div className="process-entry-actions">
-                      {img.imageUrl && (
-                        <a className="process-entry-link" href={img.imageUrl} target="_blank" rel="noreferrer">
+                      {image.imageUrl && (
+                        <a className="process-entry-link" href={image.imageUrl} target="_blank" rel="noreferrer">
                           <FiExternalLink /> View
                         </a>
                       )}
-                      {!isPdfUrl(img.imageUrl) && (
+                      {!isPdfUrl(image.imageUrl) && (
                         <>
-                          <button className="process-entry-link" onClick={() => setRecapturingImage(img)} type="button">
+                          <button className="process-entry-link" onClick={() => setRecapturingImage(image)} type="button">
                             <FiCamera /> Recapture
                           </button>
-                          <button className="process-entry-link" onClick={() => { setReuploadingImage(img); setTimeout(() => reuploadFileInputRef.current?.click(), 50); }} type="button">
+                          <button
+                            className="process-entry-link"
+                            onClick={() => {
+                              setReuploadingImage(image);
+                              setTimeout(() => reuploadFileInputRef.current?.click(), 50);
+                            }}
+                            type="button"
+                          >
                             <FiUpload /> Re-upload
                           </button>
                         </>
                       )}
-                      <button className="process-entry-delete" onClick={() => removeImage(img.id)} type="button">
+                      <button className="process-entry-delete" onClick={() => removeImage(image.id)} type="button">
                         <FiTrash2 /> Delete
                       </button>
                     </div>
@@ -4959,68 +5280,204 @@ function ProfilePage({ toast }) {
             <div className="empty-gallery-box">
               <FiCamera />
               <p>No images stored for this stage yet.</p>
-              <span>Use the camera capture inside the selected traceability stage and it will appear here.</span>
+              <span>Captured photos from this stage will appear here.</span>
             </div>
           )}
         </div>
         {allStagePhotosCaptured && (
-          <div className="profile-video-action" style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", alignItems: "center" }}>
+          <div className="profile-video-action">
             {user?.video_url && user?.video_locked ? (
-              <button className="btn" disabled style={{ backgroundColor: "#eaeaea", color: "#888", border: "1px solid #ddd", cursor: "not-allowed", display: "flex", alignItems: "center", gap: 8, padding: "10px 20px" }} type="button">
+              <button className="btn" disabled type="button">
                 <FiCheckCircle /> Video Already Generated
               </button>
             ) : (
-              <button className="btn btn-primary" onClick={generateProfileVideo} disabled={videoBusy} type="button">
+              <button className="btn btn-primary" onClick={generateGalleryVideo} disabled={videoBusy} type="button">
                 {videoBusy ? <LoadingIndicator label={videoProgress || "Generating..."} /> : <><FiVideo /> Generate Video</>}
               </button>
             )}
           </div>
         )}
       </div>
+    </div>
+  );
+}
 
-      {user?.video_url && (
-        <div className="card profile-video-card" style={{ marginTop: 24, width: "100%" }}>
-          <div className="card-title" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-            <FiVideo /> Your Traceability Video
-          </div>
-          <p className="muted" style={{ fontSize: 12, marginBottom: 16 }}>
-            Lifecycle video generated from your stage photos. Saved to your account.
-            {user?.video_locked && <span style={{ marginLeft: 8, color: "#888", fontWeight: 600 }}>&#128274; Locked - add or update a stage photo to re-generate.</span>}
+function TraceCapturesPage() {
+  const { user } = useAuth();
+  const { plantations } = useData();
+  const currentUserId = Number(user?.user_id || user?.id);
+  const mine = plantations.filter((plantation) => Number(plantation.userId) === currentUserId);
+  const productionName = mine.length === 1
+    ? getProductionTypeConfig(mine[0].type)?.label
+    : "TraceConnect-Multi-Production";
+
+  const downloadVideo = async () => {
+    try {
+      const response = await fetch(user.video_url);
+      if (!response.ok) throw new Error("Unable to download trace capture.");
+      const blobUrl = URL.createObjectURL(await response.blob());
+      const anchor = document.createElement("a");
+      anchor.href = blobUrl;
+      anchor.download = `${String(productionName || "TraceConnect").replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "")}-traceability-${new Date().toISOString().slice(0, 10)}.mp4`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      window.setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+    } catch {
+      window.open(user.video_url, "_blank", "noopener,noreferrer");
+    }
+  };
+
+  return (
+    <div className="page-container trace-captures-page">
+      <div className="page-header">
+        <div>
+          <h1><FiVideo /> Trace Captures</h1>
+          <p className="page-subtitle">Generated videos from your captured process images.</p>
+        </div>
+      </div>
+      {user?.video_url ? (
+        <div className="card profile-video-card">
+          <div className="card-title"><FiVideo /> Your Traceability Video</div>
+          <p className="muted">
+            Lifecycle video generated from your stage photos and saved to your account.
+            {user?.video_locked && (
+              <span className="trace-capture-lock">
+                &#128274; Locked - add or update a stage photo to re-generate.
+              </span>
+            )}
           </p>
-          <div className="profile-video-player" style={{ position: "relative", borderRadius: 8, overflow: "hidden", backgroundColor: "#000", aspectRatio: "16/9", maxWidth: 640, margin: "0 auto" }}>
-            <video src={user.video_url} controls style={{ width: "100%", height: "100%" }} />
+          <div className="profile-video-player trace-capture-player">
+            <video src={user.video_url} controls />
           </div>
-          <div style={{ marginTop: 16, display: "flex", justifyContent: "center", gap: 12, flexWrap: "wrap" }}>
-            <a href={user.video_url} target="_blank" rel="noreferrer" className="btn btn-outline" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div className="trace-capture-actions">
+            <a href={user.video_url} target="_blank" rel="noreferrer" className="btn btn-outline">
               <FiExternalLink /> Open Video
             </a>
-            <button
-              className="btn btn-primary"
-              style={{ display: "flex", alignItems: "center", gap: 8 }}
-              onClick={async () => {
-                try {
-                  const blob = await fetch(user.video_url).then((r) => r.blob());
-                  const blobUrl = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = blobUrl;
-                  const productionName = mine.length === 1
-                    ? getProductionTypeConfig(mine[0].type)?.label
-                    : "TraceConnect-Multi-Production";
-                  a.download = `${String(productionName || "TraceConnect").replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "")}-traceability-${new Date().toISOString().slice(0, 10)}.mp4`;
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                  URL.revokeObjectURL(blobUrl);
-                } catch (_) {
-                  window.open(user.video_url, "_blank", "noopener,noreferrer");
-                }
-              }}
-            >
+            <button className="btn btn-primary" onClick={downloadVideo} type="button">
               <FiDownload /> Download Video
             </button>
           </div>
         </div>
+      ) : (
+        <div className="empty-gallery-box">
+          <FiVideo />
+          <p>No trace captures generated yet.</p>
+          <span>Generated traceability videos will appear here.</span>
+        </div>
       )}
+    </div>
+  );
+}
+
+function ProfilePage({ toast }) {
+  const { navigate } = useRouter();
+  const { user, updateUser } = useAuth();
+  const [editing, setEditing] = useState(false);
+  const [logo, setLogo] = useState(user?.company_logo || "");
+  const [name, setName] = useState(user?.name || "");
+
+  const handleCompanyLogoEdit = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setLogo(String(reader.result || ""));
+      toast("Company logo uploaded", "success");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const saveProfile = async () => {
+    try {
+      const updated = await authApi.updateProfile({ name, company_logo: logo });
+      updateUser(updated);
+      setEditing(false);
+      toast("Profile updated successfully", "success");
+    } catch {
+      toast("Failed to update profile", "error");
+    }
+  };
+
+  return (
+    <div className="page-container profile-page">
+      <section className="profile-settings-card" aria-label="Profile settings">
+        <aside className="profile-identity">
+          <div className="profile-identity-avatar">
+            {user?.profile_image ? <img src={user.profile_image} alt="" /> : <FiUser />}
+          </div>
+          <h2>{name || "Your profile"}</h2>
+          <p>{user?.email || "Email not provided"}</p>
+        </aside>
+
+        <div className="profile-information">
+          <div className="profile-information-heading">
+            <h2><span><FiUser /></span> Profile Information</h2>
+            {!editing && (
+              <button className="btn btn-outline profile-edit-action" onClick={() => setEditing(true)} type="button">
+                <FiEdit2 /> Edit Profile
+              </button>
+            )}
+          </div>
+
+          <div className="profile-fields">
+            <label className="profile-field">
+              <span><FiUser /> Full Name</span>
+              {editing ? (
+                <input className="input" value={name} onChange={(event) => setName(event.target.value)} placeholder="Your full name" />
+              ) : (
+                <strong>{name || "Not provided"}</strong>
+              )}
+            </label>
+            <div className="profile-field">
+              <span><FiMail /> Email Address</span>
+              <strong>{user?.email || "Not provided"}</strong>
+            </div>
+            <div className="profile-field">
+              <span><FiShield /> Role</span>
+              <strong className="capitalize">{user?.role || "Not provided"}</strong>
+            </div>
+            <div className="profile-field">
+              <span><FiMapPin /> Location</span>
+              <strong>{user?.profile_location || "Not provided"}</strong>
+            </div>
+             <div className="profile-field">
+              <span><FiCheck /> Account Status</span>
+               <strong className={`profile-status ${user?.verification_status || "pending"}`}>{user?.verification_status === "approved" ? "Approved" : user?.verification_status === "rejected" ? "Rejected" : "Pending review"}</strong>
+            </div>
+             {user?.verification_status === "pending" && (
+               <div className="profile-review-note"><FiInfo /><span><strong>Profile submitted successfully.</strong> Your documents are under review and verification usually takes 2–3 days. Check your profile status here.</span></div>
+             )}
+            <div className="profile-field profile-company-field">
+              <span><FiAward /> Company Logo</span>
+              {editing ? (
+                <input className="input" type="file" accept="image/*" onChange={handleCompanyLogoEdit} />
+              ) : logo ? (
+                <img src={logo} alt="Company logo" />
+              ) : (
+                <strong>Default (Maati AI)</strong>
+              )}
+            </div>
+            {editing && (
+              <div className="profile-edit-actions">
+                <button className="btn btn-primary" onClick={saveProfile} type="button"><FiCheck /> Save changes</button>
+                <button
+                  className="btn btn-outline"
+                  onClick={() => {
+                    setName(user?.name || "");
+                    setLogo(user?.company_logo || "");
+                    setEditing(false);
+                  }}
+                  type="button"
+                >
+                  <FiX /> Cancel
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
     </div>
   );
 }
@@ -5457,7 +5914,7 @@ function AppShell() {
   const [authMode, setAuthMode] = useState("login");
   const plantationMatch = route.match(/^\/plantation\/(.+)$/);
   const patchMatch = route.match(/^\/patch\/(.+)$/);
-  const dashboardRoute = user?.role === "supplier" ? "/supplier" : "/grower";
+   const dashboardRoute = user?.role === "admin" ? "/admin" : user?.role === "supplier" ? "/supplier" : "/grower";
   const appBusy = loading || dataLoading || pendingRequests > 0;
   const busyLabel = loading
     ? "Checking session..."
@@ -5468,10 +5925,13 @@ function AppShell() {
   const getThemeClass = () => {
     if (patchMatch) return "theme-grower";
     if (plantationMatch) return "theme-grower";
-    if (route === "/grower" || route === "/plantations") return "theme-grower";
+    if (route === "/grower") return "theme-grower";
     if (route === "/supplier") return "theme-supplier";
     if (route === "/reports") return "theme-reports";
-    if (route === "/profile") return "theme-profile";
+     if (route === "/profile") return "theme-profile";
+     if (route === "/admin") return "theme-profile";
+    if (route === "/process-gallery") return "theme-grower";
+    if (route === "/trace-captures") return user?.role === "grower" ? "theme-grower" : "theme-supplier";
     if (route === "/auth" && user) return user.role === "grower" ? "theme-grower" : "theme-supplier";
     if (user) return user.role === "grower" ? "theme-grower" : "theme-supplier";
     return "";
@@ -5489,25 +5949,27 @@ function AppShell() {
   let page = null;
   if (patchMatch) page = <div className="theme-grower"><TracePage patchId={patchMatch[1]} /></div>;
   else if (route === "/") page = (
-    <TraceabilityPage
+    <Home
       onStartMonitoring={() => (user ? navigate(dashboardRoute) : setAuthModalOpen(true))}
       onGoToDashboard={user ? () => navigate(dashboardRoute) : undefined}
     />
   );
   else if (loading) page = <PageSkeleton title="Checking session..." />;
-  else if (route === "/auth" && user) page = user.role === "grower" ? <div className="theme-grower"><GrowerDashboard navigate={navigate} toast={toast} /></div> : <div className="theme-supplier"><SupplierDashboard navigate={navigate} toast={toast} /></div>;
+   else if (route === "/auth" && user) page = user.role === "admin" ? <AdminDashboard toast={toast} /> : user.role === "grower" ? <div className="theme-grower"><GrowerDashboard navigate={navigate} toast={toast} /></div> : <div className="theme-supplier"><SupplierDashboard navigate={navigate} toast={toast} /></div>;
   else if (!user) page = (
-    <TraceabilityPage
+    <Home
       onStartMonitoring={() => setAuthModalOpen(true)}
       onGoToDashboard={undefined}
     />
   );
   else if (plantationMatch) page = <div className="theme-grower"><PlantationDetail plantationId={plantationMatch[1]} toast={toast} /></div>;
   else if (route === "/grower") page = user.role === "grower" ? <div className="theme-grower"><GrowerDashboard navigate={navigate} toast={toast} /></div> : <div className="page-container">Access denied</div>;
-  else if (route === "/supplier") page = <div className="theme-supplier"><SupplierDashboard navigate={navigate} toast={toast} /></div>;
-  else if (route === "/plantations") page = user.role === "grower" ? <div className="theme-grower"><PlantationsPage navigate={navigate} toast={toast} /></div> : <div className="page-container">Access denied</div>;
+   else if (route === "/supplier") page = user.role === "supplier" ? <div className="theme-supplier"><SupplierDashboard navigate={navigate} toast={toast} /></div> : <div className="page-container">Access denied</div>;
+   else if (route === "/admin") page = user.role === "admin" ? <AdminDashboard toast={toast} /> : <div className="page-container">Access denied</div>;
   else if (route === "/reports") page = <div className="theme-reports"><ReportsPage /></div>;
   else if (route === "/profile") page = <div className="theme-profile"><ProfilePage toast={toast} /></div>;
+  else if (route === "/process-gallery") page = user.role === "grower" ? <div className="theme-grower"><ProcessGalleryPage toast={toast} /></div> : <div className="page-container">Access denied</div>;
+  else if (route === "/trace-captures") page = <div className={user.role === "grower" ? "theme-grower" : "theme-supplier"}><TraceCapturesPage /></div>;
   else page = user.role === "grower" ? <div className="theme-grower"><GrowerDashboard navigate={navigate} toast={toast} /></div> : <div className="theme-supplier"><SupplierDashboard navigate={navigate} toast={toast} /></div>;
 
   return (
@@ -5515,7 +5977,7 @@ function AppShell() {
       <AppBusyBar active={appBusy} label={busyLabel} />
       <GlobalVideoProgressBar active={videoBusy} progress={videoProgress} progressPercent={videoProgressPercent} onCancel={cancelVideoGeneration} />
       <Toasts toasts={toasts} themeClass={getThemeClass()} />
-       {user && !patchMatch && <Header route={route} navigate={navigate} />}
+       {user && !patchMatch && <Header route={route} navigate={navigate} toast={toast} />}
        {!user && !patchMatch && <PublicHeader onLogin={() => { setAuthMode("login"); setAuthModalOpen(true); }} onSignup={() => { setAuthMode("signup"); setAuthModalOpen(true); }} />}
       <main className={`${(route === "/" || !user) ? "main-fluid" : ""} ${appBusy ? "is-busy" : ""}`}>
         {backendError && user && !patchMatch && <DataStatusBanner error={backendError} />}

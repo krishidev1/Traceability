@@ -249,9 +249,31 @@ function buildOtpEmailHtml(otpCode) {
   `;
 }
 
-export async function sendOtpEmail({ email, otpCode }) {
+function buildTraceConnectOtpEmailHtml(otpCode, expiryMinutes) {
+  const code = String(otpCode || "").trim();
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>TraceConnect verification</title></head>
+<body style="margin:0;padding:24px;background:#f1f5f9;font-family:Arial,sans-serif;color:#172554">
+  <main style="max-width:560px;margin:0 auto;padding:32px;background:#fff;border-radius:14px">
+    <h1 style="margin:0 0 16px;color:#176b3a">TraceConnect</h1>
+    <p style="font-size:16px">Use this verification code to complete your signup:</p>
+    <p style="padding:18px;text-align:center;border:1px dashed #176b3a;border-radius:10px;color:#176b3a;font-size:32px;font-weight:bold;letter-spacing:8px">${code}</p>
+    <p>This code expires in ${expiryMinutes} minutes. Do not share it with anyone.</p>
+    <p>If you did not request this code, you can ignore this email.</p>
+  </main>
+</body>
+</html>`;
+}
+
+export async function sendOtpEmail({
+  email,
+  otpCode,
+  applicationName = "InternzBee",
+  expiryMinutes = config.otpExpiryMinutes,
+}) {
   if (!isAzureConfigured()) {
-    if (config.nodeEnv !== "production") {
+    if (config.nodeEnv !== "production" && applicationName !== "TraceConnect") {
       console.log(`[OTP DEV] ${email} -> ${otpCode}`);
       return;
     }
@@ -269,10 +291,14 @@ export async function sendOtpEmail({ email, otpCode }) {
     },
     body: JSON.stringify({
       message: {
-        subject: "Welcome to InternzBee - Your Verification Code",
+        subject: applicationName === "TraceConnect"
+          ? "TraceConnect - Your Verification Code"
+          : "Welcome to InternzBee - Your Verification Code",
         body: {
           contentType: "HTML",
-          content: buildOtpEmailHtml(otpCode)
+          content: applicationName === "TraceConnect"
+            ? buildTraceConnectOtpEmailHtml(otpCode, expiryMinutes)
+            : buildOtpEmailHtml(otpCode)
         },
         toRecipients: [
           {
@@ -291,4 +317,3 @@ export async function sendOtpEmail({ email, otpCode }) {
     throw new Error(`Graph sendMail failed: ${response.status} ${body}`);
   }
 }
-

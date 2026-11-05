@@ -60,6 +60,7 @@ async function resolveUser(userId) {
 
 function appRole(role) {
   const value = String(role || '').trim().toLowerCase();
+  if (value === 'admin' || value === 'administrator') return 'admin';
   return ['supplier', 'exporter', 'retailer'].includes(value) ? 'supplier' : 'grower';
 }
 

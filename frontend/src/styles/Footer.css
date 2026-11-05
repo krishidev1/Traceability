@@ -1,0 +1,214 @@
+.tc-root .site-footer {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  width: 100%;
+  min-height: 132px;
+  margin-top: 0;
+  padding: 30px clamp(24px, 4.5vw, 72px);
+  color: #172554;
+  background: linear-gradient(180deg, #f1f7ff 0%, #f8fbff 42%, #ffffff 100%);
+  border-top: 0;
+  box-sizing: border-box;
+}
+
+.tc-root .site-footer::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 18px;
+  background: linear-gradient(
+    180deg,
+    rgba(191, 219, 254, 0.3) 0%,
+    rgba(219, 234, 254, 0.16) 40%,
+    transparent 100%
+  );
+  content: "";
+}
+
+.tc-root .site-footer::after {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: url("/Traceconnect%20Logo%20-%20Whitebg.svg") center 48% / 230px auto no-repeat;
+  content: "";
+  opacity: 0.055;
+  pointer-events: none;
+}
+
+.tc-root .site-footer-main {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: clamp(20px, 2.4vw, 38px);
+  width: 100%;
+  max-width: 1800px;
+  min-height: 70px;
+  margin: 0 auto;
+}
+
+.tc-root .site-footer-brand {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 12px;
+  padding: 0 28px 0 0;
+  border: 0;
+  border-right: 1px solid #cbd5e1;
+  background: transparent;
+  color: #172554;
+  cursor: pointer;
+}
+
+.tc-root .site-footer-brand img {
+  display: block;
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+}
+
+.tc-root .site-footer-brand .brand-text {
+  color: #12372a;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  white-space: nowrap;
+}
+
+.tc-root .site-footer-brand:focus-visible {
+  outline: 3px solid #86b89a;
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
+.tc-root .site-footer-copyright {
+  flex: 0 0 auto;
+  min-width: 0;
+  margin: 0 0 0 clamp(16px, 1.2vw, 22px);
+  color: #334155;
+  font-size: 15px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.tc-root .site-footer-socials {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+  padding-left: clamp(20px, 2.4vw, 38px);
+  border-left: 1px solid rgba(148, 163, 184, 0.18);
+  transform: translateX(clamp(14px, 1.2vw, 22px));
+}
+
+.tc-root .site-footer-socials a {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 9px;
+  color: #1d4ed8;
+  background: #eff6ff;
+  font-size: 18px;
+  text-decoration: none;
+  transition: color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.tc-root .site-footer-socials a:hover {
+  color: #ffffff;
+  background: #2563eb;
+  transform: translateY(-2px);
+}
+
+.tc-root .site-footer-legal {
+  display: flex;
+  flex: 0 0 340px;
+  align-items: center;
+  justify-content: space-between;
+  margin-left: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  transform: translateX(clamp(8px, 0.8vw, 14px));
+}
+
+.tc-root .site-footer-legal span {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: #5171d8;
+  background: transparent;
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+@media (max-width: 1100px) {
+  .tc-root .site-footer-main {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px 28px;
+  }
+
+  .tc-root .site-footer-copyright {
+    flex: 0 1 auto;
+    margin-left: 0;
+  }
+
+  .tc-root .site-footer-socials {
+    transform: none;
+  }
+
+  .tc-root .site-footer-legal {
+    transform: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .tc-root .site-footer {
+    min-height: 0;
+    padding: 26px 20px;
+  }
+
+  .tc-root .site-footer-main {
+    flex-direction: column;
+    gap: 18px;
+    text-align: center;
+  }
+
+  .tc-root .site-footer-brand {
+    padding: 0;
+    border-right: 0;
+  }
+
+  .tc-root .site-footer-copyright,
+  .tc-root .site-footer-socials,
+  .tc-root .site-footer-legal,
+  .tc-root .site-footer-legal span {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .tc-root .site-footer-brand .brand-text {
+    font-size: 22px;
+  }
+
+  .tc-root .site-footer-copyright {
+    flex: 0 1 auto;
+    min-width: 0;
+    font-size: 13px;
+  }
+
+  .tc-root .site-footer-legal {
+    flex-basis: auto;
+    justify-content: center;
+    gap: 28px;
+    margin-left: 0;
+  }
+
+  .tc-root .site-footer-legal span {
+    font-size: 13px;
+  }
+}

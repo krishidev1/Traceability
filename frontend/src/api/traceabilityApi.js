@@ -57,6 +57,7 @@ export function storeAuth({ access_token, user, remember = true }) {
       district: persistedUser.district,
       state: persistedUser.state,
       country: persistedUser.country,
+      profile_location: persistedUser.profile_location,
       pincode: persistedUser.pincode,
     }));
   }
@@ -119,6 +120,22 @@ export const authApi = {
     method: "POST",
     body: JSON.stringify(payload),
   }),
+  sendSignupEmailOtp: (email) => apiRequest("/api/auth/signup/send-email-otp", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  }),
+  verifySignupEmailOtp: ({ email, code }) => apiRequest("/api/auth/signup/verify-email-otp", {
+    method: "POST",
+    body: JSON.stringify({ email, code }),
+  }),
+  sendSignupPhoneOtp: ({ phone, purpose }) => apiRequest("/api/auth/signup/send-phone-otp", {
+    method: "POST",
+    body: JSON.stringify({ phone, purpose }),
+  }),
+  verifySignupPhoneOtp: ({ phone, purpose, code }) => apiRequest("/api/auth/signup/verify-phone-otp", {
+    method: "POST",
+    body: JSON.stringify({ phone, purpose, code }),
+  }),
   forgotPassword: (identifier) => apiRequest("/api/auth/forgot-password", {
     method: "POST",
     body: JSON.stringify({ identifier }),
@@ -131,6 +148,12 @@ export const authApi = {
   updateProfile: (payload) => apiRequest("/api/auth/profile", {
     method: "PUT",
     body: JSON.stringify(payload),
+  }),
+  listAdminUsers: () => apiRequest("/api/auth/admin/users"),
+  getAdminGiRegistryDocument: (id) => apiRequest(`/api/auth/admin/users/${encodeURIComponent(id)}/gi-registry-document`),
+  updateAdminUserStatus: (id, status) => apiRequest(`/api/auth/admin/users/${encodeURIComponent(id)}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
   }),
 };
 
@@ -170,6 +193,10 @@ export const traceabilityApi = {
   }),
   deleteCrop: (id) => apiRequest(`/api/traceability/crops/${encodeURIComponent(id)}`, {
     method: "DELETE",
+  }),
+  updateCrop: (id, payload) => apiRequest(`/api/traceability/crops/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
   }),
 
   createMonitoringRecord: (payload) => apiRequest("/api/traceability/monitoring-records", {

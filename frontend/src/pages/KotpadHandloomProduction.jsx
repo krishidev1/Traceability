@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { getStoredAuth } from "../api/traceabilityApi";
 import "../styles/KotpadHandloomProduction.css";
 
@@ -8,8 +8,6 @@ const YES_NO_OPTIONS = ["Yes", "No"];
 const DESIGN_PATTERN_OPTIONS = ["Tribal Motif", "Temple Border", "Diamond Pattern", "Stripe Border", "Plain Weave", "Custom"];
 const COLOR_OPTIONS = ["Maroon + Black", "Maroon + Brown", "Black + Brown", "Natural Brown", "Custom"];
 const PACKAGING_OPTIONS = ["Eco Packaging", "Cloth Wrap", "Paper Packaging", "Standard"];
-const INSPECTION_OPTIONS = ["Pending", "Passed", "Failed"];
-const QUALITY_OPTIONS = ["A", "B", "C", "Premium"];
 const MARKETPLACE_OPTIONS = ["Public", "Private"];
 
 const fixedKotpadValues = {
@@ -20,27 +18,17 @@ const fixedKotpadValues = {
   district: "Koraput",
   regionCluster: "Kotpad Village",
   giRegistrationDate: "June 2, 2005",
-  communityName: "Mirgan Community",
   fabricType: "Cotton",
-  naturalDyeUsed: "Aal Tree Bark",
   loomType: "Pit Loom",
   weavingTechnique: "Traditional Handloom",
-  naturalDyeUsage: "Yes",
 };
 
-const defaultDyeDescription = "Traditional process description";
-const defaultCulturalStory = "Kotpad handloom fabric carries the natural-dye weaving heritage of Koraput and the Mirgan community.";
-
-function padded(value, length) {
-  return String(value).padStart(length, "0").slice(-length);
-}
-
 function generateBatchNumber(now = Date.now()) {
-  return `KT/BATCH/${new Date(now).getFullYear()}/${padded(now, 3)}`;
+  return `KT/BATCH/${new Date(now).getFullYear()}/${now.toString(36).toUpperCase()}`;
 }
 
 function generateWeaverId(now = Date.now()) {
-  return `KT/WVR/${padded(now, 5)}`;
+  return `KT/WVR/${now.toString(36).toUpperCase()}`;
 }
 
 function generateQrCode(now = Date.now()) {
@@ -52,13 +40,14 @@ function getAuthenticatedWeaverDetails() {
   return {
     weaverName: user.name || user.full_name || "",
     contactNumber: user.phone || user.mobileNumber || user.mobile_number || user.mobile || user.mob || "",
+    weaverId: user.weaver_id || (user.id ? `KT/WVR/${user.id}` : ""),
   };
 }
 
 export const KOTPAD_PRODUCTION_CONFIG = {
   value: "kotpad_handloom",
   label: "Kotpad Handloom Fabric",
-  badge: "Kotpad GI Fabric",
+  badge: "Kotpad Handloom",
   badgeClass: "kotpad",
   themeClass: "production-theme-kotpad",
   nameLabel: "Kotpad Product Name",
@@ -77,23 +66,15 @@ export const KOTPAD_PRODUCTION_CONFIG = {
   options: KOTPAD_OPTIONS,
   monitoring: [
     "GI Certificate Upload",
-    "Aadhaar / ID Proof",
     "Eco-Friendly Certification",
     "Batch Number",
     "QR Verification Code",
     "Weaver ID",
-    "Geo-Fenced Production Area",
     "Authenticity Certificate",
     "Inspection Status",
     "Quality Grade",
     "Product Images",
     "Marketplace Visibility",
-    "Natural Dye Usage",
-    "Traditional Knowledge Preservation",
-    "Cultural Story",
-    "Government Recognition",
-    "QR Scan History",
-    "Other",
   ],
 };
 
@@ -102,35 +83,31 @@ export function createKotpadInitialFields() {
   const authenticatedWeaver = getAuthenticatedWeaverDetails();
   return {
     ...fixedKotpadValues,
-    giCertificateUpload: "Upload in Verification stage",
     weaverName: authenticatedWeaver.weaverName,
+    communityName: "",
     organizationType: "",
-    idProofUpload: "Upload required",
     contactNumber: authenticatedWeaver.contactNumber,
-    emailId: "",
     address: "",
-    weavingExperience: "",
-    familyMembersInvolved: "",
-    gpsLocation: "Captured from map or pin selection",
+    gpsLocation: "",
     yarnSource: "",
-    dyePreparationMethod: defaultDyeDescription,
+    naturalDyeUsed: "Aal bark",
+    dyePreparationMethod: "",
     waterSource: "",
     chemicalFreeStatus: "",
-    ecoFriendlyCertification: "Upload required",
+    ecoFriendlyCertification: "",
     timeTakenPerFabric: "",
-    dailyProductionCapacity: "",
     designPattern: "",
     colorCombination: "",
-    handmadeVerification: "Pending admin verification",
+    designFabricDetails: "",
     batchNumber: generateBatchNumber(now),
     qrVerificationCode: generateQrCode(now),
-    weaverId: generateWeaverId(now),
-    geoFencedProductionArea: "Auto-match with Kotpad boundary",
-    authenticityCertificate: "Admin upload required",
-    blockchainTraceId: "Auto if blockchain is integrated",
+    weaverId: authenticatedWeaver.weaverId || generateWeaverId(now),
+    productionUnitId: "Auto-linked to production unit",
+    authenticityCertificate: "",
+    giRegistrationEvidence: "",
     inspectionStatus: "Pending",
+    verificationLevel: "Artisan-declared",
     qualityGrade: "",
-    productImages: "Upload after saving this fabric batch",
     sellingPrice: "",
     wholesalePrice: "",
     availableStock: "",
@@ -138,19 +115,13 @@ export function createKotpadInitialFields() {
     exportAvailability: "",
     packagingType: "",
     shippingTime: "",
-    marketplaceVisibility: "Public",
-    tribalWomenInvolved: "",
-    carbonFriendlyProduction: "",
-    waterRecyclingUsed: "",
-    traditionalKnowledgePreservation: "",
-    culturalStory: defaultCulturalStory,
-    governmentRecognition: "",
-    qrScanHistory: "Auto-tracked after QR scans",
+    marketplaceVisibility: "",
   };
 }
 
 export function buildKotpadDetails(form) {
   return {
+    "Product Type": form.productType,
     "Product Name": form.productName,
     "GI Application Number": form.giApplicationNumber,
     Category: form.category,
@@ -158,16 +129,12 @@ export function buildKotpadDetails(form) {
     District: form.district,
     "Region / Cluster": form.regionCluster,
     "GI Registration Date": form.giRegistrationDate,
-    "GI Certificate Upload": form.giCertificateUpload,
     "Weaver Name": form.weaverName,
     "Community Name": form.communityName,
+    "Weaver ID": form.weaverId,
     "Organization Type": form.organizationType,
-    "Aadhaar / ID Proof": form.idProofUpload,
     "Contact Number": form.contactNumber,
-    "Email ID": form.emailId,
     Address: form.address,
-    "Experience in Weaving": form.weavingExperience,
-    "Number of Family Members Involved": form.familyMembersInvolved,
     "GPS Location": form.gpsLocation,
     "Fabric Type": form.fabricType,
     "Yarn Source": form.yarnSource,
@@ -179,19 +146,17 @@ export function buildKotpadDetails(form) {
     "Loom Type": form.loomType,
     "Weaving Technique": form.weavingTechnique,
     "Time Taken Per Fabric": form.timeTakenPerFabric,
-    "Daily Production Capacity": form.dailyProductionCapacity,
     "Design Pattern": form.designPattern,
     "Color Combination": form.colorCombination,
-    "Handmade Verification": form.handmadeVerification,
+    "Design / Fabric Details": form.designFabricDetails,
     "Batch Number": form.batchNumber,
     "QR Verification Code": form.qrVerificationCode,
-    "Weaver ID": form.weaverId,
-    "Geo-Fenced Production Area": form.geoFencedProductionArea,
+    "Production Unit ID": form.productionUnitId,
     "Authenticity Certificate": form.authenticityCertificate,
-    "Blockchain Trace ID": form.blockchainTraceId,
+    "GI Registration Evidence": form.giRegistrationEvidence,
     "Inspection Status": form.inspectionStatus,
+    "Verification Level": form.verificationLevel,
     "Quality Grade": form.qualityGrade,
-    "Product Images": form.productImages,
     "Selling Price": form.sellingPrice,
     "Wholesale Price": form.wholesalePrice,
     "Available Stock": form.availableStock,
@@ -200,14 +165,8 @@ export function buildKotpadDetails(form) {
     "Packaging Type": form.packagingType,
     "Shipping Time": form.shippingTime,
     "Marketplace Visibility": form.marketplaceVisibility,
-    "Natural Dye Usage": form.naturalDyeUsage,
-    "Tribal Women Involved": form.tribalWomenInvolved,
-    "Carbon-Friendly Production": form.carbonFriendlyProduction,
-    "Water Recycling Used": form.waterRecyclingUsed,
-    "Traditional Knowledge Preservation": form.traditionalKnowledgePreservation,
-    "Cultural Story": form.culturalStory,
-    "Government Recognition": form.governmentRecognition,
-    "QR Scan History": form.qrScanHistory,
+    "Production Date": form.productionDate,
+    "Expected Completion Date": form.expectedCompletionDate,
   };
 }
 
@@ -271,10 +230,19 @@ function SelectInput({ label, field, form, setForm, options }) {
   );
 }
 
-export default function KotpadHandloomProductionFields({ form, setForm }) {
+export default function KotpadHandloomProductionFields({
+  form,
+  setForm,
+  activeSection,
+  productName,
+  location,
+  productionUnitId,
+}) {
+  const [locationError, setLocationError] = useState("");
+
   useEffect(() => {
     const authenticatedWeaver = getAuthenticatedWeaverDetails();
-    if (!authenticatedWeaver.weaverName && !authenticatedWeaver.contactNumber) return;
+    if (!authenticatedWeaver.weaverName && !authenticatedWeaver.contactNumber && !authenticatedWeaver.weaverId) return;
 
     setForm((current) => {
       let changed = false;
@@ -290,81 +258,124 @@ export default function KotpadHandloomProductionFields({ form, setForm }) {
         changed = true;
       }
 
+      if (authenticatedWeaver.weaverId && current.weaverId !== authenticatedWeaver.weaverId) {
+        next.weaverId = authenticatedWeaver.weaverId;
+        changed = true;
+      }
+
       return changed ? next : current;
     });
   }, [setForm]);
 
+  const captureGpsLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationError("Location is unavailable in this browser. Enter coordinates manually.");
+      return;
+    }
+
+    setLocationError("");
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => setForm((current) => ({
+        ...current,
+        gpsLocation: `${coords.latitude.toFixed(6)}, ${coords.longitude.toFixed(6)}`,
+      })),
+      (error) => setLocationError(error.message || "Location could not be captured. Enter coordinates manually."),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
   return (
     <div className="kotpad-production-fields production-fields">
-      <div className="form-section-label kotpad-section-label">Basic Product Information</div>
-      <FixedInput label="Product Name" value={form.productName} />
-      <FixedInput label="GI Application Number" value={form.giApplicationNumber} />
-      <FixedInput label="Category" value={form.category} />
-      <FixedInput label="State" value={form.giState} />
-      <FixedInput label="District" value={form.district} />
-      <FixedInput label="Region / Cluster" value={form.regionCluster} />
-      <FixedInput label="GI Registration Date" value={form.giRegistrationDate} />
-      <FixedInput label="GI Certificate Upload" value={form.giCertificateUpload} />
+      {activeSection === 0 && (
+        <>
+          <div className="form-section-label kotpad-section-label">Production Unit Registration</div>
+          <FixedInput label="Production Category" value={KOTPAD_PRODUCTION_CONFIG.label} />
+          <FixedInput label="Product Name" value={productName} />
+          <FixedInput label="Cluster / Weaver Location" value={location} />
+          <FixedInput label="Production Unit ID" value={productionUnitId} />
+        </>
+      )}
 
-      <div className="form-section-label kotpad-section-label">Weaver Details</div>
-      <FixedInput label="Weaver Name" value={form.weaverName} />
-      <FixedInput label="Community Name" value={form.communityName} />
-      <SelectInput label="Organization Type" field="organizationType" form={form} setForm={setForm} options={ORGANIZATION_OPTIONS} />
-      <FixedInput label="Aadhaar / ID Proof" value={form.idProofUpload} />
-      <FixedInput label="Contact Number" value={form.contactNumber} />
-      <TextInput label="Email ID" field="emailId" form={form} setForm={setForm} type="email" placeholder="e.g. sita.example@example.com" />
-      <TextArea label="Address" field="address" form={form} setForm={setForm} placeholder="e.g. Kotpad, Koraput district, Odisha" />
-      <TextInput label="Experience in Weaving" field="weavingExperience" form={form} setForm={setForm} type="number" placeholder="e.g. 18 years" />
-      <TextInput label="Family Members Involved" field="familyMembersInvolved" form={form} setForm={setForm} type="number" placeholder="e.g. 3" />
-      <FixedInput label="GPS Location" value={form.gpsLocation} />
+      {activeSection === 1 && (
+        <>
+          <div className="form-section-label kotpad-section-label">Producer / Weaver Details</div>
+          <TextInput label="Weaver Name *" field="weaverName" form={form} setForm={setForm} />
+          <FixedInput label="Weaver ID" value={form.weaverId} />
+          <SelectInput label="Organization Type *" field="organizationType" form={form} setForm={setForm} options={ORGANIZATION_OPTIONS} />
+          <TextInput label="Contact Number *" field="contactNumber" form={form} setForm={setForm} />
+          <TextArea label="Address *" field="address" form={form} setForm={setForm} placeholder="Enter the weaver's address" />
+          <div className="field-wrap">
+            <label className="field-label">GPS Location *</label>
+            <input
+              className="input"
+              value={form.gpsLocation}
+              placeholder="Capture or enter latitude, longitude"
+              onChange={(event) => setForm((current) => ({ ...current, gpsLocation: event.target.value }))}
+            />
+            <button type="button" className="btn btn-outline" onClick={captureGpsLocation}>Capture current location</button>
+            {locationError && <span className="production-location-warning" role="alert">{locationError}</span>}
+          </div>
+          <TextInput label="Community Name (Optional)" field="communityName" form={form} setForm={setForm} />
+        </>
+      )}
 
-      <div className="form-section-label kotpad-section-label">Raw Material Details</div>
-      <FixedInput label="Fabric Type" value={form.fabricType} />
-      <TextInput label="Yarn Source" field="yarnSource" form={form} setForm={setForm} placeholder="e.g. Local yarn supplier, Kotpad" />
-      <FixedInput label="Natural Dye Used" value={form.naturalDyeUsed} />
-      <TextArea label="Dye Preparation Method" field="dyePreparationMethod" form={form} setForm={setForm} placeholder="e.g. Traditional Aal dye extraction and preparation" />
-      <TextInput label="Water Source" field="waterSource" form={form} setForm={setForm} placeholder="e.g. Community water supply" />
-      <SelectInput label="Chemical-Free Status" field="chemicalFreeStatus" form={form} setForm={setForm} options={YES_NO_OPTIONS} />
-      <FixedInput label="Eco-Friendly Certification" value={form.ecoFriendlyCertification} />
+      {activeSection === 2 && (
+        <>
+          <div className="form-section-label kotpad-section-label">Raw Material Details</div>
+          <TextInput label="Fabric Type *" field="fabricType" form={form} setForm={setForm} />
+          <TextInput label="Yarn Source *" field="yarnSource" form={form} setForm={setForm} placeholder="e.g. Local yarn supplier, Kotpad" />
+          <TextInput label="Natural Dye Used *" field="naturalDyeUsed" form={form} setForm={setForm} />
+          <TextArea label="Dye Preparation Method (Optional)" field="dyePreparationMethod" form={form} setForm={setForm} />
+          <TextInput label="Water Source (Optional)" field="waterSource" form={form} setForm={setForm} />
+          <SelectInput label="Chemical-Free Status (Optional)" field="chemicalFreeStatus" form={form} setForm={setForm} options={YES_NO_OPTIONS} />
+          <TextInput label="Eco-Friendly Certification (If available)" field="ecoFriendlyCertification" form={form} setForm={setForm} placeholder="Enter a certification reference or link" />
+        </>
+      )}
 
-      <div className="form-section-label kotpad-section-label">Weaving & Production Info</div>
-      <FixedInput label="Loom Type" value={form.loomType} />
-      <FixedInput label="Weaving Technique" value={form.weavingTechnique} />
-      <TextInput label="Time Taken Per Fabric" field="timeTakenPerFabric" form={form} setForm={setForm} placeholder="e.g. 7 days" />
-      <TextInput label="Daily Production Capacity" field="dailyProductionCapacity" form={form} setForm={setForm} type="number" placeholder="e.g. 1 saree every 7 days" />
-      <SelectInput label="Design Pattern" field="designPattern" form={form} setForm={setForm} options={DESIGN_PATTERN_OPTIONS} />
-      <SelectInput label="Color Combination" field="colorCombination" form={form} setForm={setForm} options={COLOR_OPTIONS} />
-      <FixedInput label="Handmade Verification" value={form.handmadeVerification} />
+      {activeSection === 3 && (
+        <>
+          <div className="form-section-label kotpad-section-label">Weaving & Production Details</div>
+          <SelectInput label="Product Type *" field="name" form={form} setForm={setForm} options={KOTPAD_OPTIONS} />
+          {form.name === "Other" && <TextInput label="Custom Product Type *" field="customName" form={form} setForm={setForm} />}
+          <TextInput label="Loom Type *" field="loomType" form={form} setForm={setForm} />
+          <TextInput label="Weaving Technique *" field="weavingTechnique" form={form} setForm={setForm} />
+          <SelectInput label="Design Pattern *" field="designPattern" form={form} setForm={setForm} options={DESIGN_PATTERN_OPTIONS} />
+          <SelectInput label="Colour Combination *" field="colorCombination" form={form} setForm={setForm} options={COLOR_OPTIONS} />
+          <TextArea label="Design / Fabric Details (Optional)" field="designFabricDetails" form={form} setForm={setForm} />
+          <TextInput label="Production Start Date *" field="sowingDate" form={form} setForm={setForm} type="date" />
+          <TextInput label="Production Completion Date *" field="expectedHarvest" form={form} setForm={setForm} type="date" />
+          <TextInput label="Time Taken Per Fabric (Optional)" field="timeTakenPerFabric" form={form} setForm={setForm} placeholder="e.g. 7 days" />
+        </>
+      )}
 
-      <div className="form-section-label kotpad-section-label">Authenticity & Traceability</div>
-      <FixedInput label="Batch Number" value={form.batchNumber} />
-      <FixedInput label="QR Verification Code" value={form.qrVerificationCode} />
-      <FixedInput label="Weaver ID" value={form.weaverId} />
-      <FixedInput label="Geo-Fenced Production Area" value={form.geoFencedProductionArea} />
-      <FixedInput label="Authenticity Certificate" value={form.authenticityCertificate} />
-      <FixedInput label="Blockchain Trace ID" value={form.blockchainTraceId} />
-      <SelectInput label="Inspection Status" field="inspectionStatus" form={form} setForm={setForm} options={INSPECTION_OPTIONS} />
-      <SelectInput label="Quality Grade" field="qualityGrade" form={form} setForm={setForm} options={QUALITY_OPTIONS} />
-      <div className="form-section-label kotpad-section-label">Marketplace Fields</div>
-      <FixedInput label="Product Images" value={form.productImages} />
-      <TextInput label="Selling Price" field="sellingPrice" form={form} setForm={setForm} type="number" placeholder="e.g. ₹4,500 per saree" />
-      <TextInput label="Wholesale Price" field="wholesalePrice" form={form} setForm={setForm} type="number" placeholder="e.g. ₹3,800 per saree" />
-      <TextInput label="Available Stock" field="availableStock" form={form} setForm={setForm} type="number" placeholder="e.g. 5 pieces" />
-      <TextInput label="Minimum Order Quantity" field="minimumOrderQuantity" form={form} setForm={setForm} type="number" placeholder="e.g. 1 piece" />
-      <SelectInput label="Export Availability" field="exportAvailability" form={form} setForm={setForm} options={YES_NO_OPTIONS} />
-      <SelectInput label="Packaging Type" field="packagingType" form={form} setForm={setForm} options={PACKAGING_OPTIONS} />
-      <TextInput label="Shipping Time" field="shippingTime" form={form} setForm={setForm} placeholder="e.g. 5–7 working days after order confirmation" />
-      <SelectInput label="Marketplace Visibility" field="marketplaceVisibility" form={form} setForm={setForm} options={MARKETPLACE_OPTIONS} />
-      <div className="form-section-label kotpad-section-label">Sustainability & Preservation</div>
-      <FixedInput label="Natural Dye Usage" value={form.naturalDyeUsage} />
-      <SelectInput label="Tribal Women Involved" field="tribalWomenInvolved" form={form} setForm={setForm} options={YES_NO_OPTIONS} />
-      <SelectInput label="Carbon-Friendly Production" field="carbonFriendlyProduction" form={form} setForm={setForm} options={YES_NO_OPTIONS} />
-      <SelectInput label="Water Recycling Used" field="waterRecyclingUsed" form={form} setForm={setForm} options={YES_NO_OPTIONS} />
-      <TextArea label="Traditional Knowledge Preservation" field="traditionalKnowledgePreservation" form={form} setForm={setForm} placeholder="e.g. Traditional Kotpad dyeing and weaving knowledge documented" />
-      <TextArea label="Cultural Story" field="culturalStory" form={form} setForm={setForm} placeholder="e.g. Record the artisan's own account of learning and practising Kotpad weaving" />
-      <TextInput label="Government Recognition" field="governmentRecognition" form={form} setForm={setForm} placeholder="e.g. Kotpad Handloom Fabric GI registration" />
-      <div className="form-section-label kotpad-section-label">Smart Tracking</div>
-      <FixedInput label="QR Scan History" value={form.qrScanHistory} />
+      {activeSection === 4 && (
+        <>
+          <div className="form-section-label kotpad-section-label">Batch Identity & Verification</div>
+          <FixedInput label="Batch Number" value={form.batchNumber} />
+          <FixedInput label="QR Verification Code" value={form.qrVerificationCode} />
+          <FixedInput label="Production Unit ID" value={productionUnitId} />
+          <FixedInput label="Weaver ID" value={form.weaverId} />
+          <FixedInput label="Inspection Status" value={form.inspectionStatus} />
+          <FixedInput label="Verification Level" value={form.verificationLevel} />
+          {form.qualityGrade && <FixedInput label="Quality Grade (Inspector)" value={form.qualityGrade} />}
+          {form.authenticityCertificate && <FixedInput label="Authenticity Certificate" value={form.authenticityCertificate} />}
+          {form.giRegistrationEvidence && <FixedInput label="GI Certificate / Registration Evidence" value={form.giRegistrationEvidence} />}
+        </>
+      )}
+
+      {activeSection === 5 && (
+        <>
+          <div className="form-section-label kotpad-section-label">Product & Marketplace Details</div>
+          <TextInput label="Selling Price (Optional)" field="sellingPrice" form={form} setForm={setForm} type="number" />
+          <TextInput label="Wholesale Price (Optional)" field="wholesalePrice" form={form} setForm={setForm} type="number" />
+          <TextInput label="Available Stock *" field="availableStock" form={form} setForm={setForm} type="number" />
+          <TextInput label="Minimum Order Quantity (Optional)" field="minimumOrderQuantity" form={form} setForm={setForm} type="number" />
+          <SelectInput label="Export Availability (Optional)" field="exportAvailability" form={form} setForm={setForm} options={YES_NO_OPTIONS} />
+          <SelectInput label="Packaging Type (Optional)" field="packagingType" form={form} setForm={setForm} options={PACKAGING_OPTIONS} />
+          <TextInput label="Shipping Time (Optional)" field="shippingTime" form={form} setForm={setForm} />
+          <SelectInput label="Marketplace Visibility *" field="marketplaceVisibility" form={form} setForm={setForm} options={MARKETPLACE_OPTIONS} />
+        </>
+      )}
     </div>
   );
 }

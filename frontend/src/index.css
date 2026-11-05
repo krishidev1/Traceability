@@ -145,7 +145,7 @@ h1, .page-title, .ta-hero-title, .tc-page-header h1 {
 h2, .section-title, .ta-section-title {
   font-family: var(--font-heading) !important;
   font-size: 24px !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
   line-height: 32px !important;
   color: var(--neutral-900) !important;
   margin: 0 0 12px 0;
@@ -154,10 +154,18 @@ h2, .section-title, .ta-section-title {
 h3, .card-title, .tc-card-title {
   font-family: var(--font-heading) !important;
   font-size: 18px !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
   line-height: 24px !important;
   color: var(--neutral-900) !important;
   margin: 0 0 8px 0;
+}
+
+h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 24px;
+  color: var(--neutral-900);
 }
 
 p, .body-text {
@@ -319,9 +327,6 @@ textarea,
 }
 
 textarea {
-  min-height: 88px !important;
-  height: auto !important;
-  padding: 8px 12px !important;
   resize: vertical;
 }
 
@@ -466,7 +471,6 @@ button, .btn, .tc-btn {
   gap: 8px;
 }
 
-.loading-inline img {
-  width: 16px;
-  height: 16px;
+.loading-inline [data-useanimations] {
+  color: currentColor;
 }

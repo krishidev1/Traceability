@@ -313,6 +313,7 @@ router.post("/send-signup-code", async (req, res) => {
   const otpCode = generateOtp(6);
   const otpHash = hashOtp(otpCode);
   const expiresAt = new Date(Date.now() + SIGNUP_OTP_EXPIRY_MINUTES * 60 * 1000);
+  const applicationName = req.body?.applicationName === "TraceConnect" ? "TraceConnect" : "InternzBee";
 
   const client = await pool.connect();
   try {
@@ -338,7 +339,12 @@ router.post("/send-signup-code", async (req, res) => {
   }
 
   try {
-    await sendOtpEmail({ email, otpCode });
+    await sendOtpEmail({
+      email,
+      otpCode,
+      applicationName,
+      expiryMinutes: SIGNUP_OTP_EXPIRY_MINUTES,
+    });
   } catch {
     return res.status(500).json({ detail: "Unable to send verification code." });
   }

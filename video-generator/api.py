@@ -52,13 +52,20 @@ app = FastAPI(title="Maati Video Generator")
 
 # CORS: allow your frontend to call this API from another origin.
 # Configure via env: CORS_ORIGINS="https://example.com,https://foo.com"
-_cors_origins = os.getenv("CORS_ORIGINS", "*").strip()
-if _cors_origins == "*":
-    allow_origins = ["*"]
-    allow_credentials = False
-else:
-    allow_origins = [o.strip() for o in _cors_origins.split(",") if o.strip()]
-    allow_credentials = True
+_cors_origins = os.getenv("CORS_ORIGINS", "").strip()
+# Keep local development working even when the deployed service has no
+# CORS_ORIGINS environment variable. Add production origins through env.
+default_origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+    "https://traceconnect.in",
+    "https://www.traceconnect.in",
+]
+configured_origins = [o.strip() for o in _cors_origins.split(",") if o.strip() and o.strip() != "*"]
+allow_origins = sorted(set(default_origins + configured_origins))
+allow_credentials = True
 
 app.add_middleware(
     CORSMiddleware,

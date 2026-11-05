@@ -2,7 +2,9 @@ const db = require('../../../config/db');
 const { buildWhere, buildUpdate } = require('../../../services/sqlBuilder');
 
 const PRODUCTION_TYPES = new Set([
+  'bee',
   'kotpad_handloom',
+  'shrimp',
   'sambalpuri_bandha',
 ]);
 const DEFAULT_PRODUCTION_TYPE = 'kotpad_handloom';
