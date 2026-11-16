@@ -4,12 +4,8 @@ import { FaGoogle } from "react-icons/fa";
 import { X as LucideX } from "lucide-react";
 import { authApi } from "../api/traceabilityApi";
 import { useAuth, useRouter } from "../shared/AuthContext";
-import {
-  delay,
-  LoadingIndicator,
-  API_URL,
-  TRACE_CONNECT_LOGO_SRC
-} from "../components/Others";
+import { LoadingIndicator } from "../components/Others";
+import { API_URL, TRACE_CONNECT_LOGO_SRC, delay } from "../utils/traceConnectConstants";
 import "../styles/AuthPage.css";
 
 const ACCOUNT_TYPE_OPTIONS = [

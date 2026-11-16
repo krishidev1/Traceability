@@ -6820,6 +6820,36 @@ body.traceconnect-body { background: var(--reference-page) !important; }
   transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
 }
 
+/* Keep the plantation identity and its summary metrics in one unified panel. */
+.tc-root .production-workspace .plantation-overview {
+  overflow: hidden;
+  border: 1px solid #dbeafe;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 8px 22px rgba(37, 99, 235, .06);
+}
+
+.tc-root .production-workspace .plantation-overview .plantation-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  align-items: center;
+  gap: 24px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.tc-root .production-workspace .plantation-overview .production-product-summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0 0 0 20px;
+  border: 0;
+  border-left: 1px solid #e8eef7;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 .tc-root .production-product-summary > div {
   display: flex;
   flex-direction: column;
@@ -6984,7 +7014,7 @@ body.traceconnect-body { background: var(--reference-page) !important; }
 
 .tc-root .production-workspace .process-evidence-gallery {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 16px;
 }
 
@@ -7019,18 +7049,19 @@ body.traceconnect-body { background: var(--reference-page) !important; }
 
 .tc-root .production-workspace .process-evidence-gallery .process-entry-card {
   min-width: 0;
+  min-height: 168px;
   padding: 14px;
   border-color: #e2e8f0;
   border-radius: 14px;
 }
 
 .tc-root .production-workspace .process-evidence-gallery .process-entry-main {
-  align-items: center;
+  align-items: flex-start;
 }
 
 .tc-root .production-workspace .tc-thumb.process-entry-thumb {
-  width: 94px;
-  height: 82px;
+  width: 112px;
+  height: 86px;
   border-radius: 10px;
 }
 
@@ -7042,6 +7073,31 @@ body.traceconnect-body { background: var(--reference-page) !important; }
   border-radius: 10px;
   background: transparent;
   cursor: zoom-in;
+}
+
+.tc-root .production-theme-kancheepuram .production-fields,
+.tc-root .production-theme-mobile .production-fields {
+  display: contents;
+}
+
+.tc-root .production-theme-kancheepuram .production-fields .form-section-label,
+.tc-root .production-theme-mobile .production-fields .form-section-label,
+.tc-root .production-theme-kancheepuram .production-fields > .muted,
+.tc-root .production-theme-mobile .production-fields > .muted {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.tc-root .production-theme-kancheepuram .production-fields > .muted,
+.tc-root .production-theme-mobile .production-fields > .muted {
+  margin: 0 0 4px;
+  padding: 10px 14px;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  background: #f8fbff;
+  color: #52627a;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .tc-root .production-workspace .process-evidence-thumbnail:hover .process-entry-thumb {
@@ -7126,7 +7182,6 @@ body.traceconnect-body { background: var(--reference-page) !important; }
   font-size: 11px;
 }
 
-.tc-root .production-workspace .production-product-summary:hover,
 .tc-root .production-workspace .plantation-hero:hover,
 .tc-root .production-workspace .stage-progress-card:hover,
 .tc-root .production-workspace .stage-workspace-layout > .card:hover {
@@ -7175,6 +7230,18 @@ body.traceconnect-body { background: var(--reference-page) !important; }
   .tc-root .production-product-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 14px;
+  }
+
+  .tc-root .production-workspace .plantation-overview .plantation-hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .tc-root .production-workspace .plantation-overview .production-product-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 16px 0 0;
+    border-top: 1px solid #e8eef7;
+    border-left: 0;
   }
 
   .tc-root .production-product-summary > div + div {

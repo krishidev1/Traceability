@@ -32,6 +32,13 @@ function isKnownKancheepuramOrganisation(name) {
   return value.includes('kancheepuram') && value.includes('silk');
 }
 
+function kancheepuramGiMatch({ organisationName = '', fullName = '', profileLocation = '', district = '', state = '' } = {}) {
+  const value = [organisationName, fullName, profileLocation, district, state]
+    .join(' ').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  return /kancheepuram|kanchipuram|kancheeuram/.test(value)
+    && /silk|silks|handloom|weaver|weavers|saree|cooperative|coop/.test(value);
+}
+
 function validPhone(phone) {
   return /^\+?[1-9]\d{9,14}$/.test(phone);
 }
@@ -157,6 +164,11 @@ async function ensureAuthSchema() {
           ADD COLUMN IF NOT EXISTS account_type character varying(50),
           ADD COLUMN IF NOT EXISTS organisation_name character varying(255),
           ADD COLUMN IF NOT EXISTS gi_registry_match boolean NOT NULL DEFAULT false,
+          ADD COLUMN IF NOT EXISTS is_gi_user boolean NOT NULL DEFAULT false,
+          ADD COLUMN IF NOT EXISTS gi_registry_match_reason character varying(80),
+          ADD COLUMN IF NOT EXISTS gi_registry_application_number character varying(120),
+          ADD COLUMN IF NOT EXISTS gi_registry_name character varying(220),
+          ADD COLUMN IF NOT EXISTS gi_registry_goods character varying(120),
           ADD COLUMN IF NOT EXISTS profile_image text,
           ADD COLUMN IF NOT EXISTS company_logo text,
           ADD COLUMN IF NOT EXISTS video_url text,
@@ -239,6 +251,15 @@ function userSelectSql(whereClause) {
       password_hash,
       COALESCE(role, account_type, 'grower') AS       role,
       account_type,
+      organisation_name,
+      gi_registry_match,
+      is_gi_user,
+      gi_registry_match_reason,
+      gi_registry_application_number,
+      gi_registry_name,
+      gi_registry_goods,
+      gi_registry_document_name,
+      gi_registry_document IS NOT NULL AS has_gi_registry_document,
       profile_image,
       company_logo,
       profile_location,
@@ -281,6 +302,11 @@ async function insertUser(data) {
       account_type,
       organisation_name,
       gi_registry_match,
+      is_gi_user,
+      gi_registry_match_reason,
+      gi_registry_application_number,
+      gi_registry_name,
+      gi_registry_goods,
       role,
       full_name,
       mob,
@@ -310,9 +336,8 @@ async function insertUser(data) {
       verification_status
     )
     VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, TRUE, TRUE,
-      $13, $14, TRUE, $15, $16, NULL,
-      $17, $18, $19, $20, $21, $22, $23, $24,
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, TRUE, TRUE,
+      $18, $19, TRUE, $20, $21, NULL, $22, $23, $24, $25, $26, $27, $28, $29,
       FALSE, 'pending'
     )
     RETURNING
@@ -345,6 +370,11 @@ async function insertUser(data) {
       accountType,
       data.organisation_name || null,
       Boolean(data.gi_registry_match),
+      Boolean(data.is_gi_user),
+      data.gi_registry_match_reason || null,
+      data.gi_registry_application_number || null,
+      data.gi_registry_name || null,
+      data.gi_registry_goods || null,
       role,
       data.full_name,
       data.phone,
@@ -683,7 +713,12 @@ router.post('/signup', async (req, res, next) => {
       account_type: accountType,
       full_name: fullName,
       organisation_name: profileType === 'organisation' ? organisationName : null,
-      gi_registry_match: isKnownKancheepuramOrganisation(organisationName),
+      gi_registry_match: kancheepuramGiMatch({ organisationName, fullName, profileLocation, district, state }),
+      is_gi_user: kancheepuramGiMatch({ organisationName, fullName, profileLocation, district, state }),
+      gi_registry_match_reason: kancheepuramGiMatch({ organisationName, fullName, profileLocation, district, state }) ? 'Kancheepuram Silk registry match' : null,
+      gi_registry_application_number: kancheepuramGiMatch({ organisationName, fullName, profileLocation, district, state }) ? '15' : null,
+      gi_registry_name: kancheepuramGiMatch({ organisationName, fullName, profileLocation, district, state }) ? 'Kancheepuram Silk' : null,
+      gi_registry_goods: kancheepuramGiMatch({ organisationName, fullName, profileLocation, district, state }) ? 'Handicraft' : null,
       phone,
       email,
       password,

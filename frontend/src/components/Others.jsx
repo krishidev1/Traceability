@@ -8,11 +8,12 @@ import {
   FiCalendar, FiDroplet, FiVideo, FiCamera, FiCheck,
   FiX, FiMail, FiShield, FiStar, FiTrendingUp, FiGrid,
   FiUpload, FiAward, FiExternalLink, FiDownload, FiSun, FiAperture, FiLayers,
-  FiClipboard, FiInfo
+  FiClipboard, FiInfo, FiCpu
 } from "react-icons/fi";
 import "../styles/Others.css";
 import Navbar, { PublicNavbar } from "./Navbar";
-import { authApi, clearAuth, getApiUrl, getStoredAuth, storeAuth, traceabilityApi, setUnauthorizedCallback } from "../api/traceabilityApi";
+import { authApi, clearAuth, getStoredAuth, storeAuth, traceabilityApi, setUnauthorizedCallback } from "../api/traceabilityApi";
+import { TRACE_CONNECT_LOGO_SRC, delay } from "../utils/traceConnectConstants";
 import Home from "../pages/Home";
 import { AuthContext, useAuth, useRouter } from "../shared/AuthContext";
 import AuthEntryPage from "../pages/AuthPage";
@@ -28,9 +29,17 @@ import KotpadHandloomProductionFields, {
 } from "../pages/KotpadHandloomProduction";
 import KancheepuramSilkProductionFields, {
   KANCHEEPURAM_PRODUCTION_CONFIG,
+  KANCHEEPURAM_SECTIONS,
+  KANCHEEPURAM_SECTION_FIELDS,
   createKancheepuramInitialFields,
   buildKancheepuramDetails,
 } from "../pages/KancheepuramSilkProduction";
+import MobileRefurbishableProductionFields, {
+  createMobileRefurbishableInitialFields,
+  buildMobileRefurbishableDetails,
+  MOBILE_REFURBISHABLE_SECTIONS,
+  MOBILE_REFURBISHABLE_SECTION_FIELDS,
+} from "../pages/MobileRefurbishableProduction";
 import SambalpuriBandhaProductionFields, {
   SAMBALPURI_PRODUCTION_CONFIG,
   buildSambalpuriDetails,
@@ -51,9 +60,6 @@ import ShrimpProductionFields, {
 
 const DataContext = createContext(null);
 const TODAY = new Date().toISOString().split("T")[0];
-export const API_URL = getApiUrl();
-export const TRACE_CONNECT_LOGO_SRC = "/Traceconnect Logo.svg";
-export const TRACE_CONNECT_LOGO_TEXT_SRC = "/Traceconnect Logo Text.svg";
 const GI_LOGO_SRC = "/gi-logo.svg";
 const KOTPAD_GI_CERTIFICATE_PDF_SRC = "/kotpad-gi-certificate.pdf";
 const TRACE_CONNECT_VIDEO_LOGO_SRC = "/Traceconnect Logo - Whitebg.svg";
@@ -68,10 +74,6 @@ const VIDEO_GENERATOR_BASE_URL = (
 // video-generator is running in Docker/EC2, not on the visitor's machine.
 if (!import.meta.env.DEV && /localhost|127\.0\.0\.1/.test(VIDEO_GENERATOR_BASE_URL)) {
   throw new Error("Invalid production video-generator URL: configure VITE_VIDEO_GENERATOR_URL with a public HTTPS URL.");
-}
-
-export function delay(ms) {
-  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 export function LoadingIndicator({ label = "Loading..." }) {
@@ -1721,6 +1723,7 @@ const PRODUCTION_TYPE_CONFIG = {
   fish: { ...SHRIMP_PRODUCTION_CONFIG, value: "fish", label: "Fish Farming", badge: "Aquaculture", nameLabel: "Fish Farm Name", namePlaceholder: "e.g. Freshwater Fish Farm", locationLabel: "Farm Location", locationPlaceholder: "e.g. Chilika, Odisha" },
   vermicompost: { ...BEE_PRODUCTION_CONFIG, value: "vermicompost", label: "Vermicompost Cups", badge: "Organic Manures", nameLabel: "Vermicompost Unit Name", namePlaceholder: "e.g. Green Soil Unit", locationLabel: "Unit Location", locationPlaceholder: "e.g. Bhubaneswar, Odisha" },
   pesticides: { ...BEE_PRODUCTION_CONFIG, value: "pesticides", label: "Pesticides", badge: "Agriculture Inputs", nameLabel: "Input Unit Name", namePlaceholder: "e.g. Bio-inputs Unit", locationLabel: "Unit Location", locationPlaceholder: "e.g. Cuttack, Odisha" },
+  mobile_refurbishable: { value: "mobile_refurbishable", label: "Mobile Refurbishable", badge: "Mobile Refurbishable", themeClass: "production-theme-mobile", nameLabel: "Refurbishment Center Name", namePlaceholder: "e.g. TraceConnect Mobile Lab", locationLabel: "Center Location", locationPlaceholder: "Enter refurbishment center location", mode: "mobile_refurbishable", crop: "Mobile Device Passport", crops: "Mobile Device Passport", variety: "Device passport details", varietyPlaceholder: "Enter device passport details", startVerb: "Registered", itemTypeLabel: "Device Type", options: ["Smartphone"] , monitoring: MOBILE_REFURBISHABLE_SECTIONS },
 };
 const PRODUCTION_TYPE_ICONS = {
   kotpad_handloom: FiSun,
@@ -1731,6 +1734,7 @@ const PRODUCTION_TYPE_ICONS = {
   fish: FiDroplet,
   vermicompost: FiLayers,
   pesticides: FiLayers,
+  mobile_refurbishable: FiCpu,
 };
 
 function ProductionTypeMark({ type, size = 18 }) {
@@ -1749,6 +1753,13 @@ const PRODUCTION_CATEGORY_GROUPS = [
   { label: "Organic Manures", options: ["vermicompost"] },
   { label: "Apiculture", options: ["bee"] },
   { label: "Agriculture Inputs", options: ["pesticides"] },
+  { label: "Technology", options: ["mobile_refurbishable"] },
+];
+const MOBILE_LOCATION_SUGGESTIONS = [
+  "Bengaluru, Karnataka", "Chennai, Tamil Nadu", "Hyderabad, Telangana", "Mumbai, Maharashtra",
+  "Delhi, Delhi", "Noida, Uttar Pradesh", "Pune, Maharashtra", "Kolkata, West Bengal",
+  "Ahmedabad, Gujarat", "Coimbatore, Tamil Nadu", "Bhubaneswar, Odisha", "Visakhapatnam, Andhra Pradesh",
+  "Kochi, Kerala", "Jaipur, Rajasthan", "Lucknow, Uttar Pradesh", "Gurugram, Haryana",
 ];
 const PRODUCTION_ID_CODES = {
   kotpad_handloom: ["HND", "KT"],
@@ -1759,6 +1770,7 @@ const PRODUCTION_ID_CODES = {
   bee: ["APE", "HO"],
   vermicompost: ["OPM", "VER"],
   pesticides: ["AGI", "PE"],
+  mobile_refurbishable: ["TEC", "MOB"],
 };
 function getProductionUnitId(type, sequence) {
   const [category, subtype] = PRODUCTION_ID_CODES[normalizeProductionType(type)] || ["PRD", "GN"];
@@ -1773,6 +1785,7 @@ const PRODUCTION_FIELD_COMPONENTS = {
   fish: ShrimpProductionFields,
   vermicompost: BeeProductionFields,
   pesticides: BeeProductionFields,
+  mobile_refurbishable: MobileRefurbishableProductionFields,
 };
 const PRODUCTION_INITIAL_FIELDS = {
   kotpad_handloom: createKotpadInitialFields,
@@ -1783,6 +1796,7 @@ const PRODUCTION_INITIAL_FIELDS = {
   fish: createShrimpInitialFields,
   vermicompost: createBeeInitialFields,
   pesticides: createBeeInitialFields,
+  mobile_refurbishable: createMobileRefurbishableInitialFields,
 };
 const PRODUCTION_DETAIL_BUILDERS = {
   kotpad_handloom: buildKotpadDetails,
@@ -1793,6 +1807,7 @@ const PRODUCTION_DETAIL_BUILDERS = {
   fish: buildShrimpDetails,
   vermicompost: buildBeeDetails,
   pesticides: buildBeeDetails,
+  mobile_refurbishable: buildMobileRefurbishableDetails,
 };
 const PRODUCTION_RECORD_BUILDERS = {
   sambalpuri_bandha: buildSambalpuriProductPayload,
@@ -1955,44 +1970,7 @@ function useConfirm() {
   return { confirm, dialog };
 }
 
-export const INDIA_STATE_DISTRICTS = {
-  "Andaman and Nicobar Islands": ["Nicobar", "North and Middle Andaman", "South Andaman"],
-  "Andhra Pradesh": ["Alluri Sitharama Raju", "Anakapalli", "Ananthapuramu", "Annamayya", "Bapatla", "Chittoor", "Dr. B.R. Ambedkar Konaseema", "East Godavari", "Eluru", "Guntur", "Kakinada", "Krishna", "Kurnool", "Nandyal", "NTR", "Palnadu", "Parvathipuram Manyam", "Prakasam", "Sri Potti Sriramulu Nellore", "Sri Sathya Sai", "Srikakulam", "Tirupati", "Visakhapatnam", "Vizianagaram", "West Godavari", "YSR"],
-  "Arunachal Pradesh": ["Anjaw", "Changlang", "Dibang Valley", "East Kameng", "East Siang", "Kamle", "Kra Daadi", "Kurung Kumey", "Lepa Rada", "Lohit", "Longding", "Lower Dibang Valley", "Lower Siang", "Lower Subansiri", "Namsai", "Pakke-Kessang", "Papum Pare", "Shi Yomi", "Siang", "Tawang", "Tirap", "Upper Siang", "Upper Subansiri", "West Kameng", "West Siang"],
-  Assam: ["Bajali", "Baksa", "Barpeta", "Biswanath", "Bongaigaon", "Cachar", "Charaideo", "Chirang", "Darrang", "Dhemaji", "Dhubri", "Dibrugarh", "Dima Hasao", "Goalpara", "Golaghat", "Hailakandi", "Hojai", "Jorhat", "Kamrup", "Kamrup Metropolitan", "Karbi Anglong", "Karimganj", "Kokrajhar", "Lakhimpur", "Majuli", "Morigaon", "Nagaon", "Nalbari", "Sivasagar", "Sonitpur", "South Salmara-Mankachar", "Tamulpur", "Tinsukia", "Udalguri", "West Karbi Anglong"],
-  Bihar: ["Araria", "Arwal", "Aurangabad", "Banka", "Begusarai", "Bhagalpur", "Bhojpur", "Buxar", "Darbhanga", "East Champaran", "Gaya", "Gopalganj", "Jamui", "Jehanabad", "Kaimur", "Katihar", "Khagaria", "Kishanganj", "Lakhisarai", "Madhepura", "Madhubani", "Munger", "Muzaffarpur", "Nalanda", "Nawada", "Patna", "Purnia", "Rohtas", "Saharsa", "Samastipur", "Saran", "Sheikhpura", "Sheohar", "Sitamarhi", "Siwan", "Supaul", "Vaishali", "West Champaran"],
-  Chandigarh: ["Chandigarh"],
-  Chhattisgarh: ["Balod", "Baloda Bazar", "Balrampur", "Bastar", "Bemetara", "Bijapur", "Bilaspur", "Dantewada", "Dhamtari", "Durg", "Gariaband", "Gaurela-Pendra-Marwahi", "Janjgir-Champa", "Jashpur", "Kabirdham", "Kanker", "Khairagarh-Chhuikhadan-Gandai", "Kondagaon", "Korba", "Korea", "Mahasamund", "Manendragarh-Chirmiri-Bharatpur", "Mohla-Manpur-Ambagarh Chowki", "Mungeli", "Narayanpur", "Raigarh", "Raipur", "Rajnandgaon", "Sakti", "Sarangarh-Bilaigarh", "Sukma", "Surajpur", "Surguja"],
-  "Dadra and Nagar Haveli and Daman and Diu": ["Dadra and Nagar Haveli", "Daman", "Diu"],
-  Delhi: ["Central Delhi", "East Delhi", "New Delhi", "North Delhi", "North East Delhi", "North West Delhi", "Shahdara", "South Delhi", "South East Delhi", "South West Delhi", "West Delhi"],
-  Goa: ["North Goa", "South Goa"],
-  Gujarat: ["Ahmedabad", "Amreli", "Anand", "Aravalli", "Banaskantha", "Bharuch", "Bhavnagar", "Botad", "Chhota Udaipur", "Dahod", "Dang", "Devbhoomi Dwarka", "Gandhinagar", "Gir Somnath", "Jamnagar", "Junagadh", "Kheda", "Kutch", "Mahisagar", "Mehsana", "Morbi", "Narmada", "Navsari", "Panchmahal", "Patan", "Porbandar", "Rajkot", "Sabarkantha", "Surat", "Surendranagar", "Tapi", "Vadodara", "Valsad"],
-  Haryana: ["Ambala", "Bhiwani", "Charkhi Dadri", "Faridabad", "Fatehabad", "Gurugram", "Hisar", "Jhajjar", "Jind", "Kaithal", "Karnal", "Kurukshetra", "Mahendragarh", "Nuh", "Palwal", "Panchkula", "Panipat", "Rewari", "Rohtak", "Sirsa", "Sonipat", "Yamunanagar"],
-  "Himachal Pradesh": ["Bilaspur", "Chamba", "Hamirpur", "Kangra", "Kinnaur", "Kullu", "Lahaul and Spiti", "Mandi", "Shimla", "Sirmaur", "Solan", "Una"],
-  "Jammu and Kashmir": ["Anantnag", "Bandipora", "Baramulla", "Budgam", "Doda", "Ganderbal", "Jammu", "Kathua", "Kishtwar", "Kulgam", "Kupwara", "Poonch", "Pulwama", "Rajouri", "Ramban", "Reasi", "Samba", "Shopian", "Srinagar", "Udhampur"],
-  Jharkhand: ["Bokaro", "Chatra", "Deoghar", "Dhanbad", "Dumka", "East Singhbhum", "Garhwa", "Giridih", "Godda", "Gumla", "Hazaribagh", "Jamtara", "Khunti", "Koderma", "Latehar", "Lohardaga", "Pakur", "Palamu", "Ramgarh", "Ranchi", "Sahibganj", "Seraikela Kharsawan", "Simdega", "West Singhbhum"],
-  Karnataka: ["Bagalkot", "Ballari", "Belagavi", "Bengaluru Rural", "Bengaluru Urban", "Bidar", "Chamarajanagar", "Chikkaballapur", "Chikkamagaluru", "Chitradurga", "Dakshina Kannada", "Davanagere", "Dharwad", "Gadag", "Hassan", "Haveri", "Kalaburagi", "Kodagu", "Kolar", "Koppal", "Mandya", "Mysuru", "Raichur", "Ramanagara", "Shivamogga", "Tumakuru", "Udupi", "Uttara Kannada", "Vijayapura", "Vijayanagara", "Yadgir"],
-  Kerala: ["Alappuzha", "Ernakulam", "Idukki", "Kannur", "Kasaragod", "Kollam", "Kottayam", "Kozhikode", "Malappuram", "Palakkad", "Pathanamthitta", "Thiruvananthapuram", "Thrissur", "Wayanad"],
-  Ladakh: ["Kargil", "Leh"],
-  Lakshadweep: ["Lakshadweep"],
-  "Madhya Pradesh": ["Agar Malwa", "Alirajpur", "Anuppur", "Ashoknagar", "Balaghat", "Barwani", "Betul", "Bhind", "Bhopal", "Burhanpur", "Chhatarpur", "Chhindwara", "Damoh", "Datia", "Dewas", "Dhar", "Dindori", "Guna", "Gwalior", "Harda", "Indore", "Jabalpur", "Jhabua", "Katni", "Khandwa", "Khargone", "Maihar", "Mandla", "Mandsaur", "Mauganj", "Morena", "Narmadapuram", "Narsinghpur", "Neemuch", "Niwari", "Pandhurna", "Panna", "Raisen", "Rajgarh", "Ratlam", "Rewa", "Sagar", "Satna", "Sehore", "Seoni", "Shahdol", "Shajapur", "Sheopur", "Shivpuri", "Sidhi", "Singrauli", "Tikamgarh", "Ujjain", "Umaria", "Vidisha"],
-  Maharashtra: ["Ahmednagar", "Akola", "Amravati", "Beed", "Bhandara", "Buldhana", "Chandrapur", "Chhatrapati Sambhajinagar", "Dhule", "Dharashiv", "Gadchiroli", "Gondia", "Hingoli", "Jalgaon", "Jalna", "Kolhapur", "Latur", "Mumbai City", "Mumbai Suburban", "Nagpur", "Nanded", "Nandurbar", "Nashik", "Palghar", "Parbhani", "Pune", "Raigad", "Ratnagiri", "Sangli", "Satara", "Sindhudurg", "Solapur", "Thane", "Wardha", "Washim", "Yavatmal"],
-  Manipur: ["Bishnupur", "Chandel", "Churachandpur", "Imphal East", "Imphal West", "Jiribam", "Kakching", "Kamjong", "Kangpokpi", "Noney", "Pherzawl", "Senapati", "Tamenglong", "Tengnoupal", "Thoubal", "Ukhrul"],
-  Meghalaya: ["East Garo Hills", "East Jaintia Hills", "East Khasi Hills", "Eastern West Khasi Hills", "North Garo Hills", "Ri Bhoi", "South Garo Hills", "South West Garo Hills", "South West Khasi Hills", "West Garo Hills", "West Jaintia Hills", "West Khasi Hills"],
-  Mizoram: ["Aizawl", "Champhai", "Hnahthial", "Khawzawl", "Kolasib", "Lawngtlai", "Lunglei", "Mamit", "Saitual", "Serchhip", "Siaha"],
-  Nagaland: ["Chumoukedima", "Dimapur", "Kiphire", "Kohima", "Longleng", "Mokokchung", "Mon", "Niuland", "Noklak", "Peren", "Phek", "Shamator", "Tseminyu", "Tuensang", "Wokha", "Zunheboto"],
-  Odisha: ["Angul", "Balangir", "Balasore", "Bargarh", "Bhadrak", "Boudh", "Cuttack", "Deogarh", "Dhenkanal", "Gajapati", "Ganjam", "Jagatsinghpur", "Jajpur", "Jharsuguda", "Kalahandi", "Kandhamal", "Kendrapara", "Keonjhar", "Khordha", "Koraput", "Malkangiri", "Mayurbhanj", "Nabarangpur", "Nayagarh", "Nuapada", "Puri", "Rayagada", "Sambalpur", "Subarnapur", "Sundargarh"],
-  Puducherry: ["Karaikal", "Mahe", "Puducherry", "Yanam"],
-  Punjab: ["Amritsar", "Barnala", "Bathinda", "Faridkot", "Fatehgarh Sahib", "Fazilka", "Ferozepur", "Gurdaspur", "Hoshiarpur", "Jalandhar", "Kapurthala", "Ludhiana", "Malerkotla", "Mansa", "Moga", "Pathankot", "Patiala", "Rupnagar", "Sahibzada Ajit Singh Nagar", "Sangrur", "Shaheed Bhagat Singh Nagar", "Sri Muktsar Sahib", "Tarn Taran"],
-  Rajasthan: ["Ajmer", "Alwar", "Anupgarh", "Balotra", "Banswara", "Baran", "Barmer", "Beawar", "Bharatpur", "Bhilwara", "Bikaner", "Bundi", "Chittorgarh", "Churu", "Dausa", "Deeg", "Didwana-Kuchaman", "Dholpur", "Dudu", "Dungarpur", "Gangapur City", "Hanumangarh", "Jaipur", "Jaipur Rural", "Jaisalmer", "Jalore", "Jhalawar", "Jhunjhunu", "Jodhpur", "Jodhpur Rural", "Karauli", "Kekri", "Khairthal-Tijara", "Kota", "Kotputli-Behror", "Nagaur", "Neem Ka Thana", "Pali", "Phalodi", "Pratapgarh", "Rajsamand", "Salumbar", "Sanchore", "Sawai Madhopur", "Shahpura", "Sikar", "Sirohi", "Sri Ganganagar", "Tonk", "Udaipur"],
-  Sikkim: ["Gangtok", "Gyalshing", "Mangan", "Namchi", "Pakyong", "Soreng"],
-  "Tamil Nadu": ["Ariyalur", "Chengalpattu", "Chennai", "Coimbatore", "Cuddalore", "Dharmapuri", "Dindigul", "Erode", "Kallakurichi", "Kancheepuram", "Kanniyakumari", "Karur", "Krishnagiri", "Madurai", "Mayiladuthurai", "Nagapattinam", "Namakkal", "Nilgiris", "Perambalur", "Pudukkottai", "Ramanathapuram", "Ranipet", "Salem", "Sivaganga", "Tenkasi", "Thanjavur", "Theni", "Thoothukudi", "Tiruchirappalli", "Tirunelveli", "Tirupathur", "Tiruppur", "Tiruvallur", "Tiruvannamalai", "Tiruvarur", "Vellore", "Viluppuram", "Virudhunagar"],
-  Telangana: ["Adilabad", "Bhadradri Kothagudem", "Hanumakonda", "Hyderabad", "Jagtial", "Jangaon", "Jayashankar Bhupalpally", "Jogulamba Gadwal", "Kamareddy", "Karimnagar", "Khammam", "Komaram Bheem Asifabad", "Mahabubabad", "Mahabubnagar", "Mancherial", "Medak", "Medchal-Malkajgiri", "Mulugu", "Nagarkurnool", "Nalgonda", "Narayanpet", "Nirmal", "Nizamabad", "Peddapalli", "Rajanna Sircilla", "Rangareddy", "Sangareddy", "Siddipet", "Suryapet", "Vikarabad", "Wanaparthy", "Warangal", "Yadadri Bhuvanagiri"],
-  Tripura: ["Dhalai", "Gomati", "Khowai", "North Tripura", "Sepahijala", "South Tripura", "Unakoti", "West Tripura"],
-  "Uttar Pradesh": ["Agra", "Aligarh", "Ambedkar Nagar", "Amethi", "Amroha", "Auraiya", "Ayodhya", "Azamgarh", "Baghpat", "Bahraich", "Ballia", "Balrampur", "Banda", "Barabanki", "Bareilly", "Basti", "Bijnor", "Budaun", "Bulandshahr", "Chandauli", "Chitrakoot", "Deoria", "Etah", "Etawah", "Farrukhabad", "Fatehpur", "Firozabad", "Gautam Buddha Nagar", "Ghaziabad", "Ghazipur", "Gonda", "Gorakhpur", "Hamirpur", "Hapur", "Hardoi", "Hathras", "Jalaun", "Jaunpur", "Jhansi", "Kannauj", "Kanpur Dehat", "Kanpur Nagar", "Kasganj", "Kaushambi", "Kheri", "Kushinagar", "Lalitpur", "Lucknow", "Maharajganj", "Mahoba", "Mainpuri", "Mathura", "Mau", "Meerut", "Mirzapur", "Moradabad", "Muzaffarnagar", "Pilibhit", "Pratapgarh", "Prayagraj", "Rae Bareli", "Rampur", "Saharanpur", "Sambhal", "Sant Kabir Nagar", "Shahjahanpur", "Shamli", "Shravasti", "Siddharthnagar", "Sitapur", "Sonbhadra", "Sultanpur", "Unnao", "Varanasi"],
-  Uttarakhand: ["Almora", "Bageshwar", "Chamoli", "Champawat", "Dehradun", "Haridwar", "Nainital", "Pauri Garhwal", "Pithoragarh", "Rudraprayag", "Tehri Garhwal", "Udham Singh Nagar", "Uttarkashi"],
-  "West Bengal": ["Alipurduar", "Bankura", "Birbhum", "Cooch Behar", "Dakshin Dinajpur", "Darjeeling", "Hooghly", "Howrah", "Jalpaiguri", "Jhargram", "Kalimpong", "Kolkata", "Malda", "Murshidabad", "Nadia", "North 24 Parganas", "Paschim Bardhaman", "Paschim Medinipur", "Purba Bardhaman", "Purba Medinipur", "Purulia", "South 24 Parganas", "Uttar Dinajpur"],
-};
+
 
 function Header({ route, navigate, toast }) {
   const { user, signOut } = useAuth();
@@ -2380,9 +2358,15 @@ function GrowerDashboard({ navigate, toast }) {
                   <input
                     className="input"
                     placeholder={selectedProduction.locationPlaceholder}
+                    list={form.type === "mobile_refurbishable" ? "mobile-refurbishable-locations" : undefined}
                     value={form.location}
                     onChange={(e) => setForm((current) => ({ ...current, location: e.target.value }))}
                   />
+                  {form.type === "mobile_refurbishable" && (
+                    <datalist id="mobile-refurbishable-locations">
+                      {MOBILE_LOCATION_SUGGESTIONS.map((location) => <option key={location} value={location} />)}
+                    </datalist>
+                  )}
                   {form.type === "kotpad_handloom" && <span className="production-location-hint">Enter Koraput, Odisha. The unit location is not copied from your profile.</span>}
                   {form.type === "sambalpuri_bandha" && <span className="production-location-hint">Use an associated Odisha district such as Bargarh or Sambalpur.</span>}
                 </div>
@@ -2617,9 +2601,16 @@ function PlantationDetail({ plantationId, toast }) {
     .sort((a, b) => Number(a.id) - Number(b.id))
     .findIndex((unit) => Number(unit.id) === plantationIdNum) + 1;
   const productionUnitId = getProductionUnitId(plantation.type, productionSequence || 1);
-    const isKotpad = L.mode === "kotpad_handloom" || L.mode === "kancheepuram_silk";
+  const isKotpad = L.mode === "kotpad_handloom" || L.mode === "kancheepuram_silk" || L.mode === "mobile_refurbishable";
+  const isKancheepuram = L.mode === "kancheepuram_silk";
   const isBee = L.mode === "bee";
   const isTextile = ["kotpad_handloom", "sambalpuri_bandha"].includes(L.mode);
+  const kotpadStatusNames = ["Production Unit Registration", "Producer / Weaver Details", "Raw Material Details", "Weaving & Production Details", "Batch Identity & Verification", "Product & Marketplace Details"];
+  const productionSectionNames = isKancheepuram
+    ? KANCHEEPURAM_SECTIONS
+    : L.mode === "mobile_refurbishable"
+      ? MOBILE_REFURBISHABLE_SECTIONS
+      : kotpadStatusNames;
   const names = isBee ? BEE_SECTION_NAMES : [L.crops, "Monitoring", "Verification", isTextile ? "Production Completion" : "Harvest", "Packing"];
   const hasGiRegistryDocument = Boolean(user?.has_gi_registry_document || user?.gi_registry_document || user?.gi_registry_document_name);
   const beeSectionComplete = (index) => beeSavedSections.includes(index);
@@ -2634,14 +2625,26 @@ function PlantationDetail({ plantationId, toast }) {
   const allStagesComplete = completedStages === totalStages;
   const progressPercent = Math.round((completedStages / totalStages) * 100);
   const showTraceabilityVideo = isKotpad
-    ? step === 0 && kotpadSection === 5 && pCrops.length > 0
-    : step === 4 && allStagesComplete;
+    ? step === 0 && pCrops.length > 0
+    : (isBee ? step === 0 && pCrops.length > 0 : [pCrops, pMon, pVer, pHar, pPack][step]?.length > 0);
   const stageRecords = isBee ? names.map(() => pCrops) : [pCrops, pMon, pVer, pHar, pPack];
-  const kotpadStatusNames = ["Production Unit Registration", "Producer / Weaver Details", "Raw Material Details", "Weaving & Production Details", "Batch Identity & Verification", "Product & Marketplace Details"];
-  const statusNames = isKotpad ? kotpadStatusNames : names;
-  const statusRecords = isKotpad
-    ? kotpadStatusNames.map((name, index) => (index === 0 || kotpadSavedSections.includes(index) ? [{ section: name, status: "Saved" }] : []))
-    : stageRecords;
+  const sectionFields = isKancheepuram
+    ? KANCHEEPURAM_SECTION_FIELDS
+    : L.mode === "mobile_refurbishable"
+      ? MOBILE_REFURBISHABLE_SECTION_FIELDS
+      : null;
+  const sectionStatusRecords = sectionFields
+    ? sectionFields.map(([, fields]) => pCrops.map((crop) => {
+      const details = parseDetailsText(crop.variety).details;
+      return Object.fromEntries(fields
+        .map(([, key]) => [key, details.get(key)])
+        .filter(([, value]) => value !== undefined && value !== null && value !== ""));
+    }).filter((record) => Object.keys(record).length > 0))
+    : null;
+  const statusNames = sectionFields ? sectionFields.map(([name]) => name) : isKotpad ? kotpadStatusNames : names;
+  const statusRecords = sectionStatusRecords || (isKotpad
+    ? kotpadStatusNames.map((name, index) => (index === 0 || kotpadSavedSections.includes(index) ? pCrops : []))
+    : stageRecords);
   const openStep = (i) => {
     if (!unlocked[i]) {
       toast(`Complete ${names[i - 1]} first`, "error");
@@ -2678,6 +2681,7 @@ function PlantationDetail({ plantationId, toast }) {
       <button className="btn-back-minimal" onClick={() => navigate("/grower")}>
         <FiArrowLeft /> Back to Dashboard
       </button>
+      <div className="plantation-overview">
       <div className="plantation-hero">
         <div className="plantation-hero-copy">
             <div className="plantation-kicker"><ProductionTypeMark type={plantation.type} size={16} /> {L.label} - Production Workspace</div>
@@ -2687,25 +2691,26 @@ function PlantationDetail({ plantationId, toast }) {
             <span className="status-chip active"><FiCheckCircle /> Active</span>
           </div>
         </div>
-      </div>
 
-      <div className="production-product-summary">
-        <div className="production-summary-primary">
-          <span>Production unit</span>
-          <strong>{plantation.name}</strong>
+        <div className="production-product-summary">
+          <div className="production-summary-primary">
+            <span>Production unit</span>
+            <strong>{plantation.name}</strong>
+          </div>
+          <div>
+            <span>Location</span>
+            <strong>{plantation.location || "Not provided"}</strong>
+          </div>
+          <div>
+            <span>{L.crop} records</span>
+            <strong>{pCrops.length} registered</strong>
+          </div>
+          <div>
+            <span>{isKotpad ? "Section progress" : "Active stage"}</span>
+            <strong>{isKotpad ? `${L.label} sections` : `${String(step + 1).padStart(2, "0")} · ${names[step]}`}</strong>
+          </div>
         </div>
-        <div>
-          <span>Location</span>
-          <strong>{plantation.location || "Not provided"}</strong>
-        </div>
-        <div>
-          <span>{L.crop} records</span>
-          <strong>{pCrops.length} registered</strong>
-        </div>
-        <div>
-          <span>{isKotpad ? "Section progress" : "Active stage"}</span>
-          <strong>{isKotpad ? `${L.label} sections` : `${String(step + 1).padStart(2, "0")} · ${names[step]}`}</strong>
-        </div>
+      </div>
       </div>
 
       {!isKotpad && <div className={`stage-progress-card ${allStagesComplete ? "complete" : ""}`}>
@@ -2883,7 +2888,7 @@ function PlantationDetail({ plantationId, toast }) {
 
       </div>
 
-      {(!isKotpad || kotpadSection < 5) && <div className="stage-workspace-actions">
+      <div className="stage-workspace-actions">
         <button
           className="btn btn-outline"
           type="button"
@@ -2910,21 +2915,21 @@ function PlantationDetail({ plantationId, toast }) {
             className="btn btn-primary stage-continue"
             type="button"
             onClick={() => {
-              if (isKotpad && step === 0 && kotpadSection < 5) {
+              if (isKotpad && step === 0 && kotpadSection < productionSectionNames.length - 1) {
                 setKotpadSection((current) => current + 1);
                 return;
               }
               openStep(step + 1);
             }}
-            disabled={isKotpad && step === 0 ? kotpadSection === 5 && !done[step] : !done[step]}
+            disabled={isKotpad && step === 0 ? kotpadSection === productionSectionNames.length - 1 && !done[step] : !done[step]}
             title={isKotpad && step === 0
-              ? kotpadSection === 5 && !done[step] ? `Save ${names[step].toLowerCase()} to continue` : `Continue to ${["Producer / Weaver Details", "Raw Material Details", "Weaving & Production Details", "Batch Identity & Verification", "Product & Marketplace Details"][kotpadSection]}`
+              ? kotpadSection === productionSectionNames.length - 1 && !done[step] ? `Save ${names[step].toLowerCase()} to continue` : `Continue to ${productionSectionNames[kotpadSection + 1] || productionSectionNames[kotpadSection]}`
               : !done[step] ? `Save a ${names[step].toLowerCase()} record to continue` : undefined}
           >
             Continue <FiArrowRight />
           </button>
         )}
-      </div>}
+      </div>
 
       {showTraceabilityVideo && (
         <section className="card video-card production-video-card">
@@ -2944,11 +2949,6 @@ function PlantationDetail({ plantationId, toast }) {
             <button className="btn btn-primary production-video-generate" onClick={generatePlantationVideo} disabled={videoBusy} type="button">
               {videoBusy ? <LoadingIndicator label={videoProgress || "Generating..."} /> : <><FiVideo /> Generate Video</>}
             </button>
-          )}
-          {user?.video_url && (
-            <div className="production-video-preview">
-              <video src={user.video_url} controls preload="metadata" aria-label={`${plantation.name} traceability video`} />
-            </div>
           )}
         </section>
       )}
@@ -3132,7 +3132,6 @@ function ProcessEntries({ stage, displayStage = stage, plantationId, location = 
             <div className="process-evidence-preview-caption">
               <strong>{previewEntry.name}</strong>
               <span>{previewEntry.date || "Date not recorded"} · {displayStage}</span>
-              <small>Location information is embedded in the evidence image when available.</small>
             </div>
           </div>
         </div>
@@ -3269,7 +3268,6 @@ function ProcessEntries({ stage, displayStage = stage, plantationId, location = 
                 <div className="process-entry-copy">
                   <div className="process-entry-title">{it.name}</div>
                   <div className="process-entry-date">{it.date || "Date not recorded"}</div>
-                  <span className="process-evidence-location"><FiMapPin /> Location information in image when available</span>
                 </div>
               </div>
               <div className="process-entry-actions">
@@ -3642,15 +3640,10 @@ function CropsStep({ L, activeSection, setActiveSection, plantationName, plantat
   }, [isBee, pCrops, plantationId, setF]);
   const isKotpad = mode === "kotpad_handloom" || mode === "kancheepuram_silk";
   const isKancheepuram = mode === "kancheepuram_silk";
+  const isMobileRefurbishable = mode === "mobile_refurbishable";
+  const isSectionedProduction = isKotpad || isMobileRefurbishable;
   const kotpadSections = [
-    ...(isKancheepuram ? [
-      "Mulberry Cultivation & Farm Information",
-      "Silkworm Rearing & Monitoring",
-      "Cocoon Harvesting & Collection",
-      "Cocoon Sorting, Testing & Silk Reeling",
-      "Raw Silk Procurement & Yarn Dyeing",
-      "Design, Weaving, GI & Product Distribution",
-    ] : [
+    ...(isMobileRefurbishable ? MOBILE_REFURBISHABLE_SECTIONS : isKancheepuram ? KANCHEEPURAM_SECTIONS : [
       "Production Unit Registration",
       "Producer / Weaver Details",
       "Raw Material Details",
@@ -3664,8 +3657,8 @@ function CropsStep({ L, activeSection, setActiveSection, plantationName, plantat
   });
   const saveSection = async () => {
     const selectedProductType = f.name === "Other" ? f.customName : f.name;
-    const name = selectedProductType || (isKancheepuram ? "Kancheepuram Silk Batch" : isKotpad ? "Kotpad Fabric Batch" : isBee ? "Honey Production" : "");
-    if (isKotpad) {
+    const name = selectedProductType || (isMobileRefurbishable ? "Mobile Device Passport" : isKancheepuram ? "Kancheepuram Silk Batch" : isKotpad ? "Kotpad Fabric Batch" : isBee ? "Honey Production" : "");
+    if (isSectionedProduction) {
       const requiredBySection = isKancheepuram ? {} : {
         1: ["weaverName", "weaverId", "organizationType", ...(f.organizationType === "Other" ? ["organizationName"] : []), "contactNumber", "address"],
         2: ["fabricType", "yarnSource", "naturalDyeUsed"],
@@ -3689,7 +3682,7 @@ function CropsStep({ L, activeSection, setActiveSection, plantationName, plantat
         return;
       }
     }
-    const typeDetails = isKotpad
+    const typeDetails = isSectionedProduction
       ? buildTypeDetails({
           ...f,
           productType: selectedProductType,
@@ -3701,11 +3694,11 @@ function CropsStep({ L, activeSection, setActiveSection, plantationName, plantat
         })
       : buildTypeDetails(f);
     const variety = mergeDetails(f.variety || (isKotpad ? selectedProductType : ""), typeDetails);
-    if (isKotpad && f.expectedHarvest && f.sowingDate && f.expectedHarvest < f.sowingDate) {
+    if (isSectionedProduction && f.expectedHarvest && f.sowingDate && f.expectedHarvest < f.sowingDate) {
       toast("Production completion date cannot be before the start date", "error");
       return;
     }
-    if (!name || (!isKotpad && !isBee && (!f.variety || !f.sowingDate))) return;
+    if (!name || (!isSectionedProduction && !isBee && (!f.variety || !f.sowingDate))) return;
     const payload = {
       plantationId,
       name,
@@ -3715,12 +3708,12 @@ function CropsStep({ L, activeSection, setActiveSection, plantationName, plantat
       productionType: mode,
       sambalpuri: buildTypeRecord ? buildTypeRecord(f, { name, variety }) : undefined,
     };
-    const request = (isKotpad || isBee) && pCrops[0]?.id
+    const request = (isSectionedProduction || isBee) && pCrops[0]?.id
       ? updateCrop(pCrops[0].id, payload)
       : addCrop(payload);
     void request
       .then(() => {
-        if (isKotpad) {
+        if (isSectionedProduction) {
           const next = Array.from(new Set([...savedSections, activeSection]));
           setSavedSections(next);
           onSectionSaved?.(activeSection);
@@ -3748,7 +3741,7 @@ function CropsStep({ L, activeSection, setActiveSection, plantationName, plantat
   return (
     <>
       <WorkflowSection title={isKotpad ? `Section ${activeSection + 1} — ${kotpadSections[activeSection]}` : isBee ? BEE_SECTION_NAMES[beeSection] : `Register ${L.crop}`}>
-        {isKotpad && !isBee && (
+        {isSectionedProduction && !isBee && (
           <div className="kotpad-section-progress" aria-label="Kotpad section progress">
             {kotpadSections.map((section, index) => (
               <button
@@ -3765,20 +3758,20 @@ function CropsStep({ L, activeSection, setActiveSection, plantationName, plantat
           </div>
         )}
         <div className={`form-grid ${mode === "kotpad_handloom" ? "kotpad-form-grid" : ""} ${mode === "sambalpuri_bandha" ? "sambalpuri-form-grid" : ""}`}>
-          {!isKotpad && !isBee && <div className="field-wrap">
+          {!isSectionedProduction && !isBee && <div className="field-wrap">
             <label className="field-label">{L.itemTypeLabel || `${L.crop} Type`} *</label>
             <select className="input" value={f.name} onChange={(e) => setF((x) => ({ ...x, name: e.target.value }))}>
               <option value="">Select {L.crop}...</option>
               {L.options.map((o) => <option key={o}>{o}</option>)}
             </select>
           </div>}
-          {!isKotpad && !isBee && f.name === "Other" && (
+          {!isSectionedProduction && !isBee && f.name === "Other" && (
             <div className="field-wrap">
               <label className="field-label">Custom Name *</label>
               <input className="input" placeholder={`Enter custom ${L.crop.toLowerCase()} name`} value={f.customName} onChange={(e) => setF((x) => ({ ...x, customName: e.target.value }))} />
             </div>
           )}
-          {!isKotpad && !isBee && <div className="field-wrap">
+          {!isSectionedProduction && !isBee && <div className="field-wrap">
             <label className="field-label">{L.variety} *</label>
             <input className="input" placeholder={L.varietyPlaceholder || "Enter details"} value={f.variety} onChange={(e) => setF((x) => ({ ...x, variety: e.target.value }))} />
           </div>}
@@ -3797,7 +3790,7 @@ function CropsStep({ L, activeSection, setActiveSection, plantationName, plantat
             producerLocation={plantationLocation}
             productionId={productionId}
           />
-          {!isKotpad && !isBee && <div className="field-wrap">
+          {!isSectionedProduction && !isBee && <div className="field-wrap">
             <label className="field-label">{L.startDateLabel || "Start Date *"}</label>
             <input className="input" type="date" value={f.sowingDate} onChange={(e) => setF((x) => ({ ...x, sowingDate: e.target.value }))} />
           </div>}
@@ -3805,7 +3798,7 @@ function CropsStep({ L, activeSection, setActiveSection, plantationName, plantat
             <label className="field-label">{L.expectedDateLabel || "Expected Date"}</label>
             <input className="input" type="date" value={f.expectedHarvest} onChange={(e) => setF((x) => ({ ...x, expectedHarvest: e.target.value }))} />
           </div>}
-          {(isKotpad ? activeSection > 0 : true) && <div className="field-wrap field-btn-wrap">
+          {(isSectionedProduction ? (activeSection > 0 || isMobileRefurbishable || isKancheepuram) : true) && <div className="field-wrap field-btn-wrap">
             <button className="btn btn-primary" type="button" onClick={saveSection}><FiPlus /> Save</button>
           </div>}
         </div>
@@ -3834,10 +3827,10 @@ function CropsStep({ L, activeSection, setActiveSection, plantationName, plantat
         )}
       </WorkflowSection>
       <ProcessEntries
-        stage={isKotpad ? `${L.label} ${kotpadSections[activeSection]} Evidence` : isBee ? `${BEE_SECTION_NAMES[beeSection] || "Bee"} Evidence` : L.crops}
-        displayStage={isKotpad ? `${kotpadSections[activeSection]} Evidence` : isBee ? `${BEE_SECTION_NAMES[beeSection] || "Bee"} Evidence` : L.crops}
+        stage={isSectionedProduction ? `${L.label} ${kotpadSections[activeSection]} Evidence` : isBee ? `${BEE_SECTION_NAMES[beeSection] || "Bee"} Evidence` : L.crops}
+        displayStage={isSectionedProduction ? `${kotpadSections[activeSection]} Evidence` : isBee ? `${BEE_SECTION_NAMES[beeSection] || "Bee"} Evidence` : L.crops}
         location={plantationLocation}
-        enabled={isKotpad || pCrops.length > 0}
+        enabled={isSectionedProduction || pCrops.length > 0}
         plantationId={plantationId}
         pImgs={pImgs}
         addProcessImage={addProcessImage}
@@ -5444,7 +5437,20 @@ function TracePage({ patchId }) {
   const harvestRecord = firstPacking ? harvests.find((h) => h.id === firstPacking.harvestId) : null;
   const cropRecord = harvestRecord ? crops.find((c) => c.id === harvestRecord.cropId) : null;
   const plantation = firstPacking ? plantations.find((p) => p.id === firstPacking.plantationId) : null;
-  const isShrimp = false;
+  const productionType = normalizeProductionType(plantation?.type || plantation?.productionType);
+  const traceSectionFields = productionType === "kancheepuram_silk"
+    ? KANCHEEPURAM_SECTION_FIELDS
+    : productionType === "mobile_refurbishable"
+      ? MOBILE_REFURBISHABLE_SECTION_FIELDS
+      : null;
+  const traceDetails = parseDetailsText(cropRecord?.variety).details;
+  const productionSections = traceSectionFields
+    ? traceSectionFields.map(([name, fields]) => ({
+      name,
+      rows: fields.map(([label, key]) => [label, traceDetails.get(key)]).filter(([, value]) => value !== undefined && value !== null && value !== ""),
+    })).filter((section) => section.rows.length)
+    : [{ name: `${getProductionTypeConfig(productionType)?.label || "Production"} Details`, rows: Array.from(traceDetails.entries()).map(([key, value]) => [formatStatusKey(key), value]) }].filter((section) => section.rows.length);
+  const isShrimp = productionType === "shrimp";
 
   const growerRecord = plantation ? growers.find((g) => g.id === plantation.userId) : null;
   const growerProcessImages = plantation
@@ -5519,8 +5525,8 @@ function TracePage({ patchId }) {
         <div className="trace-hero-img">
           <div className="trace-hero-overlay">
             <div className="trace-verified-pill"><FiShield /> TraceConnect Verified Batch</div>
-            <h2 className="trace-product-name">{cropRecord?.name || "Agricultural Product"}</h2>
-            <p className="trace-product-subtitle">Farm to batch traceability record</p>
+            <h2 className="trace-product-name">{cropRecord?.name || getProductionTypeConfig(productionType)?.label || "Traceable Product"}</h2>
+            <p className="trace-product-subtitle">{productionType === "mobile_refurbishable" ? "Mobile digital product passport" : productionType === "kancheepuram_silk" ? "Kancheepuram Silk Saree traceability record" : "Production to batch traceability record"}</p>
           </div>
           <div className="trace-info-bar">
             <div className="trace-info-item"><span className="amber-dot">&#8226;</span><span>Variety</span><strong>{formatVarietyText(cropRecord?.variety)}</strong></div>
@@ -5532,12 +5538,12 @@ function TracePage({ patchId }) {
       </div>
 
       <div className="trace-card trace-farmer-card">
-        <div className="trace-section-header">Farmer Information</div>
+        <div className="trace-section-header">Producer Information</div>
         <div className="farmer-row">
           <div className="farmer-avatar">{isShrimp ? "AQ" : "FM"}</div>
           <div>
             <div className="farmer-name">{plantation?.name || "Unknown Farm"}</div>
-            <div className="farmer-sub">{isShrimp ? "Aquaculture Farm" : "Organic Farming Cooperative"}</div>
+            <div className="farmer-sub">{getProductionTypeConfig(productionType)?.label || "Traceable Producer"}</div>
             <div className="farmer-badges">
               <span className="badge badge-green">{isShrimp ? "MPEDA Registered" : "Certified Organic Farmer"}</span>
               <span className="badge badge-blue">{isShrimp ? "Aquaculture Expert" : "Experienced Farmer"}</span>
@@ -5547,7 +5553,7 @@ function TracePage({ patchId }) {
       </div>
 
       <div className="trace-card trace-location-card">
-        <div className="trace-section-header">Farm Location</div>
+        <div className="trace-section-header">Production Location</div>
         <div className="location-row">
           <div>
             <div className="location-name">{plantation?.location || "-"}</div>
@@ -5590,6 +5596,25 @@ function TracePage({ patchId }) {
           ))}
         </div>
       </div>
+
+      {productionSections.length > 0 && (
+        <div className="trace-card trace-production-details-card">
+          <div className="trace-section-header">{getProductionTypeConfig(productionType)?.label || "Production"} Traceability Details</div>
+          {productionSections.map((section) => (
+            <div className="trace-production-section" key={section.name}>
+              <h3>{section.name}</h3>
+              <div className="stage-response-table">
+                {section.rows.map(([label, value]) => (
+                  <div className="stage-response-table-row" key={label}>
+                    <span>{label}</span>
+                    <strong>{formatStatusValue(value)}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="trace-card trace-cert-card">
         <div className="trace-section-header">Certifications</div>

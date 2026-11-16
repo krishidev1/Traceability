@@ -10,6 +10,7 @@ const PRODUCTION_TYPES = new Set([
   'fish',
   'vermicompost',
   'pesticides',
+  'mobile_refurbishable',
 ]);
 const DEFAULT_PRODUCTION_TYPE = 'kotpad_handloom';
 
