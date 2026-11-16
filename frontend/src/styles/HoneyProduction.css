@@ -1,0 +1,142 @@
+.tc-root .bee-production-fields,
+.tc-root .production-theme-bee .production-fields {
+  display: contents;
+}
+
+.tc-root .production-theme-bee {
+  --production-primary: #9a5b00;
+  --production-secondary: #d08a00;
+  --production-accent: #226f54;
+  --production-soft: #fff8dc;
+  --production-line: rgba(154, 91, 0, 0.24);
+}
+
+.tc-root .production-theme-bee .dashboard-hero,
+.tc-root .production-theme-bee .plantation-hero {
+  background:
+    radial-gradient(circle at top left, rgba(208, 138, 0, 0.2), transparent 32%),
+    linear-gradient(135deg, #fffdf5, #fff7d8 50%, #edf7f1);
+  border-color: var(--production-line);
+}
+
+.tc-root .production-theme-bee .card,
+.tc-root .production-theme-bee .stage-progress-card,
+.tc-root .production-theme-bee .stat-card,
+.tc-root .production-theme-bee .plantation-card {
+  border-color: var(--production-line);
+  box-shadow: 0 12px 30px rgba(154, 91, 0, 0.08);
+}
+
+.tc-root .production-theme-bee .dashboard-kicker,
+.tc-root .production-theme-bee .plantation-kicker,
+.tc-root .production-theme-bee .stage-progress-kicker,
+.tc-root .production-theme-bee .card-title {
+  color: var(--production-primary);
+}
+
+.tc-root .production-theme-bee .btn-primary,
+.tc-root .production-theme-bee .step-btn.active,
+.tc-root .production-theme-bee .dashboard-active-farm:not(.grower-id-panel) {
+  background: linear-gradient(135deg, var(--production-primary), var(--production-secondary));
+  box-shadow: 0 12px 24px rgba(154, 91, 0, 0.2);
+}
+
+.tc-root .production-theme-bee .step-btn.done,
+.tc-root .production-theme-bee .btn-outline,
+.tc-root .production-theme-bee .status-chip.active {
+  background: linear-gradient(135deg, #fff9e8, #eef9f3);
+  border-color: var(--production-line);
+  color: var(--production-primary);
+}
+
+.tc-root .production-theme-bee .stage-progress-fill {
+  background: linear-gradient(90deg, var(--production-primary), var(--production-secondary), var(--production-accent));
+}
+
+.tc-root .production-theme-bee .input:focus {
+  border-color: var(--production-primary);
+  box-shadow: 0 0 0 3px rgba(154, 91, 0, 0.12);
+}
+
+/* Bee sections are the primary workflow navigation. Keep them compact and readable. */
+.tc-root.tc-root .production-workspace .bee-step-bar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
+}
+.tc-root.tc-root .production-workspace .bee-step-bar .step-btn {
+  min-height: 142px;
+  padding: 16px 12px 18px;
+  overflow: hidden;
+  box-sizing: border-box;
+  border-radius: 14px;
+}
+.tc-root.tc-root .production-workspace .bee-step-bar .step-label {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.25;
+  width: 100%;
+  overflow-wrap: anywhere;
+  font-size: 0.92rem;
+}
+.tc-root.tc-root .production-workspace .bee-step-bar .step-state {
+  margin-top: auto;
+  padding-top: 8px;
+  font-size: 0.78rem;
+}
+.tc-root.tc-root .production-workspace .bee-step-bar .step-indicator {
+  width: 38px;
+  height: 38px;
+  margin-bottom: 8px;
+}
+.tc-root .production-theme-bee .bee-production-fields {
+  display: block;
+}
+.tc-root .production-theme-bee .bee-section-panel {
+  padding-top: 2px;
+}
+.tc-root .production-theme-bee .bee-section-panel .form-grid {
+  width: 100%;
+  min-width: 0;
+  gap: 20px 28px;
+}
+.tc-root .production-theme-bee .bee-section-panel,
+.tc-root .production-theme-bee .bee-section-panel .form-grid,
+.tc-root .production-theme-bee .bee-section-panel .field-wrap {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+.tc-root .production-theme-bee .bee-section-panel .field-wrap {
+  min-width: 0;
+}
+.tc-root .production-theme-bee .bee-section-panel .input {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.tc-root .production-theme-bee .honey-apiary-repeat-list {
+  display: grid;
+  gap: 18px;
+  margin-top: 22px;
+}
+.tc-root .production-theme-bee .honey-apiary-repeat-card {
+  padding: 20px;
+  border: 1px solid var(--production-line);
+  border-radius: 14px;
+  background: rgba(255, 248, 220, 0.36);
+}
+.tc-root .production-theme-bee .honey-apiary-repeat-card h3 {
+  margin: 0 0 16px;
+  color: var(--production-primary);
+}
+@media (max-width: 1050px) {
+  .tc-root .production-theme-bee .bee-step-bar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 680px) {
+  .tc-root .production-theme-bee .bee-step-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .tc-root .production-theme-bee .bee-step-bar .step-btn { min-height: 96px; padding: 12px 8px; }
+  .tc-root .production-theme-bee .bee-step-bar .step-label { font-size: 0.78rem; }
+}

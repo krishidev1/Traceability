@@ -1,6 +1,34 @@
 const db = require('../../../config/db');
 const { buildWhere, buildUpdate } = require('../../../services/sqlBuilder');
 
+const DETAIL_TABLES = {
+  bee: 'honey_production_details',
+  shrimp: 'shrimp_production_details',
+  fish: 'fish_production_details',
+  kotpad_handloom: 'kotpad_handloom_details',
+  kancheepuram_silk: 'kancheepuram_silk_details',
+  sambalpuri_bandha: 'sambalpuri_bandha_details',
+  vermicompost: 'vermicompost_production_details',
+  pesticides: 'pesticide_production_details',
+};
+
+function parseDetails(value) {
+  if (!value) return {};
+  if (typeof value === 'object') return value;
+  try { return JSON.parse(value); } catch { return { value }; }
+}
+
+async function saveProductionDetails({ crop, productionType, details }) {
+  const table = DETAIL_TABLES[productionType];
+  if (!table) return;
+  await db.query(
+    `INSERT INTO ${table} (crop_id, plantation_id, user_id, details)
+     VALUES ($1, $2, $3, $4::jsonb)
+     ON CONFLICT (crop_id) DO UPDATE SET details = EXCLUDED.details, updated_at = CURRENT_TIMESTAMP;`,
+    [crop.id, crop.plantation_id, crop.user_id, JSON.stringify(details)],
+  );
+}
+
 exports.createCrop = async (data) => {
   const query = `
     INSERT INTO crops (
@@ -14,7 +42,7 @@ exports.createCrop = async (data) => {
     VALUES ($1, $2, $3, $4, $5, $6)
     RETURNING *;
   `;
-  return db.query(query, [
+  const result = await db.query(query, [
     data.plantation_id,
     data.user_id,
     data.crop_name,
@@ -22,6 +50,11 @@ exports.createCrop = async (data) => {
     data.sowing_date ?? null,
     data.expected_harvest_date ?? null,
   ]);
+  const crop = result.rows[0];
+  const plantation = await db.query('SELECT production_type FROM plantations WHERE id = $1;', [data.plantation_id]);
+  const productionType = data.production_type || plantation.rows[0]?.production_type;
+  await saveProductionDetails({ crop, productionType, details: parseDetails(data.crop_variety) });
+  return result;
 };
 
 exports.listCrops = async (filters = {}) => {
@@ -64,7 +97,11 @@ exports.updateCrop = async (id, data) => {
   });
 
   if (!built) return db.query('SELECT * FROM crops WHERE id = $1;', [id]);
-  return db.query(built.query, built.values);
+  const result = await db.query(built.query, built.values);
+  const crop = result.rows[0];
+  const plantation = await db.query('SELECT production_type FROM plantations WHERE id = $1;', [crop.plantation_id]);
+  await saveProductionDetails({ crop, productionType: data.production_type || plantation.rows[0]?.production_type, details: parseDetails(crop.crop_variety) });
+  return result;
 };
 
 exports.deleteCrop = async (id) => {

@@ -1,0 +1,263 @@
+.tc-root .supplier-batches-page {
+  min-height: 60vh;
+}
+
+.tc-root .supplier-batches-list {
+  margin-top: 24px;
+}
+
+.tc-root .batch-card {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  padding: 18px 20px !important;
+  border-radius: var(--radius-lg) !important;
+  border: 1px solid var(--neutral-200) !important;
+  background: #ffffff !important;
+  box-shadow: var(--shadow-sm) !important;
+  cursor: pointer !important;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease !important;
+  overflow: hidden !important;
+  position: relative !important;
+}
+
+.tc-root .batch-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: var(--theme-gradient, linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%));
+}
+
+.tc-root .batch-card:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: var(--shadow-md) !important;
+  border-color: rgba(59, 130, 246, 0.35) !important;
+}
+
+.tc-root .batch-card-top {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+}
+
+.tc-root .batch-id {
+  font-family: var(--font-mono) !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  color: #1e3a8a !important;
+  background: rgba(30, 58, 138, 0.07) !important;
+  border: 1px solid rgba(30, 58, 138, 0.15) !important;
+  padding: 4px 10px !important;
+  border-radius: var(--radius-full) !important;
+  letter-spacing: 0.03em !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.tc-root .batch-card .icon-btn.danger {
+  flex-shrink: 0 !important;
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: var(--radius-sm) !important;
+  border: 1px solid var(--neutral-200) !important;
+  background: #ffffff !important;
+  color: var(--neutral-400) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 14px !important;
+  cursor: pointer !important;
+  transition: all 0.18s ease !important;
+}
+
+.tc-root .batch-card .icon-btn.danger:hover {
+  border-color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.06) !important;
+  color: #ef4444 !important;
+}
+
+.tc-root .batch-weight {
+  font-family: var(--font-heading) !important;
+  font-size: 20px !important;
+  font-weight: 850 !important;
+  color: var(--neutral-900) !important;
+  line-height: 1.1 !important;
+  margin: 0 !important;
+}
+
+.tc-root .batch-card > .muted {
+  font-size: 12.5px !important;
+  color: var(--neutral-450, #94a3b8) !important;
+  font-family: var(--font-mono) !important;
+  font-weight: 500 !important;
+  margin: 0 !important;
+  line-height: 1.4 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.tc-root .batch-card .btn.btn-outline.full-width.mt {
+  margin-top: 6px !important;
+  width: 100% !important;
+  border: 1.5px solid var(--neutral-300) !important;
+  color: var(--neutral-700) !important;
+  background: #ffffff !important;
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  border-radius: var(--radius-md) !important;
+  padding: 10px 16px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  transition: all 0.2s ease !important;
+}
+
+.tc-root .batch-card .btn.btn-outline.full-width.mt:hover {
+  border-color: #3b82f6 !important;
+  color: #3b82f6 !important;
+  background: rgba(59, 130, 246, 0.04) !important;
+}
+
+.tc-root .batch-modal {
+  width: 100%;
+  max-width: 440px;
+  padding: 32px;
+  border-radius: var(--radius-lg);
+  background: #ffffff;
+  border: 1px solid var(--neutral-200);
+  box-shadow: var(--shadow-xl);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.tc-root .batch-modal-header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.tc-root .batch-modal-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  background: var(--theme-accent-soft, rgba(16, 185, 129, 0.08));
+  color: var(--theme-primary, #10b981);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.tc-root .batch-modal-header h3 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--neutral-900);
+}
+
+.tc-root .qr-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  background: var(--neutral-50);
+  padding: 20px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--neutral-200);
+  width: 100%;
+}
+
+.tc-root .qr-shell {
+  position: relative;
+  background: #ffffff;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tc-root .qr-logo-mark {
+  position: absolute;
+  width: 38px;
+  height: 38px;
+  background: #ffffff;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: 1px solid var(--neutral-200);
+}
+
+.tc-root .qr-logo-mark img {
+  width: 100%;
+  height: auto;
+  border-radius: 2px;
+  object-fit: contain;
+}
+
+.tc-root .qr-caption {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--neutral-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tc-root .batch-modal-info {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--neutral-50);
+  padding: 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--neutral-200);
+}
+
+.tc-root .batch-modal-info .kv-pair {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.tc-root .batch-modal-info .kv-pair span {
+  color: var(--neutral-500);
+  font-weight: 500;
+}
+
+.tc-root .batch-modal-info .kv-pair strong {
+  color: var(--neutral-850);
+  font-weight: 700;
+}
+
+.tc-root .batch-modal-info .kv-pair code {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--theme-primary, #0f766e);
+  background: var(--theme-accent-soft, rgba(16, 185, 129, 0.08));
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  font-size: 12px;
+}

@@ -1,0 +1,13 @@
+.tc-root .theme-reports .supplier-reports .reports-eyebrow {
+  color: #1e3a8a;
+}
+
+.tc-root .theme-reports .supplier-reports .reports-export {
+  background: #1e3a8a;
+  border-color: #1e3a8a;
+}
+
+.tc-root .theme-reports .supplier-reports .reports-export:hover {
+  background: #1e40af;
+  border-color: #1e40af;
+}

@@ -8,10 +8,14 @@ import {
   delay,
   LoadingIndicator,
   API_URL,
-  TRACE_CONNECT_LOGO_SRC,
-  ACCOUNT_TYPE_OPTIONS
+  TRACE_CONNECT_LOGO_SRC
 } from "../components/Others";
 import "../styles/AuthPage.css";
+
+const ACCOUNT_TYPE_OPTIONS = [
+  { value: "grower", label: "Grower" },
+  { value: "supplier", label: "Supplier" },
+];
 
 export default function AuthEntryPage({ toast, modal = false, onClose, initialMode = "login" }) {
   const { login, signup, resetPassword, setRememberAuth } = useAuth();
@@ -20,6 +24,8 @@ export default function AuthEntryPage({ toast, modal = false, onClose, initialMo
   const [signupStep, setSignupStep] = useState(0);
   const [accountType, setAccountType] = useState("grower");
   const [fullName, setFullName] = useState("");
+  const [profileType, setProfileType] = useState("individual");
+  const [organisationName, setOrganisationName] = useState("");
   const [phone, setPhone] = useState("");
   const [phoneOtp, setPhoneOtp] = useState("");
   const [phoneOtpSent, setPhoneOtpSent] = useState(false);
@@ -318,6 +324,8 @@ export default function AuthEntryPage({ toast, modal = false, onClose, initialMo
         signup({
           account_type: accountType,
           full_name: fullName,
+          profile_type: profileType,
+          organisation_name: profileType === "organisation" ? organisationName : "",
           phone,
           email,
           password,
@@ -397,6 +405,7 @@ export default function AuthEntryPage({ toast, modal = false, onClose, initialMo
 
     if (signupStep === 1) {
       if (!fullName.trim()) return setError("Enter your full name.");
+      if (profileType === "organisation" && !organisationName.trim()) return setError("Enter your organisation name.");
       if (!phoneIsValid) return setError("Enter a valid mobile number.");
       if (!emailIsValid) return setError("Enter a valid email address.");
       if (aadhaarNumber.trim() && !/^\d{12}$/.test(aadhaarNumber.replace(/\D/g, ""))) {
@@ -416,8 +425,7 @@ export default function AuthEntryPage({ toast, modal = false, onClose, initialMo
       return;
     }
 
-    if (!giRegistryDocument) return setError("Upload the GI Registry document as a PDF.");
-    if (!giConsent) return setError("Confirm that TraceConnect may share this document for verification.");
+    if (giRegistryDocument && !giConsent) return setError("Confirm that TraceConnect may share this document for verification.");
     if (signupStep < 3) {
       goToSignupStep(signupStep + 1);
       return;
@@ -544,6 +552,17 @@ export default function AuthEntryPage({ toast, modal = false, onClose, initialMo
                         <span className="auth-field-label">Full name</span>
                         <input className="input" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Enter your full name" disabled={isWorking} required />
                       </label>
+                      <label className="auth-input-wrap">
+                        <span className="auth-field-label">Profile type</span>
+                        <select className="input" value={profileType} onChange={(e) => setProfileType(e.target.value)} disabled={isWorking}>
+                          <option value="individual">Individual</option>
+                          <option value="organisation">Organisation</option>
+                        </select>
+                      </label>
+                      {profileType === "organisation" && <label className="auth-input-wrap">
+                        <span className="auth-field-label">Organisation name</span>
+                        <input className="input" value={organisationName} onChange={(e) => setOrganisationName(e.target.value)} placeholder="Enter organisation name" disabled={isWorking} required />
+                      </label>}
 
                       <div className="auth-input-wrap">
                         <label className="auth-field-label" htmlFor="signup-mobile">Mobile number</label>
@@ -567,7 +586,7 @@ export default function AuthEntryPage({ toast, modal = false, onClose, initialMo
                         <label className="auth-field-label" htmlFor="signup-email">Email address</label>
                          <div className="auth-verify-row auth-otp-disabled-row">
                           <input id="signup-email" className="input" type="email" value={email} onChange={(e) => {
-                            setEmail(e.target.value);
+                            setEmail(e.target.value.toLowerCase());
                           }} placeholder="Enter email address" disabled={isWorking} required />
                         </div>
                       </div>
@@ -685,11 +704,11 @@ export default function AuthEntryPage({ toast, modal = false, onClose, initialMo
                     <section className="auth-signup-stage">
                       <h3><strong>Step 2: KYB (Know Your Business)</strong></h3>
                       <label className="auth-input-wrap">
-                        <span className="auth-field-label">GSTIN number (Optional)</span>
+                        <span className="auth-field-label">GSTIN number</span>
                         <input className="input" value={gstin} onChange={(e) => setGstin(e.target.value.toUpperCase().slice(0, 15))} placeholder="Enter GSTIN if available" maxLength={15} autoCapitalize="characters" disabled={isWorking} />
                       </label>
                       <div className="auth-input-wrap">
-                        <label className="auth-field-label" htmlFor="gst-mobile">GST-linked mobile number (Optional)</label>
+                        <label className="auth-field-label" htmlFor="gst-mobile">GST-linked mobile number</label>
                          <div className="auth-verify-row auth-otp-disabled-row">
                           <input id="gst-mobile" className="input" type="tel" inputMode="tel" value={gstRegisteredPhone} onChange={(e) => {
                             setGstRegisteredPhone(e.target.value);
@@ -719,7 +738,7 @@ export default function AuthEntryPage({ toast, modal = false, onClose, initialMo
                           const file = e.target.files?.[0];
                           const valid = readSignupFile(e, "application/pdf", setGiRegistryDocument, "GI Registry document");
                           setGiDocumentName(valid ? file?.name || "" : "");
-                        }} disabled={isWorking} required={!giRegistryDocument} />
+                        }} disabled={isWorking} />
                       </label>
                       {giDocumentName && <p className="auth-verified-message">Selected: {giDocumentName}</p>}
                       <label className="auth-consent-row">

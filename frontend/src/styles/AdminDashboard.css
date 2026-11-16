@@ -7,8 +7,10 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: linear-gradient(135deg, #beb8b8, #1e5f9f);
-  color: #fff;
+  background: #fff;
+  color: #12356b;
+  border: 1px solid #cfe0f4;
+  box-shadow: 0 12px 30px rgba(30, 95, 159, .10);
   border-radius: 22px;
   padding: 34px 38px;
   margin-bottom: 24px
@@ -21,21 +23,21 @@
 
 .admin-hero p {
   margin: 0;
-  color: #d7e7fa
+  color: #5d7694
 }
 
 .admin-hero .eyebrow {
   font-size: 12px;
   letter-spacing: .14em;
   font-weight: 800;
-  color: #b8d8fa
+  color: #1e65ad
 }
 
 .admin-count {
   min-width: 130px;
   text-align: center;
-  background: rgba(255, 255, 255, .13);
-  border: 1px solid rgba(255, 255, 255, .24);
+  background: #edf5ff;
+  border: 1px solid #b9d3f0;
   border-radius: 16px;
   padding: 16px
 }

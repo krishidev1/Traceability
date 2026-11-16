@@ -86,9 +86,9 @@ export function createKotpadInitialFields() {
     weaverName: authenticatedWeaver.weaverName,
     communityName: "",
     organizationType: "",
+    organizationName: "",
     contactNumber: authenticatedWeaver.contactNumber,
     address: "",
-    gpsLocation: "",
     yarnSource: "",
     naturalDyeUsed: "Aal bark",
     dyePreparationMethod: "",
@@ -133,9 +133,9 @@ export function buildKotpadDetails(form) {
     "Community Name": form.communityName,
     "Weaver ID": form.weaverId,
     "Organization Type": form.organizationType,
+    "Organization Name": form.organizationName,
     "Contact Number": form.contactNumber,
     Address: form.address,
-    "GPS Location": form.gpsLocation,
     "Fabric Type": form.fabricType,
     "Yarn Source": form.yarnSource,
     "Natural Dye Used": form.naturalDyeUsed,
@@ -238,8 +238,6 @@ export default function KotpadHandloomProductionFields({
   location,
   productionUnitId,
 }) {
-  const [locationError, setLocationError] = useState("");
-
   useEffect(() => {
     const authenticatedWeaver = getAuthenticatedWeaverDetails();
     if (!authenticatedWeaver.weaverName && !authenticatedWeaver.contactNumber && !authenticatedWeaver.weaverId) return;
@@ -267,23 +265,6 @@ export default function KotpadHandloomProductionFields({
     });
   }, [setForm]);
 
-  const captureGpsLocation = () => {
-    if (!navigator.geolocation) {
-      setLocationError("Location is unavailable in this browser. Enter coordinates manually.");
-      return;
-    }
-
-    setLocationError("");
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => setForm((current) => ({
-        ...current,
-        gpsLocation: `${coords.latitude.toFixed(6)}, ${coords.longitude.toFixed(6)}`,
-      })),
-      (error) => setLocationError(error.message || "Location could not be captured. Enter coordinates manually."),
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  };
-
   return (
     <div className="kotpad-production-fields production-fields">
       {activeSection === 0 && (
@@ -302,20 +283,12 @@ export default function KotpadHandloomProductionFields({
           <TextInput label="Weaver Name *" field="weaverName" form={form} setForm={setForm} />
           <FixedInput label="Weaver ID" value={form.weaverId} />
           <SelectInput label="Organization Type *" field="organizationType" form={form} setForm={setForm} options={ORGANIZATION_OPTIONS} />
+           {form.organizationType === "Other" && (
+             <TextInput label="Organization Name *" field="organizationName" form={form} setForm={setForm} placeholder="Enter the organization name" />
+           )}
           <TextInput label="Contact Number *" field="contactNumber" form={form} setForm={setForm} />
           <TextArea label="Address *" field="address" form={form} setForm={setForm} placeholder="Enter the weaver's address" />
-          <div className="field-wrap">
-            <label className="field-label">GPS Location *</label>
-            <input
-              className="input"
-              value={form.gpsLocation}
-              placeholder="Capture or enter latitude, longitude"
-              onChange={(event) => setForm((current) => ({ ...current, gpsLocation: event.target.value }))}
-            />
-            <button type="button" className="btn btn-outline" onClick={captureGpsLocation}>Capture current location</button>
-            {locationError && <span className="production-location-warning" role="alert">{locationError}</span>}
-          </div>
-          <TextInput label="Community Name (Optional)" field="communityName" form={form} setForm={setForm} />
+          <TextInput label="Community Name" field="communityName" form={form} setForm={setForm} />
         </>
       )}
 
@@ -325,9 +298,9 @@ export default function KotpadHandloomProductionFields({
           <TextInput label="Fabric Type *" field="fabricType" form={form} setForm={setForm} />
           <TextInput label="Yarn Source *" field="yarnSource" form={form} setForm={setForm} placeholder="e.g. Local yarn supplier, Kotpad" />
           <TextInput label="Natural Dye Used *" field="naturalDyeUsed" form={form} setForm={setForm} />
-          <TextArea label="Dye Preparation Method (Optional)" field="dyePreparationMethod" form={form} setForm={setForm} />
-          <TextInput label="Water Source (Optional)" field="waterSource" form={form} setForm={setForm} />
-          <SelectInput label="Chemical-Free Status (Optional)" field="chemicalFreeStatus" form={form} setForm={setForm} options={YES_NO_OPTIONS} />
+          <TextArea label="Dye Preparation Method" field="dyePreparationMethod" form={form} setForm={setForm} />
+          <TextInput label="Water Source" field="waterSource" form={form} setForm={setForm} />
+          <SelectInput label="Chemical-Free Status" field="chemicalFreeStatus" form={form} setForm={setForm} options={YES_NO_OPTIONS} />
           <TextInput label="Eco-Friendly Certification (If available)" field="ecoFriendlyCertification" form={form} setForm={setForm} placeholder="Enter a certification reference or link" />
         </>
       )}
@@ -341,10 +314,10 @@ export default function KotpadHandloomProductionFields({
           <TextInput label="Weaving Technique *" field="weavingTechnique" form={form} setForm={setForm} />
           <SelectInput label="Design Pattern *" field="designPattern" form={form} setForm={setForm} options={DESIGN_PATTERN_OPTIONS} />
           <SelectInput label="Colour Combination *" field="colorCombination" form={form} setForm={setForm} options={COLOR_OPTIONS} />
-          <TextArea label="Design / Fabric Details (Optional)" field="designFabricDetails" form={form} setForm={setForm} />
+          <TextArea label="Design / Fabric Details" field="designFabricDetails" form={form} setForm={setForm} />
           <TextInput label="Production Start Date *" field="sowingDate" form={form} setForm={setForm} type="date" />
           <TextInput label="Production Completion Date *" field="expectedHarvest" form={form} setForm={setForm} type="date" />
-          <TextInput label="Time Taken Per Fabric (Optional)" field="timeTakenPerFabric" form={form} setForm={setForm} placeholder="e.g. 7 days" />
+          <TextInput label="Time Taken Per Fabric" field="timeTakenPerFabric" form={form} setForm={setForm} placeholder="e.g. 7 days" />
         </>
       )}
 
@@ -366,13 +339,13 @@ export default function KotpadHandloomProductionFields({
       {activeSection === 5 && (
         <>
           <div className="form-section-label kotpad-section-label">Product & Marketplace Details</div>
-          <TextInput label="Selling Price (Optional)" field="sellingPrice" form={form} setForm={setForm} type="number" />
-          <TextInput label="Wholesale Price (Optional)" field="wholesalePrice" form={form} setForm={setForm} type="number" />
+          <TextInput label="Selling Price" field="sellingPrice" form={form} setForm={setForm} type="number" />
+          <TextInput label="Wholesale Price" field="wholesalePrice" form={form} setForm={setForm} type="number" />
           <TextInput label="Available Stock *" field="availableStock" form={form} setForm={setForm} type="number" />
-          <TextInput label="Minimum Order Quantity (Optional)" field="minimumOrderQuantity" form={form} setForm={setForm} type="number" />
-          <SelectInput label="Export Availability (Optional)" field="exportAvailability" form={form} setForm={setForm} options={YES_NO_OPTIONS} />
-          <SelectInput label="Packaging Type (Optional)" field="packagingType" form={form} setForm={setForm} options={PACKAGING_OPTIONS} />
-          <TextInput label="Shipping Time (Optional)" field="shippingTime" form={form} setForm={setForm} />
+          <TextInput label="Minimum Order Quantity" field="minimumOrderQuantity" form={form} setForm={setForm} type="number" />
+          <SelectInput label="Export Availability" field="exportAvailability" form={form} setForm={setForm} options={YES_NO_OPTIONS} />
+          <SelectInput label="Packaging Type" field="packagingType" form={form} setForm={setForm} options={PACKAGING_OPTIONS} />
+          <TextInput label="Shipping Time" field="shippingTime" form={form} setForm={setForm} />
           <SelectInput label="Marketplace Visibility *" field="marketplaceVisibility" form={form} setForm={setForm} options={MARKETPLACE_OPTIONS} />
         </>
       )}

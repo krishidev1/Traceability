@@ -4,6 +4,7 @@ import {
   FiCamera,
   FiChevronDown,
   FiHome,
+  FiGrid,
   FiLogOut,
   FiShield,
   FiUser,
@@ -116,7 +117,7 @@ export default function Navbar({
                 <span className="dropdown-user-copy">
                   <span className="dropdown-name">{user.name}</span>
                   {user.email && (
-                    <span className="dropdown-email">{user.email}</span>
+                    <span className="dropdown-email">{user.email.toLowerCase()}</span>
                   )}
                 </span>
               </div>
@@ -157,20 +158,26 @@ export default function Navbar({
                   <FiCamera /> Process Gallery
                 </button>
               )}
-              <button
-                className="profile-item"
-                type="button"
-                onClick={() => {
-                  setMenuOpen(false);
-                  if (!hasTraceCapture) {
-                    toast("No trace captures generated yet.", "error");
-                    return;
-                  }
-                  navigate("/trace-captures");
-                }}
-              >
-                <FiVideo /> Trace Captures
-              </button>
+              {user.role === "supplier" ? (
+                <button className="profile-item" type="button" onClick={() => { setMenuOpen(false); navigate("/batches"); }}>
+                  <FiGrid /> Batches List
+                </button>
+              ) : (
+                <button
+                  className="profile-item"
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    if (!hasTraceCapture) {
+                      toast("No trace captures generated yet.", "error");
+                      return;
+                    }
+                    navigate("/trace-captures");
+                  }}
+                >
+                  <FiVideo /> Trace Captures
+                </button>
+              )}
               <button
                 className="profile-item danger"
                 type="button"

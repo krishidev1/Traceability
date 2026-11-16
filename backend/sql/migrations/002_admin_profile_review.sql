@@ -27,10 +27,7 @@ BEGIN
 END
 $$;
 
--- Sample admin credentials for local/staging verification only.
--- Email: admin@traceconnect.in
--- Password: Admin@123
--- Change this password before using the account in production.
+
 INSERT INTO public.users (
   account_type,
   role,

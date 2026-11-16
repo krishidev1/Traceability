@@ -4,8 +4,12 @@ const { buildWhere, buildUpdate } = require('../../../services/sqlBuilder');
 const PRODUCTION_TYPES = new Set([
   'bee',
   'kotpad_handloom',
+  'kancheepuram_silk',
   'shrimp',
   'sambalpuri_bandha',
+  'fish',
+  'vermicompost',
+  'pesticides',
 ]);
 const DEFAULT_PRODUCTION_TYPE = 'kotpad_handloom';
 

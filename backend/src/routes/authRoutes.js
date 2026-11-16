@@ -27,6 +27,11 @@ function normalizePhone(phone) {
   return String(phone || '').replace(/[^\d+]/g, '').trim();
 }
 
+function isKnownKancheepuramOrganisation(name) {
+  const value = String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  return value.includes('kancheepuram') && value.includes('silk');
+}
+
 function validPhone(phone) {
   return /^\+?[1-9]\d{9,14}$/.test(phone);
 }
@@ -150,6 +155,8 @@ async function ensureAuthSchema() {
       await db.query(`
         ALTER TABLE public.users
           ADD COLUMN IF NOT EXISTS account_type character varying(50),
+          ADD COLUMN IF NOT EXISTS organisation_name character varying(255),
+          ADD COLUMN IF NOT EXISTS gi_registry_match boolean NOT NULL DEFAULT false,
           ADD COLUMN IF NOT EXISTS profile_image text,
           ADD COLUMN IF NOT EXISTS company_logo text,
           ADD COLUMN IF NOT EXISTS video_url text,
@@ -272,6 +279,8 @@ async function insertUser(data) {
     `
     INSERT INTO users (
       account_type,
+      organisation_name,
+      gi_registry_match,
       role,
       full_name,
       mob,
@@ -301,9 +310,9 @@ async function insertUser(data) {
       verification_status
     )
     VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE, TRUE,
-      $11, $12, TRUE, $13, $14, NULL,
-      $15, $16, $17, $18, $19, $20, $21, $22,
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, TRUE, TRUE,
+      $13, $14, TRUE, $15, $16, NULL,
+      $17, $18, $19, $20, $21, $22, $23, $24,
       FALSE, 'pending'
     )
     RETURNING
@@ -334,6 +343,8 @@ async function insertUser(data) {
     `,
     [
       accountType,
+      data.organisation_name || null,
+      Boolean(data.gi_registry_match),
       role,
       data.full_name,
       data.phone,
@@ -608,6 +619,8 @@ router.post('/signup', async (req, res, next) => {
     }
     const accountType = normalizeRole(req.body?.account_type);
     const fullName = String(req.body?.full_name || req.body?.name || '').trim();
+    const profileType = String(req.body?.profile_type || 'individual').trim().toLowerCase();
+    const organisationName = String(req.body?.organisation_name || '').trim().slice(0, 255);
     const phone = normalizePhone(req.body?.phone);
     const email = normalizeEmail(req.body?.email);
     const password = String(req.body?.password || '');
@@ -629,6 +642,8 @@ router.post('/signup', async (req, res, next) => {
     if (!fullName || !phone || !email || !password || !confirmPassword || !profileImage || !profileLocation || !country || !giRegistryDocument) {
       return res.status(400).json({ detail: 'Complete all required profile and GI Registry fields.' });
     }
+    if (!['individual', 'organisation'].includes(profileType)) return res.status(400).json({ detail: 'Choose Individual or Organisation.' });
+    if (profileType === 'organisation' && !organisationName) return res.status(400).json({ detail: 'Organisation name is required.' });
     if (!validPhone(phone)) {
       return res.status(400).json({ detail: 'Enter valid mobile numbers.' });
     }
@@ -667,6 +682,8 @@ router.post('/signup', async (req, res, next) => {
     const user = await insertUser({
       account_type: accountType,
       full_name: fullName,
+      organisation_name: profileType === 'organisation' ? organisationName : null,
+      gi_registry_match: isKnownKancheepuramOrganisation(organisationName),
       phone,
       email,
       password,

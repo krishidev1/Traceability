@@ -17,6 +17,8 @@ import Home from "../pages/Home";
 import { AuthContext, useAuth, useRouter } from "../shared/AuthContext";
 import AuthEntryPage from "../pages/AuthPage";
 import AdminDashboard from "../pages/AdminDashboard";
+import SupplierBatches, { SupplierBatchModal } from "../pages/SupplierBatches";
+import SupplierReports from "../pages/SupplierReports";
 import Footer from "./Footer";
 import ReportsAnalyticsPage from "../pages/ReportsPage";
 import KotpadHandloomProductionFields, {
@@ -24,17 +26,23 @@ import KotpadHandloomProductionFields, {
   buildKotpadDetails,
   createKotpadInitialFields,
 } from "../pages/KotpadHandloomProduction";
+import KancheepuramSilkProductionFields, {
+  KANCHEEPURAM_PRODUCTION_CONFIG,
+  createKancheepuramInitialFields,
+  buildKancheepuramDetails,
+} from "../pages/KancheepuramSilkProduction";
 import SambalpuriBandhaProductionFields, {
   SAMBALPURI_PRODUCTION_CONFIG,
   buildSambalpuriDetails,
   buildSambalpuriProductPayload,
   createSambalpuriInitialFields,
 } from "../pages/SambalpuriBandhaProduction";
-import BeeProductionFields, {
+import BeeProductionFields from "../pages/HoneyProduction";
+import {
   BEE_PRODUCTION_CONFIG,
   buildBeeDetails,
   createBeeInitialFields,
-} from "../pages/BeeProduction";
+} from "../pages/HoneyProductionConfig";
 import ShrimpProductionFields, {
   SHRIMP_PRODUCTION_CONFIG,
   buildShrimpDetails,
@@ -844,7 +852,7 @@ async function renderTraceVideoFromImages({ user, images, stages, template = "A"
 }
 
 function isGiLogoProduction(mode) {
-  return mode === "kotpad_handloom" || mode === "sambalpuri_bandha";
+  return mode === "kotpad_handloom" || mode === "kancheepuram_silk" || mode === "sambalpuri_bandha";
 }
 
 async function drawGeoOverlay(ctx, width, topY, panelHeight, details) {
@@ -1219,6 +1227,7 @@ function DataProvider({ children }) {
         crop_variety: c.variety || null,
         sowing_date: c.sowingDate || null,
         expected_harvest_date: c.expectedHarvest || null,
+        production_type: c.productionType || undefined,
       };
       const created = c.productionType === "sambalpuri_bandha"
         ? await traceabilityApi.createSambalpuriBandhaProduct({
@@ -1685,7 +1694,9 @@ function Toasts({ toasts, themeClass = "" }) {
     <div className={`toast-stack ${themeClass}`}>
       {toasts.map((t) => (
         <div key={t.id} className={`toast-item toast-${t.type}`}>
-          <span className="toast-icon">{t.type === "success" ? <FiCheckCircle /> : <FiAlertTriangle />}</span>
+          <span className="toast-icon">
+            {t.type === "success" ? <FiCheckCircle /> : t.type === "info" ? <FiInfo /> : <FiAlertTriangle />}
+          </span>
           <span className="toast-msg">{t.message}</span>
         </div>
       ))}
@@ -1700,8 +1711,10 @@ const TRANSPORT_METHOD_OPTIONS = ["Road Transport", "Refrigerated Vehicle", "Rai
 const COLD_STORAGE_OPTIONS = ["Not Required", "Required", "Available", "Not Available"];
 const TRACE_STAGES = ["Ponds", "Apiaries", "Kotpad Fabric", "Sambalpuri Product", "Monitoring", "Verification", "Harvest", "Packing"];
 const SHARED_TRACE_STAGES = ["Monitoring", "Verification", "Harvest", "Packing"];
+const BEE_SECTION_NAMES = ["Beekeeper / Producer Details", "Apiary & Individual Hive Registry", "Harvest Details", "Processing & Quality Assurance", "Batch & Packaging Details", "GI Recognition & Certification"];
 const PRODUCTION_TYPE_CONFIG = {
   kotpad_handloom: KOTPAD_PRODUCTION_CONFIG,
+  kancheepuram_silk: KANCHEEPURAM_PRODUCTION_CONFIG,
   sambalpuri_bandha: SAMBALPURI_PRODUCTION_CONFIG,
   bee: BEE_PRODUCTION_CONFIG,
   shrimp: SHRIMP_PRODUCTION_CONFIG,
@@ -1711,6 +1724,7 @@ const PRODUCTION_TYPE_CONFIG = {
 };
 const PRODUCTION_TYPE_ICONS = {
   kotpad_handloom: FiSun,
+  kancheepuram_silk: FiSun,
   sambalpuri_bandha: FiAperture,
   bee: FiSun,
   shrimp: FiDroplet,
@@ -1730,14 +1744,29 @@ function ProductionTypeMark({ type, size = 18 }) {
 
 const PRODUCTION_TYPES = Object.values(PRODUCTION_TYPE_CONFIG);
 const PRODUCTION_CATEGORY_GROUPS = [
-  { label: "Handlooms", options: ["sambalpuri_bandha", "kotpad_handloom"] },
+  { label: "Handlooms", options: ["sambalpuri_bandha", "kotpad_handloom", "kancheepuram_silk"] },
   { label: "Aquaculture", options: ["shrimp", "fish"] },
   { label: "Organic Manures", options: ["vermicompost"] },
   { label: "Apiculture", options: ["bee"] },
   { label: "Agriculture Inputs", options: ["pesticides"] },
 ];
+const PRODUCTION_ID_CODES = {
+  kotpad_handloom: ["HND", "KT"],
+  kancheepuram_silk: ["HND", "KS"],
+  sambalpuri_bandha: ["HND", "SB"],
+  shrimp: ["AQC", "SR"],
+  fish: ["AQC", "FI"],
+  bee: ["APE", "HO"],
+  vermicompost: ["OPM", "VER"],
+  pesticides: ["AGI", "PE"],
+};
+function getProductionUnitId(type, sequence) {
+  const [category, subtype] = PRODUCTION_ID_CODES[normalizeProductionType(type)] || ["PRD", "GN"];
+  return `${category}/${subtype}/${String(sequence).padStart(3, "0")}`;
+}
 const PRODUCTION_FIELD_COMPONENTS = {
   kotpad_handloom: KotpadHandloomProductionFields,
+  kancheepuram_silk: KancheepuramSilkProductionFields,
   sambalpuri_bandha: SambalpuriBandhaProductionFields,
   bee: BeeProductionFields,
   shrimp: ShrimpProductionFields,
@@ -1747,6 +1776,7 @@ const PRODUCTION_FIELD_COMPONENTS = {
 };
 const PRODUCTION_INITIAL_FIELDS = {
   kotpad_handloom: createKotpadInitialFields,
+  kancheepuram_silk: createKancheepuramInitialFields,
   sambalpuri_bandha: createSambalpuriInitialFields,
   bee: createBeeInitialFields,
   shrimp: createShrimpInitialFields,
@@ -1756,6 +1786,7 @@ const PRODUCTION_INITIAL_FIELDS = {
 };
 const PRODUCTION_DETAIL_BUILDERS = {
   kotpad_handloom: buildKotpadDetails,
+  kancheepuram_silk: buildKancheepuramDetails,
   sambalpuri_bandha: buildSambalpuriDetails,
   bee: buildBeeDetails,
   shrimp: buildShrimpDetails,
@@ -1923,11 +1954,6 @@ function useConfirm() {
   ) : null;
   return { confirm, dialog };
 }
-
-export const ACCOUNT_TYPE_OPTIONS = [
-  { value: "grower", label: "Grower" },
-  { value: "supplier", label: "Supplier" },
-];
 
 export const INDIA_STATE_DISTRICTS = {
   "Andaman and Nicobar Islands": ["Nicobar", "North and Middle Andaman", "South Andaman"],
@@ -2127,6 +2153,7 @@ function GrowerDashboard({ navigate, toast }) {
   const selectedProduction = getProductionTypeConfig(form.type);
   const isKotpadRegistration = form.type === "kotpad_handloom";
   const producerId = user?.user_id || user?.id || "";
+  const nextProductionId = getProductionUnitId(form.type, mine.filter((unit) => normalizeProductionType(unit.type) === normalizeProductionType(form.type)).length + 1);
 
   const create = async () => {
     if (!form.name || !form.location) {
@@ -2340,6 +2367,11 @@ function GrowerDashboard({ navigate, toast }) {
                   <button type="button" className="production-change-category" onClick={() => setRegistrationStep(1)}>Change</button>
                 </div>
                 <div className="field-wrap">
+                  <label className="field-label">Production Unit ID</label>
+                  <input className="input" value={nextProductionId} readOnly aria-readonly="true" />
+                  <span className="production-location-hint">Generated from the selected production category and type.</span>
+                </div>
+                <div className="field-wrap">
                    <label className="field-label">{isKotpadRegistration ? "Product Name" : selectedProduction.nameLabel} *</label>
                   <input className="input" placeholder={selectedProduction.namePlaceholder} value={form.name} onChange={(e) => setForm((current) => ({ ...current, name: e.target.value }))} />
                 </div>
@@ -2354,13 +2386,6 @@ function GrowerDashboard({ navigate, toast }) {
                   {form.type === "kotpad_handloom" && <span className="production-location-hint">Enter Koraput, Odisha. The unit location is not copied from your profile.</span>}
                   {form.type === "sambalpuri_bandha" && <span className="production-location-hint">Use an associated Odisha district such as Bargarh or Sambalpur.</span>}
                 </div>
-                {isKotpadRegistration && (
-                  <div className="field-wrap">
-                    <label className="field-label">Production Unit ID *</label>
-                    <input className="input" value="Auto-generated after registration" readOnly aria-readonly="true" />
-                    <span className="production-location-hint">The ID is generated automatically when this unit is created.</span>
-                  </div>
-                )}
                 <div className="production-registration-actions">
                   <button className="btn btn-outline" type="button" onClick={() => setRegistrationStep(1)}>Back</button>
                   <button className="btn btn-primary" onClick={create} disabled={creating}>
@@ -2567,6 +2592,12 @@ function PlantationDetail({ plantationId, toast }) {
   const { confirm, dialog } = useConfirm();
   const [step, setStep] = useState(0);
   const [kotpadSection, setKotpadSection] = useState(0);
+  const [kotpadSavedSections, setKotpadSavedSections] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(`kotpad-sections-${plantationId}`) || "[]"); } catch { return []; }
+  });
+  const [beeSavedSections, setBeeSavedSections] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(`honey-sections-${plantationId}`) || "[]"); } catch { return []; }
+  });
   const draftActionRef = useRef(null);
   const [statusStageIndex, setStatusStageIndex] = useState(null);
   const [allStatusOpen, setAllStatusOpen] = useState(false);
@@ -2581,20 +2612,43 @@ function PlantationDetail({ plantationId, toast }) {
   if (!plantation && loading) return <PageSkeleton title="Loading plantation..." rows={4} cards={3} />;
   if (!plantation) return <div className="page-container"><div className="empty-state">Plantation not found.</div></div>;
   const L = getProductionTypeConfig(plantation.type);
-  const isKotpad = L.mode === "kotpad_handloom";
+  const productionSequence = plantations
+    .filter((unit) => normalizeProductionType(unit.type) === normalizeProductionType(plantation.type))
+    .sort((a, b) => Number(a.id) - Number(b.id))
+    .findIndex((unit) => Number(unit.id) === plantationIdNum) + 1;
+  const productionUnitId = getProductionUnitId(plantation.type, productionSequence || 1);
+    const isKotpad = L.mode === "kotpad_handloom" || L.mode === "kancheepuram_silk";
+  const isBee = L.mode === "bee";
   const isTextile = ["kotpad_handloom", "sambalpuri_bandha"].includes(L.mode);
-  const unlocked = [true, pCrops.length > 0, pMon.length > 0, pVer.length > 0, pHar.length > 0];
-  const done = [pCrops.length > 0, pMon.length > 0, pVer.length > 0, pHar.length > 0, pPack.length > 0];
-  const names = [L.crops, "Monitoring", "Verification", isTextile ? "Production Completion" : "Harvest", "Packing"];
+  const names = isBee ? BEE_SECTION_NAMES : [L.crops, "Monitoring", "Verification", isTextile ? "Production Completion" : "Harvest", "Packing"];
+  const hasGiRegistryDocument = Boolean(user?.has_gi_registry_document || user?.gi_registry_document || user?.gi_registry_document_name);
+  const beeSectionComplete = (index) => beeSavedSections.includes(index);
+  const unlocked = isBee
+    ? names.map((_, index) => index === 0 ? true : index === names.length - 1 ? beeSectionComplete(index - 1) : beeSectionComplete(index - 1))
+    : [true, pCrops.length > 0, pMon.length > 0, pVer.length > 0, pHar.length > 0];
+  const done = isBee
+    ? names.map((_, index) => beeSavedSections.includes(index))
+    : [pCrops.length > 0, pMon.length > 0, pVer.length > 0, pHar.length > 0, pPack.length > 0];
   const completedStages = done.filter(Boolean).length;
   const totalStages = names.length;
   const allStagesComplete = completedStages === totalStages;
-  const progressPercent = allStagesComplete ? 100 : Math.round(((completedStages + 1) / totalStages) * 100);
-  const stageRecords = [pCrops, pMon, pVer, pHar, pPack];
+  const progressPercent = Math.round((completedStages / totalStages) * 100);
+  const showTraceabilityVideo = isKotpad
+    ? step === 0 && kotpadSection === 5 && pCrops.length > 0
+    : step === 4 && allStagesComplete;
+  const stageRecords = isBee ? names.map(() => pCrops) : [pCrops, pMon, pVer, pHar, pPack];
+  const kotpadStatusNames = ["Production Unit Registration", "Producer / Weaver Details", "Raw Material Details", "Weaving & Production Details", "Batch Identity & Verification", "Product & Marketplace Details"];
+  const statusNames = isKotpad ? kotpadStatusNames : names;
+  const statusRecords = isKotpad
+    ? kotpadStatusNames.map((name, index) => (index === 0 || kotpadSavedSections.includes(index) ? [{ section: name, status: "Saved" }] : []))
+    : stageRecords;
   const openStep = (i) => {
     if (!unlocked[i]) {
       toast(`Complete ${names[i - 1]} first`, "error");
       return;
+    }
+    if (isBee && i === names.length - 1 && !hasGiRegistryDocument) {
+      toast("No GI document was submitted during signup. You can provide GI details now.", "info");
     }
     setStep(i);
   };
@@ -2619,7 +2673,7 @@ function PlantationDetail({ plantationId, toast }) {
         records={statusStageIndex === null ? [] : stageRecords[statusStageIndex]}
         onClose={() => setStatusStageIndex(null)}
       />
-      {allStatusOpen && <AllStagesStatusModal names={names} records={stageRecords} onClose={() => setAllStatusOpen(false)} />}
+      {allStatusOpen && <AllStagesStatusModal names={statusNames} records={statusRecords} onClose={() => setAllStatusOpen(false)} />}
       <DataStatusBanner loading={loading} error={backendError} />
       <button className="btn-back-minimal" onClick={() => navigate("/grower")}>
         <FiArrowLeft /> Back to Dashboard
@@ -2650,7 +2704,7 @@ function PlantationDetail({ plantationId, toast }) {
         </div>
         <div>
           <span>{isKotpad ? "Section progress" : "Active stage"}</span>
-          <strong>{isKotpad ? "Kotpad sections" : `${String(step + 1).padStart(2, "0")} · ${names[step]}`}</strong>
+          <strong>{isKotpad ? `${L.label} sections` : `${String(step + 1).padStart(2, "0")} · ${names[step]}`}</strong>
         </div>
       </div>
 
@@ -2677,7 +2731,7 @@ function PlantationDetail({ plantationId, toast }) {
             : `Complete ${names[Math.min(completedStages, totalStages - 1)]} to move forward.`}
         </div>
       </div>}
-      {!isKotpad && <div className="step-bar">
+      {!isKotpad && <div className={`step-bar ${isBee ? "bee-step-bar" : ""}`}>
         {names.map((n, i) => {
           const rejected = i === 2 && pVer.length > 0 && !pVer[pVer.length - 1].approved;
           return (
@@ -2719,7 +2773,7 @@ function PlantationDetail({ plantationId, toast }) {
       </div>}
 
       <div className="stage-workspace-layout">
-      {step === 0 && (
+      {(step === 0 || isBee) && (
         <CropsStep
           L={L}
           activeSection={kotpadSection}
@@ -2738,9 +2792,27 @@ function PlantationDetail({ plantationId, toast }) {
           delProcessImage={delProcessImage}
           toast={toast}
           draftActionRef={draftActionRef}
+           isBee={isBee}
+           beeSection={isBee ? step : kotpadSection}
+           giEnabled={hasGiRegistryDocument}
+           profileName={user?.name || user?.full_name || ""}
+           profilePhone={user?.phone || user?.mobileNumber || user?.mobile_number || user?.mobile || user?.mob || ""}
+           profileRegistration={user?.gstin || user?.gst_number || user?.registration_number || ""}
+           productionId={productionUnitId}
+          onSectionSaved={(section) => {
+            if (isBee) {
+              setBeeSavedSections((current) => {
+                const next = Array.from(new Set([...current, section]));
+                localStorage.setItem(`honey-sections-${plantationIdNum}`, JSON.stringify(next));
+                return next;
+              });
+            } else {
+              setKotpadSavedSections((current) => Array.from(new Set([...current, section])));
+            }
+          }}
         />
       )}
-      {step === 1 && (
+      {step === 1 && !isBee && (
         <MonitoringStep
           L={L}
           plantationLocation={plantation.location}
@@ -2757,7 +2829,7 @@ function PlantationDetail({ plantationId, toast }) {
           draftActionRef={draftActionRef}
         />
       )}
-      {step === 2 && (
+      {step === 2 && !isBee && (
         <VerificationStep
           plantationLocation={plantation.location}
           pVer={pVer}
@@ -2774,7 +2846,7 @@ function PlantationDetail({ plantationId, toast }) {
           draftActionRef={draftActionRef}
         />
       )}
-      {step === 3 && (
+      {step === 3 && !isBee && (
         <HarvestStep
           plantationLocation={plantation.location}
           pHar={pHar}
@@ -2791,7 +2863,7 @@ function PlantationDetail({ plantationId, toast }) {
           draftActionRef={draftActionRef}
         />
       )}
-      {step === 4 && (
+      {step === 4 && !isBee && (
         <PackingStep
           plantationLocation={plantation.location}
           pPack={pPack}
@@ -2811,7 +2883,7 @@ function PlantationDetail({ plantationId, toast }) {
 
       </div>
 
-      <div className="stage-workspace-actions">
+      {(!isKotpad || kotpadSection < 5) && <div className="stage-workspace-actions">
         <button
           className="btn btn-outline"
           type="button"
@@ -2833,7 +2905,7 @@ function PlantationDetail({ plantationId, toast }) {
         >
           Save Draft
         </button>
-        {step < 4 && (
+        {step < (isBee ? names.length - 1 : 4) && (
           <button
             className="btn btn-primary stage-continue"
             type="button"
@@ -2852,9 +2924,9 @@ function PlantationDetail({ plantationId, toast }) {
             Continue <FiArrowRight />
           </button>
         )}
-      </div>
+      </div>}
 
-      {step === 4 && allStagesComplete && (
+      {showTraceabilityVideo && (
         <section className="card video-card production-video-card">
           <div className="video-card-left">
             <div className="video-icon"><FiVideo /></div>
@@ -3538,7 +3610,7 @@ function GeoCameraModal({
   );
 }
 
-function CropsStep({ L, activeSection, setActiveSection, plantationName, plantationLocation, plantationUnitId, pCrops, addCrop, updateCrop, delCrop, confirm, plantationId, pImgs, addProcessImage, delProcessImage, toast, draftActionRef }) {
+function CropsStep({ L, activeSection, setActiveSection, plantationName, plantationLocation, plantationUnitId, pCrops, addCrop, updateCrop, delCrop, confirm, plantationId, pImgs, addProcessImage, delProcessImage, toast, draftActionRef, onSectionSaved, isBee = false, beeSection = 0, giEnabled = false, profileName = "", profilePhone = "", profileRegistration = "", productionId = "" }) {
   const mode = L.mode || "kotpad_handloom";
   const ProductionFields = PRODUCTION_FIELD_COMPONENTS[mode] || KotpadHandloomProductionFields;
   const createTypeFields = PRODUCTION_INITIAL_FIELDS[mode] || createKotpadInitialFields;
@@ -3553,24 +3625,49 @@ function CropsStep({ L, activeSection, setActiveSection, plantationName, plantat
     ...createTypeFields(),
   });
   const [f, setF, clearDraft] = useProductionStageDraft(plantationId, "production", emptyForm(), draftActionRef, toast);
-  const isKotpad = mode === "kotpad_handloom";
+  useEffect(() => {
+    if (!isBee || !pCrops.length) return;
+    const draftKey = `traceconnect:production-draft:${plantationId}:production`;
+    if (window.localStorage.getItem(draftKey)) return;
+    const savedFields = Object.fromEntries(parseDetailsText(pCrops[0].variety).details);
+    if (typeof savedFields.apiaryDetails === "string") {
+      try {
+        savedFields.apiaryDetails = JSON.parse(decodeURIComponent(savedFields.apiaryDetails));
+      } catch (error) {
+        console.error("Unable to restore saved apiary details", error);
+        delete savedFields.apiaryDetails;
+      }
+    }
+    if (Object.keys(savedFields).length) setF((current) => ({ ...current, ...savedFields }));
+  }, [isBee, pCrops, plantationId, setF]);
+  const isKotpad = mode === "kotpad_handloom" || mode === "kancheepuram_silk";
+  const isKancheepuram = mode === "kancheepuram_silk";
   const kotpadSections = [
-    "Production Unit Registration",
-    "Producer / Weaver Details",
-    "Raw Material Details",
-    "Weaving & Production Details",
-    "Batch Identity & Verification",
-    "Product & Marketplace Details",
+    ...(isKancheepuram ? [
+      "Mulberry Cultivation & Farm Information",
+      "Silkworm Rearing & Monitoring",
+      "Cocoon Harvesting & Collection",
+      "Cocoon Sorting, Testing & Silk Reeling",
+      "Raw Silk Procurement & Yarn Dyeing",
+      "Design, Weaving, GI & Product Distribution",
+    ] : [
+      "Production Unit Registration",
+      "Producer / Weaver Details",
+      "Raw Material Details",
+      "Weaving & Production Details",
+      "Batch Identity & Verification",
+      "Product & Marketplace Details",
+    ]),
   ];
   const [savedSections, setSavedSections] = useState(() => {
     try { return JSON.parse(localStorage.getItem(`kotpad-sections-${plantationId}`) || "[]"); } catch { return []; }
   });
   const saveSection = async () => {
     const selectedProductType = f.name === "Other" ? f.customName : f.name;
-    const name = selectedProductType || (isKotpad ? "Kotpad Fabric Batch" : "");
+    const name = selectedProductType || (isKancheepuram ? "Kancheepuram Silk Batch" : isKotpad ? "Kotpad Fabric Batch" : isBee ? "Honey Production" : "");
     if (isKotpad) {
-      const requiredBySection = {
-        1: ["weaverName", "weaverId", "organizationType", "contactNumber", "address", "gpsLocation"],
+      const requiredBySection = isKancheepuram ? {} : {
+        1: ["weaverName", "weaverId", "organizationType", ...(f.organizationType === "Other" ? ["organizationName"] : []), "contactNumber", "address"],
         2: ["fabricType", "yarnSource", "naturalDyeUsed"],
         3: ["name", ...(f.name === "Other" ? ["customName"] : []), "loomType", "weavingTechnique", "designPattern", "colorCombination", "sowingDate", "expectedHarvest"],
         4: ["batchNumber", "qrVerificationCode", "productionUnitId", "weaverId", "inspectionStatus"],
@@ -3583,11 +3680,11 @@ function CropsStep({ L, activeSection, setActiveSection, plantationName, plantat
         toast(`Complete the required ${missing.replace(/[A-Z]/g, (letter) => ` ${letter.toLowerCase()}`)} field`, "error");
         return;
       }
-      if (activeSection === 3 && !pImgs.some((image) => image.stage === "Kotpad Production")) {
+      if (!isKancheepuram && activeSection === 3 && !pImgs.some((image) => image.stage === "Kotpad Production")) {
         toast("Upload a production image before saving this section", "error");
         return;
       }
-      if (activeSection === 5 && !pImgs.some((image) => image.stage === "Kotpad Product")) {
+      if (!isKancheepuram && activeSection === 5 && !pImgs.some((image) => image.stage === "Kotpad Product")) {
         toast("Upload a product image before saving this section", "error");
         return;
       }
@@ -3608,7 +3705,7 @@ function CropsStep({ L, activeSection, setActiveSection, plantationName, plantat
       toast("Production completion date cannot be before the start date", "error");
       return;
     }
-    if (!name || (!isKotpad && (!f.variety || !f.sowingDate))) return;
+    if (!name || (!isKotpad && !isBee && (!f.variety || !f.sowingDate))) return;
     const payload = {
       plantationId,
       name,
@@ -3618,14 +3715,20 @@ function CropsStep({ L, activeSection, setActiveSection, plantationName, plantat
       productionType: mode,
       sambalpuri: buildTypeRecord ? buildTypeRecord(f, { name, variety }) : undefined,
     };
-    const request = isKotpad && pCrops[0]?.id ? updateCrop(pCrops[0].id, payload) : addCrop(payload);
+    const request = (isKotpad || isBee) && pCrops[0]?.id
+      ? updateCrop(pCrops[0].id, payload)
+      : addCrop(payload);
     void request
       .then(() => {
         if (isKotpad) {
           const next = Array.from(new Set([...savedSections, activeSection]));
           setSavedSections(next);
+          onSectionSaved?.(activeSection);
           localStorage.setItem(`kotpad-sections-${plantationId}`, JSON.stringify(next));
           toast(`${kotpadSections[activeSection]} saved`, "success");
+        } else if (isBee) {
+          onSectionSaved?.(beeSection);
+          toast(`${BEE_SECTION_NAMES[beeSection]} saved`, "success");
         } else {
           stabilizeTraceabilityViewport(() => { clearDraft(); setF(emptyForm()); toast("Saved", "success"); });
         }
@@ -3644,8 +3747,8 @@ function CropsStep({ L, activeSection, setActiveSection, plantationName, plantat
   };
   return (
     <>
-      <WorkflowSection title={isKotpad ? `Section ${activeSection + 1} — ${kotpadSections[activeSection]}` : `Register ${L.crop}`}>
-        {isKotpad && (
+      <WorkflowSection title={isKotpad ? `Section ${activeSection + 1} — ${kotpadSections[activeSection]}` : isBee ? BEE_SECTION_NAMES[beeSection] : `Register ${L.crop}`}>
+        {isKotpad && !isBee && (
           <div className="kotpad-section-progress" aria-label="Kotpad section progress">
             {kotpadSections.map((section, index) => (
               <button
@@ -3662,41 +3765,48 @@ function CropsStep({ L, activeSection, setActiveSection, plantationName, plantat
           </div>
         )}
         <div className={`form-grid ${mode === "kotpad_handloom" ? "kotpad-form-grid" : ""} ${mode === "sambalpuri_bandha" ? "sambalpuri-form-grid" : ""}`}>
-          {!isKotpad && <div className="field-wrap">
+          {!isKotpad && !isBee && <div className="field-wrap">
             <label className="field-label">{L.itemTypeLabel || `${L.crop} Type`} *</label>
             <select className="input" value={f.name} onChange={(e) => setF((x) => ({ ...x, name: e.target.value }))}>
               <option value="">Select {L.crop}...</option>
               {L.options.map((o) => <option key={o}>{o}</option>)}
             </select>
           </div>}
-          {!isKotpad && f.name === "Other" && (
+          {!isKotpad && !isBee && f.name === "Other" && (
             <div className="field-wrap">
               <label className="field-label">Custom Name *</label>
               <input className="input" placeholder={`Enter custom ${L.crop.toLowerCase()} name`} value={f.customName} onChange={(e) => setF((x) => ({ ...x, customName: e.target.value }))} />
             </div>
           )}
-          {!isKotpad && <div className="field-wrap">
+          {!isKotpad && !isBee && <div className="field-wrap">
             <label className="field-label">{L.variety} *</label>
             <input className="input" placeholder={L.varietyPlaceholder || "Enter details"} value={f.variety} onChange={(e) => setF((x) => ({ ...x, variety: e.target.value }))} />
           </div>}
           <ProductionFields
             form={f}
             setForm={setF}
-            activeSection={activeSection}
             productName={plantationName}
             location={plantationLocation}
             productionUnitId={plantationUnitId}
+            activeSection={isBee ? beeSection : activeSection}
+            giEnabled={giEnabled}
+            profileName={profileName}
+            profilePhone={profilePhone}
+            profileRegistration={profileRegistration}
+            apiaryFarmName={plantationName}
+            producerLocation={plantationLocation}
+            productionId={productionId}
           />
-          {!isKotpad && <div className="field-wrap">
+          {!isKotpad && !isBee && <div className="field-wrap">
             <label className="field-label">{L.startDateLabel || "Start Date *"}</label>
             <input className="input" type="date" value={f.sowingDate} onChange={(e) => setF((x) => ({ ...x, sowingDate: e.target.value }))} />
           </div>}
-          {!isKotpad && <div className="field-wrap">
+          {!isKotpad && !isBee && <div className="field-wrap">
             <label className="field-label">{L.expectedDateLabel || "Expected Date"}</label>
             <input className="input" type="date" value={f.expectedHarvest} onChange={(e) => setF((x) => ({ ...x, expectedHarvest: e.target.value }))} />
           </div>}
           {(isKotpad ? activeSection > 0 : true) && <div className="field-wrap field-btn-wrap">
-            <button className="btn btn-primary" type="button" onClick={saveSection}><FiPlus /> {isKotpad ? `Save ${kotpadSections[activeSection]}` : `Add ${L.crop}`}</button>
+            <button className="btn btn-primary" type="button" onClick={saveSection}><FiPlus /> Save</button>
           </div>}
         </div>
         {pCrops.length > 0 && (
@@ -3723,21 +3833,19 @@ function CropsStep({ L, activeSection, setActiveSection, plantationName, plantat
           </div>
         )}
       </WorkflowSection>
-      {(
-        <ProcessEntries
-          stage={isKotpad ? `Kotpad ${kotpadSections[activeSection]} Evidence` : L.crops}
-          displayStage={isKotpad ? `${kotpadSections[activeSection]} Evidence` : L.crops}
-          location={plantationLocation}
-          enabled={isKotpad || pCrops.length > 0}
-          plantationId={plantationId}
-          pImgs={pImgs}
-          addProcessImage={addProcessImage}
-          delProcessImage={delProcessImage}
-          confirm={confirm}
-          toast={toast}
-          giProductLabel={L.badge || "GI TAGGED"}
-        />
-      )}
+      <ProcessEntries
+        stage={isKotpad ? `${L.label} ${kotpadSections[activeSection]} Evidence` : isBee ? `${BEE_SECTION_NAMES[beeSection] || "Bee"} Evidence` : L.crops}
+        displayStage={isKotpad ? `${kotpadSections[activeSection]} Evidence` : isBee ? `${BEE_SECTION_NAMES[beeSection] || "Bee"} Evidence` : L.crops}
+        location={plantationLocation}
+        enabled={isKotpad || pCrops.length > 0}
+        plantationId={plantationId}
+        pImgs={pImgs}
+        addProcessImage={addProcessImage}
+        delProcessImage={delProcessImage}
+        confirm={confirm}
+        toast={toast}
+        giProductLabel={L.badge || "GI TAGGED"}
+      />
     </>
   );
 }
@@ -3815,18 +3923,7 @@ function MonitoringStep({ L, plantationLocation, pMon, addMonitoring, delMonitor
           </div>
         )}
       </WorkflowSection>
-      <ProcessEntries
-        stage="Monitoring"
-        location={plantationLocation}
-        enabled={pMon.length > 0}
-        plantationId={plantationId}
-        pImgs={pImgs}
-        addProcessImage={addProcessImage}
-        delProcessImage={delProcessImage}
-        confirm={confirm}
-        toast={toast}
-        giProductLabel={L.badge || "GI TAGGED"}
-      />
+      <ProcessEntries stage="Monitoring" location={plantationLocation} enabled={pMon.length > 0} plantationId={plantationId} pImgs={pImgs} addProcessImage={addProcessImage} delProcessImage={delProcessImage} confirm={confirm} toast={toast} giProductLabel={L.badge || "GI TAGGED"} />
     </>
   );
 }
@@ -3902,19 +3999,7 @@ function VerificationStep({ pVer, addVerification, delVerification, pCrops, conf
           </div>
         )}
       </WorkflowSection>
-      <ProcessEntries
-        stage="Verification"
-        location={plantationLocation}
-        enabled={pVer.length > 0}
-        plantationId={plantationId}
-        pImgs={pImgs}
-        addProcessImage={addProcessImage}
-        delProcessImage={delProcessImage}
-        confirm={confirm}
-        toast={toast}
-        variant={L.mode === "kotpad_handloom" ? "gi-certificate" : "process"}
-        giProductLabel={L.badge || "GI TAGGED"}
-      />
+      <ProcessEntries stage="Verification" location={plantationLocation} enabled={pVer.length > 0} plantationId={plantationId} pImgs={pImgs} addProcessImage={addProcessImage} delProcessImage={delProcessImage} confirm={confirm} toast={toast} variant={L.mode === "kotpad_handloom" || L.mode === "kancheepuram_silk" ? "gi-certificate" : "process"} giProductLabel={L.badge || "GI TAGGED"} />
     </>
   );
 }
@@ -3999,19 +4084,7 @@ function HarvestStep({ pHar, addHarvest, delHarvest, pCrops, confirm, plantation
           </div>
         )}
       </WorkflowSection>
-      <ProcessEntries
-        stage="Harvest"
-        displayStage={stageLabel}
-        location={plantationLocation}
-        enabled={pHar.length > 0}
-        plantationId={plantationId}
-        pImgs={pImgs}
-        addProcessImage={addProcessImage}
-        delProcessImage={delProcessImage}
-        confirm={confirm}
-        toast={toast}
-        giProductLabel={L.badge || "GI TAGGED"}
-      />
+      <ProcessEntries stage="Harvest" displayStage={stageLabel} location={plantationLocation} enabled={pHar.length > 0} plantationId={plantationId} pImgs={pImgs} addProcessImage={addProcessImage} delProcessImage={delProcessImage} confirm={confirm} toast={toast} giProductLabel={L.badge || "GI TAGGED"} />
     </>
   );
 }
@@ -4159,25 +4232,14 @@ function PackingStep({ pPack, pHar, addPacking, delPacking, confirm, plantationI
           </div>
         )}
       </WorkflowSection>
-      <ProcessEntries
-        stage="Packing"
-        location={plantationLocation}
-        enabled={pPack.length > 0}
-        plantationId={plantationId}
-        pImgs={pImgs}
-        addProcessImage={addProcessImage}
-        delProcessImage={delProcessImage}
-        confirm={confirm}
-        toast={toast}
-        giProductLabel={L?.badge || "GI TAGGED"}
-      />
+      <ProcessEntries stage="Packing" location={plantationLocation} enabled={pPack.length > 0} plantationId={plantationId} pImgs={pImgs} addProcessImage={addProcessImage} delProcessImage={delProcessImage} confirm={confirm} toast={toast} giProductLabel={L?.badge || "GI TAGGED"} />
     </>
   );
 }
 
-function SupplierDashboard({ navigate, toast }) {
+export function SupplierDashboard({ navigate, toast }) {
   const { user } = useAuth();
-  const { batches, addBatch, delBatch } = useData();
+  const { batches, addBatch } = useData();
   const { confirm, dialog } = useConfirm();
   const [selected, setSelected] = useState([]);
   const [desc, setDesc] = useState("");
@@ -4405,29 +4467,6 @@ function SupplierDashboard({ navigate, toast }) {
       })
       .catch((e) => toast(getTraceabilityErrorMessage(e), "error"))
       .finally(() => setBatchCreating(false));
-  };
-
-  const removeBatch = async (id) => {
-    const ok = await confirm("Delete this batch?");
-    if (!ok) return;
-
-    const targetBatch = mine.find((batch) => batch.id === id);
-
-    try {
-      await delBatch(id);
-      setSupplierTraceState((prev) => ({
-        ...prev,
-        traces: prev.traces.map((trace) =>
-          targetBatch?.packingIds?.includes(trace.packingId) &&
-          trace.assignedPatchId === id
-            ? { ...trace, assignedPatchId: "" }
-            : trace,
-        ),
-      }));
-      toast("Deleted", "success");
-    } catch (e) {
-      toast(getTraceabilityErrorMessage(e), "error");
-    }
   };
 
   return (
@@ -4872,158 +4911,17 @@ function SupplierDashboard({ navigate, toast }) {
         )}
       </div>
 
-      {mine.length > 0 && (
-        <div className="card" style={{ marginTop: 24 }}>
-          <div className="card-title">
-            <FiGrid /> Your Batches
-          </div>
-          <div className="card-grid">
-            {mine.map((batch) => (
-              <div
-                key={batch.id}
-                className="batch-card"
-                onClick={() => setBatchModal(batch)}
-              >
-                <div className="batch-card-top">
-                  <code className="batch-id">{batch.id}</code>
-                  <button
-                    className="icon-btn danger"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeBatch(batch.id);
-                    }}
-                  >
-                    <FiTrash2 />
-                  </button>
-                </div>
-                <div className="batch-weight">{batch.totalWeight} kg total</div>
-                <p className="muted">
-                  {batch.description || "No description"} - {batch.createdAt}
-                </p>
-                <button
-                  className="btn btn-outline full-width mt"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/patch/${batch.id}`);
-                  }}
-                >
-                  View Trace Page <FiArrowRight />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {batchModal && <BatchModal batch={batchModal} onClose={() => setBatchModal(null)} navigate={navigate} />}
+      {batchModal && <SupplierBatchModal batch={batchModal} onClose={() => setBatchModal(null)} navigate={navigate} />}
     </div>
   );
 }
 
-function BatchModal({ batch, onClose, navigate }) {
-  const auth = useContext(AuthContext);
-  const user = auth?.user;
-  const themeClass = user?.role === "grower" ? "theme-grower" : "";
-  const qrValue = `${window.location.origin}/patch/${batch.id}`;
-
-  return createPortal(
-    <div className={`tc-root ${themeClass}`}>
-      <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-        <div className="modal-box batch-modal">
-          <button className="modal-close" onClick={onClose}><LucideX aria-hidden="true" /></button>
-          <div className="batch-modal-header">
-            <div className="batch-modal-icon"><FiCheck /></div>
-            <h3>Batch Created!</h3>
-          </div>
-          <div className="qr-box">
-            <div className="qr-shell">
-              <QRCode value={qrValue} size={188} />
-              <span className="qr-logo-mark">
-                <img src={TRACE_CONNECT_LOGO_SRC} alt="" />
-              </span>
-            </div>
-            <span className="qr-caption">Scan to open batch trace</span>
-          </div>
-          <div className="batch-modal-info">
-            <div className="kv-pair"><span>Batch ID</span><code>{batch.id}</code></div>
-            <div className="kv-pair"><span>Total Weight</span><strong>{batch.totalWeight} kg</strong></div>
-            <div className="kv-pair"><span>Description</span><strong>{batch.description || "-"}</strong></div>
-            <div className="kv-pair"><span>Created</span><strong>{batch.createdAt}</strong></div>
-            <div className="kv-pair"><span>Items</span><strong>{batch.packingIds.length} packings</strong></div>
-          </div>
-          <button className="btn btn-primary full-width" onClick={() => { onClose(); navigate(`/patch/${batch.id}`); }}>
-            View Public Trace Page <FiArrowRight />
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body
-  );
-}
-
-function QRCode({ value, size = 160 }) {
-  const cells = 25;
-  const quiet = 2;
-  const cell = size / (cells + quiet * 2);
-  const moduleSize = cell * 0.76;
-  const offset = (cell - moduleSize) / 2;
-  const hash = (s) => {
-    let h = 0;
-    for (let i = 0; i < s.length; i += 1) h = (h * 31 + s.charCodeAt(i)) & 0xffffffff;
-    return h >>> 0;
-  };
-  const isFinder = (r, c) =>
-    (r < 7 && c < 7) ||
-    (r < 7 && c >= cells - 7) ||
-    (r >= cells - 7 && c < 7);
-  const grid = Array.from({ length: cells }, (_, r) =>
-    Array.from({ length: cells }, (_, c) => {
-      if (isFinder(r, c)) return false;
-      return ((hash(value + r * 100 + c) >> (c % 30)) & 1) === 1;
-    }),
-  );
-  const finderPositions = [
-    [0, 0],
-    [cells - 7, 0],
-    [0, cells - 7],
-  ];
-  const finderSize = cell * 7;
-
-  return (
-    <svg className="modern-qr" width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label="Batch QR code">
-      <rect width={size} height={size} rx="18" fill="#ffffff" />
-      {finderPositions.map(([x, y]) => (
-        <g key={`${x}-${y}`} transform={`translate(${(x + quiet) * cell} ${(y + quiet) * cell})`}>
-          <rect width={finderSize} height={finderSize} rx={cell * 1.4} fill="#0f8d75" />
-          <rect x={cell} y={cell} width={cell * 5} height={cell * 5} rx={cell} fill="#ffffff" />
-          <rect x={cell * 2} y={cell * 2} width={cell * 3} height={cell * 3} rx={cell * 0.75} fill="#10251b" />
-        </g>
-      ))}
-      {grid.map((row, r) =>
-        row.map((on, c) =>
-          on ? (
-            <rect
-              key={`${r}-${c}`}
-              x={(c + quiet) * cell + offset}
-              y={(r + quiet) * cell + offset}
-              width={moduleSize}
-              height={moduleSize}
-              rx={moduleSize * 0.3}
-              fill={(r + c) % 5 === 0 ? "#1d7dd8" : "#10251b"}
-            />
-          ) : null,
-        ),
-      )}
-    </svg>
-  );
-}
-
-function ReportsPage() {
+function ReportsPage({ Page = ReportsAnalyticsPage }) {
   const { navigate } = useRouter();
   const { user } = useAuth();
   const { plantations, crops, harvests, verification, loading, backendError } = useData();
   return (
-    <ReportsAnalyticsPage
+    <Page
       navigate={navigate}
       userRole={user?.role}
       plantations={plantations}
@@ -5385,7 +5283,7 @@ function ProfilePage({ toast }) {
             {user?.profile_image ? <img src={user.profile_image} alt="" /> : <FiUser />}
           </div>
           <h2>{name || "Your profile"}</h2>
-          <p>{user?.email || "Email not provided"}</p>
+          <p>{user?.email?.toLowerCase() || "Email not provided"}</p>
         </aside>
 
         <div className="profile-information">
@@ -5409,7 +5307,7 @@ function ProfilePage({ toast }) {
             </label>
             <div className="profile-field">
               <span><FiMail /> Email Address</span>
-              <strong>{user?.email || "Not provided"}</strong>
+              <strong>{user?.email?.toLowerCase() || "Not provided"}</strong>
             </div>
             <div className="profile-field">
               <span><FiShield /> Role</span>
@@ -5426,16 +5324,6 @@ function ProfilePage({ toast }) {
              {user?.verification_status === "pending" && (
                <div className="profile-review-note"><FiInfo /><span><strong>Profile submitted successfully.</strong> Your documents are under review and verification usually takes 2–3 days. Check your profile status here.</span></div>
              )}
-            <div className="profile-field profile-company-field">
-              <span><FiAward /> Company Logo</span>
-              {editing ? (
-                <input className="input" type="file" accept="image/*" onChange={handleCompanyLogoEdit} />
-              ) : logo ? (
-                <img src={logo} alt="Company logo" />
-              ) : (
-                <strong>Default (Maati AI)</strong>
-              )}
-            </div>
             {editing && (
               <div className="profile-edit-actions">
                 <button className="btn btn-primary" onClick={saveProfile} type="button"><FiCheck /> Save changes</button>
@@ -5885,7 +5773,8 @@ function TracePage({ patchId }) {
 }
 function AppShell() {
   const { user, loading, videoBusy, videoProgress, videoProgressPercent, cancelVideoGeneration } = useAuth();
-  const { loading: dataLoading, pendingRequests, backendError } = useData();
+  const { loading: dataLoading, pendingRequests, backendError, batches, delBatch } = useData();
+  const { confirm, dialog } = useConfirm();
   const { route, navigate } = useRouter();
   const { toast, toasts } = useToast();
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -5894,6 +5783,16 @@ function AppShell() {
   const patchMatch = route.match(/^\/patch\/(.+)$/);
    const dashboardRoute = user?.role === "admin" ? "/admin" : user?.role === "supplier" ? "/supplier" : "/grower";
   const appBusy = loading || dataLoading || pendingRequests > 0;
+  const removeSupplierBatch = async (id) => {
+    if (!await confirm("Delete this batch?")) return;
+
+    try {
+      await delBatch(id);
+      toast("Deleted", "success");
+    } catch (error) {
+      toast(getTraceabilityErrorMessage(error) || "Unable to delete this batch.", "error");
+    }
+  };
   const busyLabel = loading
     ? "Checking session..."
     : dataLoading
@@ -5904,7 +5803,7 @@ function AppShell() {
     if (patchMatch) return "theme-grower";
     if (plantationMatch) return "theme-grower";
     if (route === "/grower") return "theme-grower";
-    if (route === "/supplier") return "theme-supplier";
+    if (route === "/supplier" || route === "/batches") return "theme-supplier";
     if (route === "/reports") return "theme-reports";
      if (route === "/profile") return "theme-profile";
      if (route === "/admin") return "theme-profile";
@@ -5943,8 +5842,9 @@ function AppShell() {
   else if (plantationMatch) page = <div className="theme-grower"><PlantationDetail plantationId={plantationMatch[1]} toast={toast} /></div>;
   else if (route === "/grower") page = user.role === "grower" ? <div className="theme-grower"><GrowerDashboard navigate={navigate} toast={toast} /></div> : <div className="page-container">Access denied</div>;
    else if (route === "/supplier") page = user.role === "supplier" ? <div className="theme-supplier"><SupplierDashboard navigate={navigate} toast={toast} /></div> : <div className="page-container">Access denied</div>;
+   else if (route === "/batches") page = user.role === "supplier" ? <div className="theme-supplier"><SupplierBatches batches={batches} supplierId={user.user_id || user.id} navigate={navigate} removeBatch={removeSupplierBatch} dialog={dialog} /></div> : <div className="page-container">Access denied</div>;
    else if (route === "/admin") page = user.role === "admin" ? <AdminDashboard toast={toast} /> : <div className="page-container">Access denied</div>;
-  else if (route === "/reports") page = <div className="theme-reports"><ReportsPage /></div>;
+  else if (route === "/reports") page = <div className="theme-reports"><ReportsPage Page={user.role === "supplier" ? SupplierReports : ReportsAnalyticsPage} /></div>;
   else if (route === "/profile") page = <div className="theme-profile"><ProfilePage toast={toast} /></div>;
   else if (route === "/process-gallery") page = user.role === "grower" ? <div className="theme-grower"><ProcessGalleryPage toast={toast} /></div> : <div className="page-container">Access denied</div>;
   else if (route === "/trace-captures") page = <div className={user.role === "grower" ? "theme-grower" : "theme-supplier"}><TraceCapturesPage /></div>;
