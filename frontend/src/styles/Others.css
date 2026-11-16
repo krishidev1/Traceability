@@ -597,6 +597,13 @@ body.traceconnect-body {
   gap: 10px;
 }
 
+.tc-root .production-field-example {
+  margin-top: -4px;
+  color: var(--neutral-600, #64748b);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
 .tc-root .field-label {
   font-family: var(--font-mono);
   font-size: 11px;

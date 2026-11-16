@@ -3797,6 +3797,7 @@ function CropsStep({ L, activeSection, setActiveSection, plantationName, plantat
           {!isKotpad && !isBee && <div className="field-wrap">
             <label className="field-label">{L.expectedDateLabel || "Expected Date"}</label>
             <input className="input" type="date" value={f.expectedHarvest} onChange={(e) => setF((x) => ({ ...x, expectedHarvest: e.target.value }))} />
+            {!f.expectedHarvest && <small className="production-field-example">Example: 2026-12-15</small>}
           </div>}
           {(isSectionedProduction ? (activeSection > 0 || isMobileRefurbishable || isKancheepuram) : true) && <div className="field-wrap field-btn-wrap">
             <button className="btn btn-primary" type="button" onClick={saveSection}><FiPlus /> Save</button>

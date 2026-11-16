@@ -35,6 +35,43 @@ const sections = [
 ];
 
 const AUTO_FIELDS = new Set(["passportId", "productCategory", "deviceRegistrationDate"]);
+const FIELD_EXAMPLES = {
+  brandName: "Samsung",
+  modelName: "Galaxy A54 5G",
+  modelNumber: "SM-A546E",
+  imeiNumber: "356938035643809",
+  serialNumber: "RZ8W123ABCD",
+  manufacturingDate: "2025-03-15",
+  operatingSystemVersion: "Android 14 (One UI 6.1)",
+  processorInfo: "Exynos 1380, Octa-core",
+  ramCapacity: "8 GB",
+  internalStorage: "128 GB",
+  displaySpecifications: "6.4 in AMOLED, 120 Hz",
+  chargingConnectorType: "USB-C",
+  batteryHealth: "92",
+  batteryCapacity: "5000",
+  batteryCycleCount: "180",
+  batteryReplacementStatus: "Original battery",
+  batterySafetyTest: "Passed - no swelling or overheating",
+  repairedReplacedParts: "Display and battery replaced with OEM parts",
+  refurbishmentCenterId: "TraceConnect Mobile Lab | BLR-01",
+  technicianIdentifier: "TECH-042",
+  refurbishmentDate: "2026-11-12",
+  securityPatchLevel: "2026-10-01",
+  dataErasureStatus: "Factory reset and verified data wipe",
+  bootloaderRootStatus: "Bootloader locked; not rooted",
+  hardwareDiagnosticPass: "Passed all hardware checks",
+  finalQualityScore: "92",
+  deviceLifecycleStatus: "Refurbished - ready for resale",
+  componentReusedCount: "3",
+  ewasteDivertedAmount: "0.18",
+  refurbishmentCostValue: "12500",
+  resalePrice: "16800",
+  warrantyStartDate: "2026-11-15",
+  warrantyEndDate: "2027-05-15",
+  euRegistryQsealStatus: "Signed",
+  ceDeclarationUrl: "https://example.com/certificates/CE-MOB-2026-001.pdf",
+};
 
 function createInitial() {
   const result = { passportId: "Auto-generated", productCategory: "Smartphone", deviceRegistrationDate: new Date().toISOString().slice(0, 10) };
@@ -50,7 +87,28 @@ export const MOBILE_REFURBISHABLE_SECTION_FIELDS = sections;
 function Field({ label, keyName, type = "text", form, setForm, readOnly = false, options = [] }) {
   const value = form[keyName] || "";
   const update = (event) => setForm((current) => ({ ...current, [keyName]: event.target.value }));
-  return <div className="field-wrap"><label className="field-label">{label}{readOnly ? " (Auto)" : ""}</label>{type === "select" ? <select className="input" value={value} onChange={update} disabled={readOnly}><option value="">Select...</option>{options.map((option) => <option key={option}>{option}</option>)}</select> : <input className="input" type={type} value={value} onChange={update} readOnly={readOnly} placeholder={`Enter ${label.toLowerCase()}`} />}</div>;
+  const sample = FIELD_EXAMPLES[keyName] || (keyName.toLowerCase().includes("id") ? "MOB-2026-001" : type === "number" ? "95" : `Sample ${label}`);
+  return (
+    <div className="field-wrap">
+      <label className="field-label">{label}{readOnly ? " (Auto)" : ""}</label>
+      {type === "select" ? (
+        <select className="input" value={value} onChange={update} disabled={readOnly}>
+          <option value="">Select... (e.g. {options[0]})</option>
+          {options.map((option) => <option key={option}>{option}</option>)}
+        </select>
+      ) : (
+        <input
+          className="input"
+          type={type}
+          value={value}
+          onChange={update}
+          readOnly={readOnly}
+          placeholder={type === "date" ? undefined : `e.g. ${sample}`}
+        />
+      )}
+      {type === "date" && !value && <small className="production-field-example">Example: {sample}</small>}
+    </div>
+  );
 }
 
 export default function MobileRefurbishableProductionFields({ form, setForm, activeSection, productName, location, productionUnitId }) {

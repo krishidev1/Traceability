@@ -29,6 +29,99 @@ const sections = [
 ];
 
 const AUTO_FIELDS = new Set(["productIdSerialNumber", "inspectionId", "dppLookupIdentifier", "qrCodeUrl", "barcodeData"]);
+const FIELD_EXAMPLES = {
+  productNameCollection: "Svarna Mayil Heritage Series",
+  productDescription: "Handwoven silk saree with a temple border and peacock pallu.",
+  productCategory: "Bridal Kancheepuram Silk",
+  manufacturingBatchId: "KP-2026-LOT-001",
+  manufacturingDate: "2026-11-16",
+  originCountry: "India",
+  originState: "Tamil Nadu",
+  originDistrict: "Kancheepuram",
+  silkBatchId: "SILK-2026-041",
+  silkProcurementDate: "2026-10-20",
+  silkSupplierId: "SUP-SILK-008",
+  silkSupplierName: "Sri Lakshmi Silks",
+  silkSupplierTaxId: "29ABCDE1234F1Z5",
+  silkOriginDistrict: "Ramanagara",
+  silkSourcedQuantity: "12.5",
+  purityCertificate: "silk-purity-certificate.pdf",
+  procurementEvidence: "silk-purchase-invoice.pdf",
+  zariBatchId: "ZARI-2026-017",
+  zariProcurementDate: "2026-10-22",
+  zariSupplierId: "SUP-ZARI-014",
+  zariSupplierName: "Kaveri Zari Works",
+  goldContent: "0.5",
+  silverContent: "60",
+  copperContent: "39.5",
+  silkCoreContent: "15",
+  zariSourcedQuantity: "2.5",
+  testingLaboratory: "Central Silk Technological Research Institute",
+  processingBatchId: "YARN-2026-009",
+  processingDate: "2026-10-25",
+  processingFacilityName: "Sri Venkateswara Reeling Unit",
+  processingFacilityLocation: "Kancheepuram, Tamil Nadu",
+  warpYarnSpecifications: "18/20 denier, 3-ply",
+  weftYarnSpecifications: "16/18 denier, 2-ply",
+  processedOutputWeight: "8.5",
+  threadLength: "12000",
+  processingLogs: "Silk reeled, twisted, and inspected for uniformity.",
+  dyeingBatchId: "DYE-2026-012",
+  dyeingDate: "2026-10-28",
+  dyeingFacilityId: "DYE-UNIT-003",
+  dyeingFacilityName: "Kanchi Natural Dye House",
+  dyeBrand: "Kiran Azo-Free Silk Dye",
+  dyeingDuration: "45",
+  waterConsumption: "250",
+  dyeVatTemperature: "80",
+  bodyColorProfile: "#8B1E3F",
+  borderColorProfile: "#D4AF37",
+  palluColorProfile: "#1E3A5F",
+  designId: "DES-KP-2026-021",
+  designName: "Mayil Temple Heritage",
+  motifSpecifications: "Peacock motifs with traditional temple checks.",
+  designerName: "Meenakshi Raman",
+  loomType: "Traditional pit loom",
+  totalWarpThreads: "5900",
+  endsPerInch: "80",
+  warpLength: "6.5",
+  weavingBatchId: "WEAVE-2026-031",
+  weavingStartDate: "2026-11-01",
+  weavingCompletionDate: "2026-11-09",
+  weaverId: "WEAVER-KP-014",
+  artisanName: "R. Suresh",
+  artisanPhone: "+91 98765 43210",
+  artisanExperienceYears: "25",
+  activeWeaverCount: "2",
+  sareesProduced: "10",
+  productionDuration: "8",
+  artisanComments: "Traditional korvai border woven by hand.",
+  inspectionDate: "2026-11-10",
+  finishedLength: "6.2",
+  finishedWidth: "120",
+  finishedWeight: "0.65",
+  structuralDefectAssessment: "No defects observed; border and pallu joints passed inspection.",
+  giRegistrationId: "GI-KP-2026-001",
+  authorizedUserNumber: "AU-KP-024",
+  silkMarkNumber: "SM-KP-2026-018",
+  indiaHandloomBrandRegistration: "IHB-KP-2026-007",
+  complianceEvidencePackaging: "gi-silkmark-lab-certificates.pdf",
+  dppLookupIdentifier: "DPP-KP-2026-001",
+  qrCodeUrl: "https://traceconnect.in/dpp/KP-2026-001",
+  barcodeData: "KP2026001",
+  packagingDate: "2026-11-12",
+  netSareeWeight: "0.65 kg",
+  grossShipmentWeight: "1.2",
+  consumerHandlingInstructions: "Dry clean only. Store folded in a breathable cotton cover.",
+  shipmentId: "SHIP-KP-2026-004",
+  retailerId: "RET-CHN-018",
+  retailerAddress: "12 Usman Road, T. Nagar, Chennai",
+  invoiceNumber: "INV-KP-2026-105",
+  salePrice: "48500",
+  dateOfSale: "2026-11-16",
+  customerMetadata: "Retail sale, Chennai, Tamil Nadu",
+  scanHistory: "12 scans",
+};
 function code(suffix) { const now = new Date(); const year = now.getFullYear(); const stamp = `${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`; const sequence = String(Math.floor(Math.random() * 90000) + 10000); return { productIdSerialNumber: `KP-${year}-MUB-${sequence}`, inspectionId: `INSP-${year}-${stamp}-${sequence.slice(-3)}`, dppLookupIdentifier: `DPP-KP-${year}-${sequence}`, qrCodeUrl: `https://traceconnect.in/dpp/KP-${year}-${sequence}`, barcodeData: `KP${year}${sequence}` }[suffix]; }
 function initial() { const result = { productIdSerialNumber: code("productIdSerialNumber"), inspectionId: code("inspectionId"), dppLookupIdentifier: code("dppLookupIdentifier"), qrCodeUrl: code("qrCodeUrl"), barcodeData: code("barcodeData"), originCountry: "India", originState: "Tamil Nadu", originDistrict: "Kancheepuram", giIdentity: "PENDING_GEOGRAPHIC_AUDIT" }; sections.forEach(([, fields]) => fields.forEach(([, key]) => { if (!(key in result)) result[key] = ""; })); return result; }
 export function createKancheepuramInitialFields() { return initial(); }
@@ -36,5 +129,40 @@ export function buildKancheepuramDetails(form) { return Object.fromEntries(Objec
 export const KANCHEEPURAM_SECTIONS = sections.map(([name]) => name);
 export const KANCHEEPURAM_SECTION_FIELDS = sections;
 export const KANCHEEPURAM_PRODUCTION_CONFIG = { value: "kancheepuram_silk", label: "Kancheepuram Silk", badge: "Kancheepuram Silk", badgeClass: "kancheepuram", themeClass: "production-theme-kancheepuram", nameLabel: "Kancheepuram Silk Product Name", namePlaceholder: "e.g. Silk Saree", locationLabel: "Production Location", locationPlaceholder: "Enter production location", mode: "kancheepuram_silk", crop: "Silk Production Batch", crops: "Kancheepuram Silk", variety: "Silk production details", varietyPlaceholder: "Enter batch details", startVerb: "Produced", itemTypeLabel: "Product Type", options: ["Saree", "Silk Yarn", "Zari", "Other"], monitoring: KANCHEEPURAM_SECTIONS };
-function Field({ label, keyName, type = "text", options = [], form, setForm, readOnly = false }) { const value = form[keyName] || ""; const update = (event) => setForm((current) => ({ ...current, [keyName]: event.target.value })); if (type === "textarea") return <div className="field-wrap"><label className="field-label">{label}</label><textarea className="input" value={value} onChange={update} placeholder={`Enter ${label.toLowerCase()}`} /></div>; return <div className="field-wrap"><label className="field-label">{label}{readOnly ? " (Auto)" : ""}</label>{type === "select" ? <select className="input" value={value} onChange={update} disabled={readOnly}><option value="">Select...</option>{options.map((option) => <option key={option}>{option}</option>)}</select> : <input className="input" type={type} value={value} onChange={update} readOnly={readOnly} placeholder={`Enter ${label.toLowerCase()}`} />}</div>; }
+function Field({ label, keyName, type = "text", options = [], form, setForm, readOnly = false }) {
+  const value = form[keyName] || "";
+  const update = (event) => setForm((current) => ({ ...current, [keyName]: event.target.value }));
+  const sample = FIELD_EXAMPLES[keyName] || (keyName.toLowerCase().includes("id") ? "KP-2026-MUB-001" : type === "number" ? "100" : `Sample ${label}`);
+  const exampleHint = type === "date" && !value ? `Example: ${sample}` : "";
+  const fieldLabel = <label className="field-label">{label}{readOnly ? " (Auto)" : ""}</label>;
+  if (type === "textarea") {
+    return (
+      <div className="field-wrap">
+        {fieldLabel}
+        <textarea className="input" value={value} onChange={update} placeholder={`e.g. ${sample}`} />
+      </div>
+    );
+  }
+  return (
+    <div className="field-wrap">
+      {fieldLabel}
+      {type === "select" ? (
+        <select className="input" value={value} onChange={update} disabled={readOnly}>
+          <option value="">Select... (e.g. {options[0]})</option>
+          {options.map((option) => <option key={option}>{option}</option>)}
+        </select>
+      ) : (
+        <input
+          className="input"
+          type={type}
+          value={value}
+          onChange={update}
+          readOnly={readOnly}
+          placeholder={type === "date" ? undefined : `e.g. ${sample}`}
+        />
+      )}
+      {exampleHint && <small className="production-field-example">{exampleHint}</small>}
+    </div>
+  );
+}
 export default function KancheepuramSilkProductionFields({ form, setForm, activeSection, productName, location, productionUnitId }) { const [sectionName, fields] = sections[activeSection] || sections[0]; useEffect(() => { const signupUser = getStoredAuth()?.user || {}; setForm((current) => ({ ...current, productionUnitId, productName, productionLocation: location, giRegistrationId: current.giRegistrationId || signupUser.gi_registry_application_number || "", complianceEvidencePackaging: current.complianceEvidencePackaging || signupUser.gi_registry_document_name || "" })); }, [location, productName, productionUnitId, setForm]); return <div className="kotpad-production-fields production-fields"><div className="form-section-label kotpad-section-label">{sectionName}</div><p className="muted">Add Process Evidence after saving this section to attach the required images, reports, certificates, or multimedia proof.</p>{fields.map(([label, key, type]) => <Field key={key} label={label} keyName={key} type={type || (OPTIONS[key] ? "select" : "text")} options={OPTIONS[key]} readOnly={AUTO_FIELDS.has(key)} form={form} setForm={setForm} />)}</div>; }
