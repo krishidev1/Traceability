@@ -34,7 +34,9 @@ export default function BeeProductionFields({ form, setForm, activeSection = 0, 
     <><Field label="Processing Lot ID" name="processingLotId" {...common} /><Field label="Linked Harvest ID(s)" name="linkedHarvestIds" {...common} /><Field label="Processing Date" name="processingDate" {...common} type="date" /><Field label="Processing Unit Name & ID" name="processingUnitNameId" {...common} /><SelectField label="Extraction & Filtration Method" name="extractionFiltrationMethod" options={EXTRACTION_METHODS} {...common} /><Field label="Quality Testing Status" name="qualityTestingStatus" {...common} /><Field label="Lab Certificate (PDF)" name="laboratoryReport" {...common} type="file" /></>,
     <><Field label="Honey Batch ID" name="honeyBatchId" {...common} /><Field label="Linked Processing Lot ID" name="linkedProcessingLotId" {...common} /><Field label="Packaging Date" name="packagingDate" {...common} type="date" /><Field label="Net Weight per Pack Size (g / kg / ml / litres / tonnes)" name="netWeightPackSize" {...common} /><Field label="Best Before Date" name="bestBeforeDate" {...common} type="date" /><Field label="FSSAI License Number" name="fssaiLicenseNumber" {...common} /><Field label="Dynamic Batch QR Code" name="qrCodeGeneration" {...common} /></>,
   ];
-  const apiaryCount = Math.min(Math.max(Number(form.numberOfApiaries) || 0, 0), 20);
+  const apiaryCount = activeSection === 1
+    ? Math.min(Math.max(Number(form.numberOfApiaries) || 1, 1), 20)
+    : Math.min(Math.max(Number(form.numberOfApiaries) || 0, 0), 20);
   const updateApiary = (index, field, value) => setForm((current) => {
     const apiaryDetails = Array.from({ length: apiaryCount }, (_, i) => ({ ...(current.apiaryDetails?.[i] || {}) }));
     apiaryDetails[index][field] = value;

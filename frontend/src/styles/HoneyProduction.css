@@ -132,6 +132,11 @@
   margin: 0 0 16px;
   color: var(--production-primary);
 }
+.tc-root .production-theme-bee .honey-apiary-help {
+  margin: -8px 0 16px;
+  color: #6b7280;
+  font-size: 12px;
+}
 @media (max-width: 1050px) {
   .tc-root .production-theme-bee .bee-step-bar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
