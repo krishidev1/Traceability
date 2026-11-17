@@ -323,6 +323,27 @@ export default function Home({
         </div>
       </section>
 
+      <section className="ta-feedback" aria-labelledby="ta-feedback-title">
+        <div className="ta-container ta-feedback-inner">
+          <div className="ta-feedback-copy">
+            <span className="ta-feedback-kicker">WE VALUE YOUR FEEDBACK</span>
+            <h2 id="ta-feedback-title">Help us make TraceConnect better</h2>
+            <p>
+              Scan the QR code with your phone to share your thoughts. Your
+              feedback helps us improve the experience for everyone.
+            </p>
+          </div>
+          <div className="ta-feedback-qr-wrap">
+            <img
+              className="ta-feedback-qr"
+              src="/Feedback%20QR.svg"
+              alt="QR code to share feedback"
+            />
+            <span>Scan to give feedback</span>
+          </div>
+        </div>
+      </section>
+
       {/* Demo video opens only after the user selects Show a Demo. */}
       {showDemo && (
         <section

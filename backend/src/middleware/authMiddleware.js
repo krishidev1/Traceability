@@ -75,7 +75,7 @@ module.exports = async function authMiddleware(req, res, next) {
   const payload = verifyToken(token);
   const userId = Number(payload && payload.sub);
 
-  if (!payload || !Number.isFinite(userId)) {
+  if (!payload || payload.typ === 'refresh' || !Number.isFinite(userId)) {
     return res.status(401).json({ error: 'Invalid authorization token.' });
   }
 

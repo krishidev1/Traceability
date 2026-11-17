@@ -156,6 +156,15 @@ function signAccessToken(userId) {
   });
 }
 
+function signRefreshToken(userId) {
+  return jwt.sign({ sub: String(userId), typ: 'refresh' }, jwtSecret(), {
+    algorithm: 'HS256',
+    expiresIn: `${Number(process.env.REFRESH_TOKEN_EXPIRE_DAYS || 30)}d`,
+    issuer: process.env.JWT_ISSUER || 'internlabs-auth-service',
+    audience: process.env.JWT_AUDIENCE || 'internlabs-api',
+  });
+}
+
 async function ensureAuthSchema() {
   if (!schemaReadyPromise) {
     schemaReadyPromise = (async () => {
@@ -419,6 +428,7 @@ function authResponse(user) {
   const rawRole = normalizeRole(user.account_type || user.role);
   return {
     access_token: signAccessToken(user.user_id),
+    refresh_token: signRefreshToken(user.user_id),
     token_type: 'bearer',
     user: {
       id: user.public_id || String(user.user_id),
@@ -448,6 +458,27 @@ function authResponse(user) {
     },
   };
 }
+
+router.post('/refresh', async (req, res) => {
+  try {
+    const token = String(req.body?.refresh_token || '').trim();
+    const payload = jwt.verify(token, jwtSecret(), {
+      algorithms: ['HS256'],
+      issuer: process.env.JWT_ISSUER || 'internlabs-auth-service',
+      audience: process.env.JWT_AUDIENCE || 'internlabs-api',
+    });
+    const userId = Number(payload.sub);
+    if (payload.typ !== 'refresh' || !Number.isFinite(userId)) {
+      return res.status(401).json({ detail: 'Invalid refresh token.' });
+    }
+    await ensureAuthSchema();
+    const result = await db.query(userSelectSql('WHERE user_id = $1'), [userId]);
+    if (!result.rows[0]) return res.status(401).json({ detail: 'User not found.' });
+    return res.json(authResponse(result.rows[0]));
+  } catch {
+    return res.status(401).json({ detail: 'Refresh token expired or invalid. Please sign in again.' });
+  }
+});
 
 router.post('/login', async (req, res, next) => {
   try {

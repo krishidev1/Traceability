@@ -1550,7 +1550,12 @@ function AuthProvider({ children }) {
       role: payload.user?.role || "grower",
       rawRole: payload.user?.rawRole || payload.user?.role || "grower",
     };
-    storeAuth({ access_token: payload.access_token, user: nextUser, remember });
+    storeAuth({
+      access_token: payload.access_token,
+      refresh_token: payload.refresh_token,
+      user: nextUser,
+      remember,
+    });
     setUser(nextUser);
     return nextUser;
   };

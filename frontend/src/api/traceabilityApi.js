@@ -12,6 +12,7 @@ export function getApiUrl() {
 
 const AUTH_TOKEN_KEY = "traceconnect_auth_token";
 const AUTH_USER_KEY = "traceconnect_auth_user";
+const AUTH_REFRESH_TOKEN_KEY = "traceconnect_refresh_token";
 
 function getPersistableUser(user) {
   const persisted = { ...(user || {}) };
@@ -25,20 +26,25 @@ function getPersistableUser(user) {
 
 export function getStoredAuth() {
   try {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY) || sessionStorage.getItem(AUTH_TOKEN_KEY);
+    const persistent = Boolean(localStorage.getItem(AUTH_TOKEN_KEY));
+    const storage = persistent ? localStorage : sessionStorage;
+    const token = storage.getItem(AUTH_TOKEN_KEY);
     const user = JSON.parse(localStorage.getItem(AUTH_USER_KEY) || sessionStorage.getItem(AUTH_USER_KEY) || "null");
-    return token && user ? { token, user } : null;
+    const refreshToken = storage.getItem(AUTH_REFRESH_TOKEN_KEY);
+    return token && user ? { token, user, refreshToken, remember: persistent } : null;
   } catch {
     return null;
   }
 }
 
-export function storeAuth({ access_token, user, remember = true }) {
+export function storeAuth({ access_token, refresh_token, user, remember = true }) {
   const primary = remember ? localStorage : sessionStorage;
   const secondary = remember ? sessionStorage : localStorage;
   secondary.removeItem(AUTH_TOKEN_KEY);
   secondary.removeItem(AUTH_USER_KEY);
+  secondary.removeItem(AUTH_REFRESH_TOKEN_KEY);
   primary.setItem(AUTH_TOKEN_KEY, access_token);
+  if (refresh_token) primary.setItem(AUTH_REFRESH_TOKEN_KEY, refresh_token);
   const persistedUser = getPersistableUser(user);
   try {
     primary.setItem(AUTH_USER_KEY, JSON.stringify(persistedUser));
@@ -68,6 +74,8 @@ export function clearAuth() {
   localStorage.removeItem(AUTH_USER_KEY);
   sessionStorage.removeItem(AUTH_TOKEN_KEY);
   sessionStorage.removeItem(AUTH_USER_KEY);
+  localStorage.removeItem(AUTH_REFRESH_TOKEN_KEY);
+  sessionStorage.removeItem(AUTH_REFRESH_TOKEN_KEY);
 }
 
 let onUnauthorizedCallback = null;
@@ -82,21 +90,37 @@ function getAuthToken() {
 }
 
 async function apiRequest(path, options = {}) {
-  const token = getAuthToken();
-  const headers = {
-    "Content-Type": "application/json",
-    ...(options.headers || {}),
-  };
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-
-  const response = await fetch(`${getApiUrl()}${path}`, {
+  const performRequest = (token) => fetch(`${getApiUrl()}${path}`, {
     ...options,
-    headers,
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
   });
 
-  const data = await response.json().catch(() => ({}));
+  let response = await performRequest(getAuthToken());
+  let data = await response.json().catch(() => ({}));
+  if (response.status === 401 && path !== "/api/auth/refresh") {
+    const stored = getStoredAuth();
+    if (stored?.refreshToken) {
+      try {
+        const refreshResponse = await fetch(`${getApiUrl()}/api/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh_token: stored.refreshToken }),
+        });
+        const refreshed = await refreshResponse.json().catch(() => ({}));
+        if (refreshResponse.ok && refreshed.access_token) {
+          storeAuth({ ...refreshed, user: stored.user, remember: stored.remember });
+          response = await performRequest(refreshed.access_token);
+          data = await response.json().catch(() => ({}));
+        }
+      } catch {
+        // Keep the original request error if renewal is unavailable.
+      }
+    }
+  }
   if (!response.ok) {
     const error = new Error(data.detail || data.error || "Request failed");
     error.status = response.status;

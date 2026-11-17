@@ -869,6 +869,28 @@ body.traceability-page-active .footer {
 .ta-carbon-positive-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 154px; padding: 12px 17px; border-radius: 9px; background: #16834b; color: #fff; font-size: 13px; font-weight: 800; text-decoration: none; white-space: nowrap; transition: background .2s ease, transform .2s ease; }
 .ta-carbon-positive-button:hover { background: #0f663a; color: #fff; transform: translateY(-1px); }
 
+.ta-feedback {
+  padding: 40px 0 48px;
+  background: #f7faff;
+}
+.ta-feedback-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 36px;
+  padding: 30px 38px;
+  border: 1px solid #dbe7f5;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(37, 99, 235, .07);
+}
+.ta-feedback-copy { max-width: 650px; }
+.ta-feedback-kicker { color: #2563eb; font-size: 10px; font-weight: 800; letter-spacing: .12em; }
+.ta-feedback-copy h2 { margin: 7px 0 9px; color: #172554; font-size: clamp(23px, 3vw, 30px); line-height: 1.2; }
+.ta-feedback-copy p { margin: 0; color: #526174; font-size: 15px; line-height: 1.6; }
+.ta-feedback-qr-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; color: #526174; font-size: 12px; font-weight: 700; }
+.ta-feedback-qr { display: block; width: 142px; height: 142px; padding: 8px; border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; }
+
 @media (max-width: 640px) {
   .ta-pipeline { padding: 36px 0 40px; }
   .ta-pipeline-track { grid-template-columns: 1fr; gap: 16px; }
@@ -882,4 +904,7 @@ body.traceability-page-active .footer {
   .ta-carbon-positive-inner { grid-template-columns: 1fr; gap: 18px; padding: 24px 22px; }
   .ta-carbon-positive-brand { justify-content: start; min-height: auto; padding: 0 0 16px; border-right: 0; border-bottom: 1px solid #d8eee0; }
   .ta-carbon-positive-button { width: fit-content; }
+  .ta-feedback { padding: 30px 0 36px; }
+  .ta-feedback-inner { grid-template-columns: 1fr; gap: 22px; padding: 24px 20px; text-align: center; }
+  .ta-feedback-qr { width: 132px; height: 132px; }
 }
