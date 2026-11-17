@@ -58,16 +58,18 @@ const FIELD_EXAMPLES = {
   certifiedUserName: "Koraput Tribal Honey FPO",
 };
 
-function Field({ label, name, form, update, type = "text", placeholder = "", readOnly = false }) {
-  const sample = placeholder || FIELD_EXAMPLES[name] || (name.toLowerCase().includes("date") ? "2026-11-16" : type === "number" ? "25" : `Sample ${label}`);
-  const exampleHint = type === "date" ? `Example: ${sample}` : type === "file" ? `Example file: ${sample}` : "";
+function Field({ label, name, form, update, type = "text", placeholder = "", readOnly = false, hideReadOnlyExamples = false }) {
+  const sample = hideReadOnlyExamples && readOnly
+    ? ""
+    : placeholder || FIELD_EXAMPLES[name] || (name.toLowerCase().includes("date") ? "2026-11-16" : type === "number" ? "25" : `Sample ${label}`);
+  const exampleHint = sample && type === "date" ? `Example: ${sample}` : sample && type === "file" ? `Example file: ${sample}` : "";
   return (
     <div className="field-wrap">
       <label className="field-label">{label}</label>
       <input
         className="input"
         type={type}
-        placeholder={type === "date" || type === "file" ? undefined : `e.g. ${sample}`}
+        placeholder={type === "date" || type === "file" || !sample ? undefined : `e.g. ${sample}`}
         readOnly={readOnly}
         {...(type === "file" ? {} : { value: form[name] || "" })}
         onChange={(e) => update(name, type === "file" ? e.target.files?.[0]?.name || "" : e.target.value)}
@@ -89,8 +91,8 @@ function SelectField({ label, name, options, form, update }) {
   );
 }
 
-export default function BeeProductionFields({ form, setForm, activeSection = 0, profileName = "", profilePhone = "", profileRegistration = "", apiaryFarmName = "", producerLocation = "", productionId = "" }) {
-  const update = (field, value) => setForm((current) => ({ ...current, [field]: value })); const common = { form, update };
+export default function BeeProductionFields({ form, setForm, activeSection = 0, profileName = "", profilePhone = "", profileRegistration = "", apiaryFarmName = "", producerLocation = "", productionId = "", isHoneyProduction = false }) {
+  const update = (field, value) => setForm((current) => ({ ...current, [field]: value })); const common = { form, update, hideReadOnlyExamples: isHoneyProduction };
   useEffect(() => {
     setForm((current) => ({
       ...current,

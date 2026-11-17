@@ -64,6 +64,7 @@ const GI_LOGO_SRC = "/gi-logo.svg";
 const KOTPAD_GI_CERTIFICATE_PDF_SRC = "/kotpad-gi-certificate.pdf";
 const TRACE_CONNECT_VIDEO_LOGO_SRC = "/Traceconnect Logo - Whitebg.svg";
 const THANK_YOU_IMAGE_SRC = "/Thank You.svg";
+const MULTI_INDUSTRY_VIDEO_COVER_SRC = "/traceconnect-multi-industry-film.png";
 const VIDEO_GENERATOR_BASE_URL = (
   import.meta.env?.VITE_VIDEO_GENERATOR_URL ||
   (import.meta.env.DEV ? "http://localhost:8000" : "https://maatiaivideogenerator.onrender.com")
@@ -745,7 +746,7 @@ function pickCertificateImage(images = []) {
     || images[images.length - 1];
 }
 
-function buildTraceVideoPayload({ user, images, stages, template = "A", productionName = "TraceConnect" }) {
+function buildTraceVideoPayload({ images, stages, template = "A", productionName = "TraceConnect" }) {
   const orderedImages = getOrderedVideoImages(images, stages);
   if (!orderedImages.length) {
     throw new Error("Capture at least one stage image before generating the video.");
@@ -756,7 +757,6 @@ function buildTraceVideoPayload({ user, images, stages, template = "A", producti
   const videoProcessImages = processImages.length ? processImages : orderedImages;
   const firstImageUrl = videoProcessImages[0].imageUrl;
   const lastImageUrl = videoProcessImages[videoProcessImages.length - 1].imageUrl;
-  const farmerImageUrl = user?.profile_image || firstImageUrl;
   const certificateImageUrl = pickCertificateImage(orderedImages)?.imageUrl || lastImageUrl;
 
   return {
@@ -764,12 +764,63 @@ function buildTraceVideoPayload({ user, images, stages, template = "A", producti
     production_name: productionName,
     logo_url: TRACE_CONNECT_VIDEO_LOGO_SRC,
     intro_logo_url: TRACE_CONNECT_VIDEO_LOGO_SRC,
-    farmer_img_url: farmerImageUrl,
-    farm_img_url: firstImageUrl,
+    farmer_img_url: firstImageUrl,
+    farm_img_url: videoProcessImages[1]?.imageUrl || firstImageUrl,
     process_image_urls: videoProcessImages.map((img) => img.imageUrl),
     certificate_img_url: certificateImage?.imageUrl || certificateImageUrl,
     end_img_url: THANK_YOU_IMAGE_SRC,
   };
+}
+
+async function createTraceVideoFrame(source, { kicker, title, detail, tagline = false, brandReveal = false }) {
+  try {
+  const inlineSource = await inlineVideoImageSource(source);
+  const image = await loadImageElement(inlineSource);
+  const canvas = document.createElement("canvas");
+  canvas.width = 1280;
+  canvas.height = 720;
+  const context = canvas.getContext("2d");
+  const scale = Math.max(canvas.width / image.naturalWidth, canvas.height / image.naturalHeight);
+  const imageWidth = image.naturalWidth * scale;
+  const imageHeight = image.naturalHeight * scale;
+  context.drawImage(image, (canvas.width - imageWidth) / 2, (canvas.height - imageHeight) / 2, imageWidth, imageHeight);
+
+  const shade = context.createLinearGradient(0, 275, 0, 720);
+  shade.addColorStop(0, "rgba(4, 17, 12, 0)");
+  shade.addColorStop(1, "rgba(4, 17, 12, 0.91)");
+  context.fillStyle = shade;
+  context.fillRect(0, 250, canvas.width, 470);
+  context.fillStyle = "#54d69a";
+  context.fillRect(92, 488, 4, 108);
+  context.textAlign = "left";
+  context.textBaseline = "alphabetic";
+  context.fillStyle = "#7ee6b3";
+  context.font = "700 18px Arial, sans-serif";
+  context.fillText(String(kicker || "TRACECONNECT").toUpperCase().slice(0, 62), 120, 510);
+  context.fillStyle = "#ffffff";
+
+  if (tagline || brandReveal) {
+    context.font = "700 43px Arial, sans-serif";
+    context.fillText("Every Product Has a Journey.", 120, 566);
+    context.fillText("We Make It Traceable.", 120, 616);
+    context.fillStyle = "rgba(238, 247, 242, 0.88)";
+    context.font = "400 19px Arial, sans-serif";
+    context.fillText("One Platform. Multiple Industries. Complete Transparency.", 120, 657);
+    context.fillStyle = "rgba(238, 247, 242, 0.76)";
+    context.font = "400 14px Arial, sans-serif";
+    if (tagline) context.fillText("AGRICULTURE  ·  AQUACULTURE  ·  HANDLOOM  ·  FOOD  ·  HONEY  ·  MANUFACTURING  ·  REFURBISHED ELECTRONICS", 120, 690);
+  } else {
+    context.font = "700 33px Arial, sans-serif";
+    context.fillText(String(title || "A connected product journey").slice(0, 54), 120, 564);
+    context.fillStyle = "rgba(238, 247, 242, 0.88)";
+    context.font = "400 19px Arial, sans-serif";
+    context.fillText(String(detail || "Verified records from origin to destination").slice(0, 94), 120, 600);
+  }
+
+  return canvas.toDataURL("image/jpeg", 0.92);
+  } catch {
+    return source;
+  }
 }
 
 async function inlineVideoImageSource(source) {
@@ -804,12 +855,31 @@ async function inlineVideoImageSource(source) {
   }
 }
 
-async function renderTraceVideoFromImages({ user, images, stages, template = "A", productionName, onJobId, onProgress }) {
-  const payload = buildTraceVideoPayload({ user, images, stages, template, productionName });
+async function renderTraceVideoFromImages({ images, stages, template = "A", productionName, videoContext, onJobId, onProgress }) {
+  const payload = buildTraceVideoPayload({ images, stages, template, productionName });
   const sourceKeys = ["logo_url", "intro_logo_url", "farmer_img_url", "farm_img_url", "certificate_img_url", "end_img_url"];
   const inlinedSources = await Promise.all(sourceKeys.map((key) => inlineVideoImageSource(payload[key])));
   sourceKeys.forEach((key, index) => { payload[key] = inlinedSources[index]; });
-  payload.process_image_urls = await Promise.all(payload.process_image_urls.map(inlineVideoImageSource));
+  const orderedImages = getOrderedVideoImages(images, stages);
+  const portfolio = Array.isArray(videoContext?.productions) ? videoContext.productions : [];
+  payload.intro_logo_url = await createTraceVideoFrame(MULTI_INDUSTRY_VIDEO_COVER_SRC, {
+    kicker: "MULTI-INDUSTRY PRODUCT TRACEABILITY",
+    tagline: true,
+  });
+  payload.end_img_url = await createTraceVideoFrame(orderedImages[orderedImages.length - 1].imageUrl, {
+    kicker: "TRACECONNECT | A TRACEABLE JOURNEY",
+    brandReveal: true,
+  });
+  payload.process_image_urls = await Promise.all(orderedImages.map((image) => {
+    const production = portfolio.find((item) => Number(item.id) === Number(image.plantationId));
+    const location = production?.location || "";
+    const detail = [location, image.date].filter(Boolean).join("  ·  ");
+    return createTraceVideoFrame(image.imageUrl, {
+      kicker: image.stage || production?.type || "TRACEABILITY RECORD",
+      title: production?.products?.[0] || image.name || production?.name || production?.type,
+      detail: detail || "A verified step in the product journey",
+    });
+  }));
   onProgress?.({ progress: 1, stage: "starting" });
   await waitForVideoGenerator(onProgress);
   let renderResponse;
@@ -1596,18 +1666,18 @@ function AuthProvider({ children }) {
     setCurrentJobId(null);
   };
 
-  const generateVideo = async (images, stages, template = "A", productionName = "TraceConnect") => {
+  const generateVideo = async (images, stages, template = "A", productionName = "TraceConnect", videoContext = null) => {
     if (videoBusy) return;
     setVideoBusy(true);
     setVideoProgress("Starting video generator...");
     setVideoProgressPercent(1);
     try {
       const videoUrl = await renderTraceVideoFromImages({
-        user,
         images,
         stages,
         template,
         productionName,
+        videoContext,
         onJobId: (jobId) => setCurrentJobId(jobId),
         onProgress: ({ progress, stage }) => {
           setVideoProgress(stage || "Processing");
@@ -1936,6 +2006,24 @@ function getCompactCropSummary(mode, variety) {
       "GI-tagged batch",
     tags,
   };
+}
+
+function buildVideoPortfolio(plantations, crops) {
+  return plantations.map((plantation) => {
+    const production = getProductionTypeConfig(plantation.type);
+    const products = crops
+      .filter((crop) => Number(crop.plantationId) === Number(plantation.id))
+      .map((crop) => crop.name || getCompactCropSummary(production.mode, crop.variety).primary)
+      .filter(Boolean)
+      .slice(0, 3);
+    return {
+      id: plantation.id,
+      name: plantation.name,
+      type: production.label,
+      location: plantation.location,
+      products,
+    };
+  });
 }
 
 function ConfirmDialog({ message, onConfirm, onCancel }) {
@@ -2598,6 +2686,10 @@ function PlantationDetail({ plantationId, toast }) {
   const pHar = harvests.filter((h) => h.plantationId === plantationIdNum);
   const pPack = packings.filter((pk) => pk.plantationId === plantationIdNum);
   const pImgs = processImages.filter((img) => img.plantationId === plantationIdNum);
+  const userProductions = plantations.filter((unit) => Number(unit.userId) === Number(user?.user_id || user?.id));
+  const userProductionIds = new Set(userProductions.map((unit) => Number(unit.id)));
+  const userProcessImages = processImages.filter((image) => userProductionIds.has(Number(image.plantationId)));
+  const hasPortfolioVideoImages = userProcessImages.some((image) => image.imageUrl && !isPdfUrl(image.imageUrl));
   if (!plantation && loading) return <PageSkeleton title="Loading plantation..." rows={4} cards={3} />;
   if (!plantation) return <div className="page-container"><div className="empty-state">Plantation not found.</div></div>;
   const L = getProductionTypeConfig(plantation.type);
@@ -2629,9 +2721,6 @@ function PlantationDetail({ plantationId, toast }) {
   const totalStages = names.length;
   const allStagesComplete = completedStages === totalStages;
   const progressPercent = Math.round((completedStages / totalStages) * 100);
-  const showTraceabilityVideo = isKotpad
-    ? step === 0 && pCrops.length > 0
-    : (isBee ? step === 0 && pCrops.length > 0 : [pCrops, pMon, pVer, pHar, pPack][step]?.length > 0);
   const stageRecords = isBee ? names.map(() => pCrops) : [pCrops, pMon, pVer, pHar, pPack];
   const sectionFields = isKancheepuram
     ? KANCHEEPURAM_SECTION_FIELDS
@@ -2663,10 +2752,16 @@ function PlantationDetail({ plantationId, toast }) {
 
   const generatePlantationVideo = async () => {
     if (videoBusy) return;
+    if (!hasPortfolioVideoImages) {
+      toast("Capture or upload a process photo to generate a video.", "error");
+      return;
+    }
     try {
       toast("Preparing saved images for video...", "success");
-      const videoStages = isTextile ? [...names.slice(0, 3), "Harvest", names[4]] : names;
-      await generateVideo(pImgs, videoStages, "A", L.label);
+      const videoStages = getTraceStagesForPlantations(userProductions);
+      await generateVideo(userProcessImages, videoStages, "A", "TraceConnect-Product-Journey", {
+        productions: buildVideoPortfolio(userProductions, crops),
+      });
       toast("Video generated and saved to profile successfully.", "success");
     } catch (error) {
       toast(error?.message || "Video service unavailable right now.", "error");
@@ -2936,14 +3031,15 @@ function PlantationDetail({ plantationId, toast }) {
         )}
       </div>
 
-      {showTraceabilityVideo && (
-        <section className="card video-card production-video-card">
+      <section className="card video-card production-video-card">
           <div className="video-card-left">
             <div className="video-icon"><FiVideo /></div>
             <div className="production-video-copy">
               <span className="production-video-kicker">YOUR JOURNEY, READY TO SHARE</span>
               <h3>Generate Traceability Video</h3>
-              <p>Create a video from this unit's saved evidence and view it in Trace Captures.</p>
+              <p>{hasPortfolioVideoImages
+                ? "Create a multi-industry video from your saved production evidence and view it in Trace Captures."
+                : "Capture or upload a process photo to make a video from your saved production evidence."}</p>
             </div>
           </div>
           {user?.video_url && user?.video_locked ? (
@@ -2951,12 +3047,11 @@ function PlantationDetail({ plantationId, toast }) {
               <FiCheckCircle /> View Generated Video <FiArrowRight />
             </button>
           ) : (
-            <button className="btn btn-primary production-video-generate" onClick={generatePlantationVideo} disabled={videoBusy} type="button">
+            <button className="btn btn-primary production-video-generate" onClick={generatePlantationVideo} disabled={videoBusy || !hasPortfolioVideoImages} type="button">
               {videoBusy ? <LoadingIndicator label={videoProgress || "Generating..."} /> : <><FiVideo /> Generate Video</>}
             </button>
           )}
         </section>
-      )}
       <div className="all-stages-status-action">
         <button className="btn btn-outline" type="button" onClick={() => setAllStatusOpen(true)}>
           <FiClipboard /> View all stages status
@@ -3794,6 +3889,7 @@ function CropsStep({ L, activeSection, setActiveSection, plantationName, plantat
             apiaryFarmName={plantationName}
             producerLocation={plantationLocation}
             productionId={productionId}
+            isHoneyProduction={mode === "bee"}
           />
           {!isSectionedProduction && !isBee && <div className="field-wrap">
             <label className="field-label">{L.startDateLabel || "Start Date *"}</label>
@@ -4939,7 +5035,7 @@ function ReportsPage({ Page = ReportsAnalyticsPage }) {
 
 function ProcessGalleryPage({ toast }) {
   const { user, videoBusy, videoProgress, generateVideo } = useAuth();
-  const { plantations, processImages, updateProcessImage, delProcessImage } = useData();
+  const { plantations, crops, processImages, updateProcessImage, delProcessImage } = useData();
   const { confirm, dialog } = useConfirm();
   const [activeGalleryStage, setActiveGalleryStage] = useState(TRACE_STAGES[0]);
   const [recapturingImage, setRecapturingImage] = useState(null);
@@ -5039,7 +5135,9 @@ function ProcessGalleryPage({ toast }) {
       const productionName = mine.length === 1
         ? getProductionTypeConfig(mine[0].type)?.label
         : "TraceConnect-Multi-Production";
-      await generateVideo(mineImages, stages, "A", productionName);
+      await generateVideo(mineImages, stages, "A", productionName, {
+        productions: buildVideoPortfolio(mine, crops),
+      });
       toast("Video generated and saved to profile successfully.", "success");
     } catch (error) {
       toast(error?.message || "Video service unavailable right now.", "error");
