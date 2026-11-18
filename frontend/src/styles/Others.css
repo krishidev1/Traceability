@@ -1943,6 +1943,45 @@ body.traceconnect-body {
   font-weight: 700;
 }
 
+.tc-root .supplier-trace-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 4px 0 22px;
+}
+
+.tc-root .supplier-trace-filter {
+  display: grid;
+  flex: 1 1 220px;
+  max-width: 360px;
+  gap: 6px;
+  color: var(--neutral-600);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.tc-root .supplier-trace-filter .input {
+  width: 100%;
+  min-height: 42px;
+  color: var(--neutral-800);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.tc-root .supplier-trace-carousel-controls small {
+  display: block;
+  margin-top: 2px;
+  color: var(--neutral-400);
+  font-size: 9px;
+  letter-spacing: .06em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
 .tc-root .supplier-carousel-arrow {
   display: grid;
   place-items: center;

@@ -235,6 +235,7 @@ function mapTraceRow(row) {
   return {
     packingId: Number(row.packing_id),
     plantationId: Number(row.plantation_id),
+    productionType: row.production_type || "",
     farmId: row.farm_id === null || row.farm_id === undefined ? null : Number(row.farm_id),
     growerUserId: Number(row.grower_user_id),
     plantationName: row.plantation_name || "Farm Trace",
@@ -258,6 +259,7 @@ function mapTraceRow(row) {
     totalQuantity: row.total_quantity === null ? null : Number(row.total_quantity),
     harvestUnit: row.harvest_unit || "kg",
     packingDate: row.packing_date,
+    packingCreatedAt: row.packing_created_at,
     packingSize: row.packing_size || "",
     numPackages:
       row.number_of_packages === null ? 0 : Number(row.number_of_packages),
@@ -356,6 +358,7 @@ exports.list = async (req, res) => {
         pk.country,
         pk.created_at AS packing_created_at,
         pl.id AS plantation_id,
+        pl.production_type,
         pl.name AS plantation_name,
         pl.location_description,
         pl.status AS plantation_status,
@@ -489,6 +492,7 @@ exports.lookupGrower = async (req, res) => {
       `
       SELECT
         pl.id AS plantation_id,
+        pl.production_type,
         pl.name AS plantation_name,
         pl.location_description,
         pl.status AS plantation_status,

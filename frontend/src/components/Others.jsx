@@ -1789,6 +1789,23 @@ const COLD_STORAGE_OPTIONS = ["Not Required", "Required", "Available", "Not Avai
 const TRACE_STAGES = ["Ponds", "Apiaries", "Kotpad Fabric", "Sambalpuri Product", "Monitoring", "Verification", "Harvest", "Packing"];
 const SHARED_TRACE_STAGES = ["Monitoring", "Verification", "Harvest", "Packing"];
 const BEE_SECTION_NAMES = ["Beekeeper / Producer Details", "Apiary & Individual Hive Registry", "Harvest Details", "Processing & Quality Assurance", "Batch & Packaging Details", "GI Recognition & Certification"];
+const STANDARD_STAGE_NAMES = ["Production Details", "Monitoring", "Verification", "Harvest", "Packing"];
+const KOTPAD_SECTION_NAMES = ["Production Unit Registration", "Producer / Weaver Details", "Raw Material Details", "Weaving & Production Details", "Batch Identity & Verification", "Product & Marketplace Details"];
+const SAMBALPURI_SECTION_FIELDS = [
+  ["Producer Registration", [["Registered Name", "Registered Name"], ["GI Application Number", "GI Application Number"], ["GI Certificate Date", "GI Certificate Date"], ["Weaver Name", "Weaver Name"], ["Weaver ID", "Weaver ID"], ["Cooperative Name", "Cooperative Name"], ["District", "District"]]],
+  ["Raw Material & Design Details", [["Bandha Pattern", "Bandha Pattern"], ["Fabric Material", "Fabric Material"], ["Color Combination", "Color Combination"], ["Border Design", "Border Design"], ["Motif Style", "Motif Style"], ["Natural Dye Used", "Natural Dye Used"]]],
+  ["Weaving & Production Details", [["Loom Type", "Loom Type"]]],
+  ["Batch Identity & GI Verification", [["GI Region Match", "GI Region Match"], ["Inspection Status", "Inspection Status"], ["Authenticity Score", "Authenticity Score"], ["QR Verification Code", "QR Verification Code"], ["Batch Number", "Batch Number"]]],
+  ["Product Images & Marketplace", []],
+];
+const KOTPAD_STATUS_FIELDS = [
+  ["Production Unit Registration", [["Product Name", "Product Name"], ["GI Application Number", "GI Application Number"], ["Category", "Category"], ["State", "State"], ["District", "District"], ["Region / Cluster", "Region / Cluster"]]],
+  ["Producer / Weaver Details", [["Weaver Name", "Weaver Name"], ["Weaver ID", "Weaver ID"], ["Organization Type", "Organization Type"], ["Organization Name", "Organization Name"], ["Contact Number", "Contact Number"], ["Address", "Address"]]],
+  ["Raw Material Details", [["Fabric Type", "Fabric Type"], ["Yarn Source", "Yarn Source"], ["Natural Dye Used", "Natural Dye Used"], ["Dye Preparation Method", "Dye Preparation Method"], ["Water Source", "Water Source"]]],
+  ["Weaving & Production Details", [["Product Type", "Product Type"], ["Loom Type", "Loom Type"], ["Weaving Technique", "Weaving Technique"], ["Design Pattern", "Design Pattern"], ["Color Combination", "Color Combination"]]],
+  ["Batch Identity & Verification", [["Batch Number", "Batch Number"], ["QR Verification Code", "QR Verification Code"], ["Production Unit ID", "Production Unit ID"], ["Inspection Status", "Inspection Status"], ["Quality Grade", "Quality Grade"]]],
+  ["Product & Marketplace Details", [["Available Stock", "Available Stock"], ["Marketplace Visibility", "Marketplace Visibility"], ["Product Images", "Product Images"]]],
+];
 const PRODUCTION_TYPE_CONFIG = {
   kotpad_handloom: KOTPAD_PRODUCTION_CONFIG,
   kancheepuram_silk: KANCHEEPURAM_PRODUCTION_CONFIG,
@@ -2693,6 +2710,7 @@ function PlantationDetail({ plantationId, toast }) {
   if (!plantation && loading) return <PageSkeleton title="Loading plantation..." rows={4} cards={3} />;
   if (!plantation) return <div className="page-container"><div className="empty-state">Plantation not found.</div></div>;
   const L = getProductionTypeConfig(plantation.type);
+  const productionMode = normalizeProductionType(L.mode || plantation.type);
   const productionSequence = plantations
     .filter((unit) => normalizeProductionType(unit.type) === normalizeProductionType(plantation.type))
     .sort((a, b) => Number(a.id) - Number(b.id))
@@ -2702,13 +2720,24 @@ function PlantationDetail({ plantationId, toast }) {
   const isKancheepuram = L.mode === "kancheepuram_silk";
   const isBee = L.mode === "bee";
   const isTextile = ["kotpad_handloom", "sambalpuri_bandha"].includes(L.mode);
-  const kotpadStatusNames = ["Production Unit Registration", "Producer / Weaver Details", "Raw Material Details", "Weaving & Production Details", "Batch Identity & Verification", "Product & Marketplace Details"];
   const productionSectionNames = isKancheepuram
     ? KANCHEEPURAM_SECTIONS
     : L.mode === "mobile_refurbishable"
       ? MOBILE_REFURBISHABLE_SECTIONS
-      : kotpadStatusNames;
-  const names = isBee ? BEE_SECTION_NAMES : [L.crops, "Monitoring", "Verification", isTextile ? "Production Completion" : "Harvest", "Packing"];
+      : productionMode === "sambalpuri_bandha"
+        ? ["Producer Registration", "Raw Material & Design Details", "Weaving & Production Details", "Batch Identity & GI Verification", "Product Images & Marketplace"]
+        : KOTPAD_SECTION_NAMES;
+  const productionSectionFields = isKancheepuram
+    ? KANCHEEPURAM_SECTION_FIELDS
+    : L.mode === "mobile_refurbishable"
+      ? MOBILE_REFURBISHABLE_SECTION_FIELDS
+      : null;
+  const configuredWorkflowNames = isBee
+    ? BEE_SECTION_NAMES
+    : isKotpad
+      ? productionSectionNames
+      : [L.crops || L.label, ...(L.monitoring || []), "Verification", isTextile ? "Production Completion" : "Harvest", "Packing"];
+  const names = isBee ? BEE_SECTION_NAMES : STANDARD_STAGE_NAMES.map((name, index) => index === 0 ? L.crops : name === "Harvest" && isTextile ? "Production Completion" : name);
   const hasGiRegistryDocument = Boolean(user?.has_gi_registry_document || user?.gi_registry_document || user?.gi_registry_document_name);
   const beeSectionComplete = (index) => beeSavedSections.includes(index);
   const unlocked = isBee
@@ -2722,23 +2751,33 @@ function PlantationDetail({ plantationId, toast }) {
   const allStagesComplete = completedStages === totalStages;
   const progressPercent = Math.round((completedStages / totalStages) * 100);
   const stageRecords = isBee ? names.map(() => pCrops) : [pCrops, pMon, pVer, pHar, pPack];
-  const sectionFields = isKancheepuram
-    ? KANCHEEPURAM_SECTION_FIELDS
-    : L.mode === "mobile_refurbishable"
-      ? MOBILE_REFURBISHABLE_SECTION_FIELDS
-      : null;
-  const sectionStatusRecords = sectionFields
-    ? sectionFields.map(([, fields]) => pCrops.map((crop) => {
-      const details = parseDetailsText(crop.variety).details;
-      return Object.fromEntries(fields
-        .map(([, key]) => [key, details.get(key)])
-        .filter(([, value]) => value !== undefined && value !== null && value !== ""));
-    }).filter((record) => Object.keys(record).length > 0))
+  const sectionFields = productionSectionFields;
+  const statusNames = configuredWorkflowNames;
+  const savedProductionDetails = pCrops.map((crop) => parseDetailsText(crop.variety).details);
+  const sectionIsSaved = (index, sectionName) => savedProductionDetails.some((details) => {
+    const configuredFields = sectionFields?.[index]?.[1].map(([, key]) => key)
+      || (productionMode === "sambalpuri_bandha" ? SAMBALPURI_SECTION_FIELDS[index]?.[1] : null)
+      || (productionMode === "kotpad_handloom" ? KOTPAD_STATUS_FIELDS[index]?.[1].map(([, key]) => key) : null);
+    if (configuredFields) {
+      const keys = configuredFields;
+      return keys.some((key) => details.has(key) && details.get(key) !== "");
+    }
+    return false;
+  });
+  const fieldsForStatusSection = (index) => sectionFields?.[index]?.[1].map(([label, key]) => [key, label])
+    || (productionMode === "sambalpuri_bandha" ? SAMBALPURI_SECTION_FIELDS[index]?.[1].map((key) => [key, key]) : null)
+    || (productionMode === "kotpad_handloom" ? KOTPAD_STATUS_FIELDS[index]?.[1] : null);
+  const sectionStatusRecords = isKotpad || productionMode === "sambalpuri_bandha"
+    ? statusNames.map((name, index) => savedProductionDetails.filter(() => sectionIsSaved(index, name)).map((details) => Object.fromEntries(
+      (fieldsForStatusSection(index) || []).map(([key, label]) => [label, details.get(key)])
+        .filter(([, value]) => value !== undefined && value !== null && value !== "")
+    )).filter((record) => Object.keys(record).length))
     : null;
-  const statusNames = sectionFields ? sectionFields.map(([name]) => name) : isKotpad ? kotpadStatusNames : names;
   const statusRecords = sectionStatusRecords || (isKotpad
-    ? kotpadStatusNames.map((name, index) => (index === 0 || kotpadSavedSections.includes(index) ? pCrops : []))
-    : stageRecords);
+    ? statusNames.map((name, index) => (index === 0 || sectionIsSaved(index, name) ? pCrops : []))
+    : isBee
+      ? statusNames.map((_, index) => beeSavedSections.includes(index) ? pCrops : [])
+      : [pCrops, pMon, pVer, pHar, pPack]);
   const openStep = (i) => {
     if (!unlocked[i]) {
       toast(`Complete ${names[i - 1]} first`, "error");
@@ -3743,14 +3782,7 @@ function CropsStep({ L, activeSection, setActiveSection, plantationName, plantat
   const isMobileRefurbishable = mode === "mobile_refurbishable";
   const isSectionedProduction = isKotpad || isMobileRefurbishable;
   const kotpadSections = [
-    ...(isMobileRefurbishable ? MOBILE_REFURBISHABLE_SECTIONS : isKancheepuram ? KANCHEEPURAM_SECTIONS : [
-      "Production Unit Registration",
-      "Producer / Weaver Details",
-      "Raw Material Details",
-      "Weaving & Production Details",
-      "Batch Identity & Verification",
-      "Product & Marketplace Details",
-    ]),
+    ...(isMobileRefurbishable ? MOBILE_REFURBISHABLE_SECTIONS : isKancheepuram ? KANCHEEPURAM_SECTIONS : mode === "sambalpuri_bandha" ? SAMBALPURI_SECTION_FIELDS.map(([name]) => name) : KOTPAD_SECTION_NAMES),
   ];
   const [savedSections, setSavedSections] = useState(() => {
     try { return JSON.parse(localStorage.getItem(`kotpad-sections-${plantationId}`) || "[]"); } catch { return []; }
@@ -4342,6 +4374,8 @@ export function SupplierDashboard({ navigate, toast }) {
   const [batchCreating, setBatchCreating] = useState(false);
   const workbenchRef = useRef(null);
   const [traceIndex, setTraceIndex] = useState(0);
+  const [selectedProductionType, setSelectedProductionType] = useState("all");
+  const [selectedTracePlace, setSelectedTracePlace] = useState("all");
   const [expandedTraceId, setExpandedTraceId] = useState(null);
   const [growerLookupId, setGrowerLookupId] = useState("");
   const [growerLookupState, setGrowerLookupState] = useState({
@@ -4359,7 +4393,19 @@ export function SupplierDashboard({ navigate, toast }) {
   const supplierUserId = Number(user?.user_id || user?.id);
   const mine = batches.filter((b) => Number(b.supplierId) === supplierUserId);
   const minePackingIds = mine.flatMap((b) => b.packingIds || []);
-  const traces = supplierTraceState.traces;
+  const traces = [...supplierTraceState.traces].sort((a, b) => {
+    const dateA = new Date(a.packingCreatedAt || a.packingDate || 0).getTime() || 0;
+    const dateB = new Date(b.packingCreatedAt || b.packingDate || 0).getTime() || 0;
+    return dateB - dateA || Number(b.packingId) - Number(a.packingId);
+  });
+  const productionFilters = [...new Set(traces.map((trace) => trace.productionType).filter(Boolean))]
+    .sort((a, b) => (PRODUCTION_TYPE_CONFIG[a]?.label || a).localeCompare(PRODUCTION_TYPE_CONFIG[b]?.label || b));
+  const placeFilters = [...new Set(traces.map((trace) => trace.matchedArea || trace.originLocation).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b));
+  const feedTraces = traces.filter((trace) =>
+    (selectedProductionType === "all" || trace.productionType === selectedProductionType)
+    && (selectedTracePlace === "all" || (trace.matchedArea || trace.originLocation) === selectedTracePlace),
+  );
   const available = traces.filter(
     (trace) =>
       trace.workflowComplete &&
@@ -4369,6 +4415,11 @@ export function SupplierDashboard({ navigate, toast }) {
   const selectedTraces = available.filter((trace) =>
     selected.includes(trace.packingId),
   );
+
+  useEffect(() => {
+    setTraceIndex(0);
+    setExpandedTraceId(null);
+  }, [selectedProductionType, selectedTracePlace]);
   const total = selectedTraces.reduce(
     (sum, trace) => sum + (Number(trace.netWeight) || 0),
     0,
@@ -4818,6 +4869,25 @@ export function SupplierDashboard({ navigate, toast }) {
           <FiMapPin /> Farm Trace Feed
         </div>
 
+        <div className="supplier-trace-filters">
+          <label className="supplier-trace-filter">
+            <span>Production</span>
+            <select className="input" value={selectedProductionType} onChange={(event) => setSelectedProductionType(event.target.value)}>
+              <option value="all">All productions</option>
+              {productionFilters.map((type) => (
+                <option key={type} value={type}>{PRODUCTION_TYPE_CONFIG[type]?.label || type}</option>
+              ))}
+            </select>
+          </label>
+          <label className="supplier-trace-filter">
+            <span>Place</span>
+            <select className="input" value={selectedTracePlace} onChange={(event) => setSelectedTracePlace(event.target.value)}>
+              <option value="all">All places</option>
+              {placeFilters.map((place) => <option key={place} value={place}>{place}</option>)}
+            </select>
+          </label>
+        </div>
+
         {supplierTraceState.loading ? (
           <div className="empty-state small">
             <p>Loading farm traces from your supplier coverage...</p>
@@ -4829,15 +4899,19 @@ export function SupplierDashboard({ navigate, toast }) {
               areas yet.
             </p>
           </div>
+        ) : feedTraces.length === 0 ? (
+          <div className="empty-state small">
+            <p>No traces match the selected production and place filters.</p>
+          </div>
         ) : (
           <>
           <div className="supplier-trace-carousel-controls">
             <button type="button" className="supplier-carousel-arrow" onClick={() => { setTraceIndex((index) => Math.max(0, index - 1)); setExpandedTraceId(null); }} disabled={traceIndex === 0} aria-label="Show newer trace"><ArrowLeft aria-hidden="true" /></button>
-            <span>{traceIndex + 1} / {traces.length}</span>
-            <button type="button" className="supplier-carousel-arrow" onClick={() => { setTraceIndex((index) => Math.min(traces.length - 1, index + 1)); setExpandedTraceId(null); }} disabled={traceIndex >= traces.length - 1} aria-label="Show older trace"><ArrowRight aria-hidden="true" /></button>
+            <span>{traceIndex + 1} / {feedTraces.length} <small>Newest first</small></span>
+            <button type="button" className="supplier-carousel-arrow" onClick={() => { setTraceIndex((index) => Math.min(feedTraces.length - 1, index + 1)); setExpandedTraceId(null); }} disabled={traceIndex >= feedTraces.length - 1} aria-label="Show older trace"><ArrowRight aria-hidden="true" /></button>
           </div>
           <div className="supplier-trace-grid supplier-trace-carousel">
-             {traces.slice(traceIndex, traceIndex + 1).map((trace) => {
+             {feedTraces.slice(traceIndex, traceIndex + 1).map((trace) => {
               const isSelected = selected.includes(trace.packingId);
               const myBatch = mine.find((batch) =>
                 batch.packingIds?.includes(trace.packingId),
